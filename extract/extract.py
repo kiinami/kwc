@@ -12,6 +12,8 @@ from pathlib import Path
 import cv2
 import numpy as np
 import peakutils
+from PIL import Image
+from imagehash import phash, colorhash
 from rich.progress import Progress
 from vidgear.gears import CamGear
 
@@ -23,20 +25,8 @@ def total_frames(video: Path) -> int:
     return int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 
-def scale(img, xScale, yScale):
-    return cv2.resize(img, None, fx=xScale, fy=yScale, interpolation=cv2.INTER_AREA)
-
-
-def grayscale(frame):
-    grayframe = None
-    gray = None
-    if frame is not None:
-        cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        gray = scale(gray, 1, 1)
-        grayframe = scale(gray, 1, 1)
-        gray = cv2.GaussianBlur(gray, (9, 9), 0.0)
-    return grayframe, gray
+def hashdiff(phash1, phash2):
+    return phash1 - phash2
 
 
 def save_frame(frame, output: Path, i: int):
@@ -45,16 +35,19 @@ def save_frame(frame, output: Path, i: int):
 
 def extract(
         videos: list[Path],
+        phash_size: int,
+        colorhash_size: int,
         output: Path
 ):
     logger.info(f'Extracting frames from {len(videos)} videos to {output}...')
     i = 0
     video = videos[0]
-    diff = []
-    last = None
-    with Progress() as progress:
-        task = progress.add_task(f'Analyzing {video}', total=total_frames(video))
-        stream = CamGear(source=str(video), logging=True).start()
+    pls = []
+    cls = []
+    total = total_frames(video)
+    with Progress(transient=True) as progress:
+        task = progress.add_task(f'Analyzing {video}', total=total)
+        stream = CamGear(source=str(video), logging=False).start()
 
         while True:
             frame = stream.read()
@@ -62,25 +55,30 @@ def extract(
                 stream.stop()
                 break
 
-            gray, gray_blur = grayscale(frame)
-            if last is None:
-                last = gray_blur
+            img = Image.fromarray(frame)
 
-            diff.append(cv2.countNonZero(cv2.subtract(gray_blur, last)))
+            pls.append(phash(img, hash_size=phash_size))
+            cls.append(colorhash(img, binbits=colorhash_size))
 
             i += 1
             progress.update(task, completed=i)
 
-    logger.info(f'Analyzed {i} frames.')
+        logger.debug(f'Analyzed {i} frames in {progress.get_time()}.')
 
-    y = np.array(diff)
+    pdiff = []
+    cdiff = []
+    for i in range(len(pls) - 1):
+        pdiff.append(hashdiff(pls[i], pls[i + 1]))
+        cdiff.append(hashdiff(cls[i], cls[i + 1]))
+
+    y = np.multiply(np.array(pdiff), np.array(cdiff))
     base = peakutils.baseline(y, 2)
-    indices = peakutils.indexes(y - base, 0.3, min_dist=1)
+    indices = peakutils.indexes(y - base, 0.2, min_dist=10)
 
     i = 0
-    with Progress() as progress:
+    with Progress(transient=True) as progress:
         task = progress.add_task(f'Extracting frames from {video}', total=len(indices))
-        stream = CamGear(source=str(video), logging=True).start()
+        stream = CamGear(source=str(video), logging=False).start()
 
         while True:
             frame = stream.read()
@@ -90,6 +88,8 @@ def extract(
 
             if i in indices:
                 save_frame(frame, output, i)
-                progress.update(task, completed=i)
 
+            progress.update(task, completed=i)
             i += 1
+
+    logger.info(f'Selected {len(indices)} from {total} frames ({len(indices) / total * 100:.2f}%).')
