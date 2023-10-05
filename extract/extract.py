@@ -25,6 +25,10 @@ def total_frames(video: Path) -> int:
     return int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 
+def score(img: np.ndarray):
+    return cv2.Laplacian(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.CV_16S).var()
+
+
 def hashdiff(phash1, phash2):
     return phash1 - phash2
 
@@ -39,12 +43,15 @@ def extract(
         colorhash_size: int,
         output: Path
 ):
-    logger.info(f'Extracting frames from {len(videos)} videos to {output}...')
+    logger.info(f'Extracting frames from {len(videos)} videos to "{output}"...')
+
     i = 0
     video = videos[0]
     pls = []
     cls = []
+    sls = []
     total = total_frames(video)
+
     with Progress(transient=True) as progress:
         task = progress.add_task(f'Analyzing {video}', total=total)
         stream = CamGear(source=str(video), logging=False).start()
@@ -59,6 +66,7 @@ def extract(
 
             pls.append(phash(img, hash_size=phash_size))
             cls.append(colorhash(img, binbits=colorhash_size))
+            sls.append(score(frame))
 
             i += 1
             progress.update(task, completed=i)
@@ -73,7 +81,12 @@ def extract(
 
     y = np.multiply(np.array(pdiff), np.array(cdiff))
     base = peakutils.baseline(y, 2)
-    indices = peakutils.indexes(y - base, 0.2, min_dist=10)
+    peaks = peakutils.indexes(y - base, 0.2, min_dist=10)
+
+    indices = [
+        max(range(i + 1, j), key=lambda k: sls[k])
+        for i, j in zip([0, *peaks], [*peaks, len(sls) - 1])
+    ]
 
     i = 0
     with Progress(transient=True) as progress:
