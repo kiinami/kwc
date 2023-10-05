@@ -38,15 +38,14 @@ def save_frame(frame, output: Path, i: int):
 
 
 def extract(
-        videos: list[Path],
+        video: Path,
         phash_size: int,
         colorhash_size: int,
         output: Path
 ):
-    logger.info(f'Extracting frames from {len(videos)} videos to "{output}"...')
+    logger.info(f'Extracting frames from "{video.absolute()}" to "{output.absolute()}"...')
 
     i = 0
-    video = videos[0]
     pls = []
     cls = []
     sls = []

@@ -28,7 +28,7 @@ def callback(
 
 @app.command()
 def extract(
-        videos: list[Path] = Argument(..., help='Video files to extract frames from.'),
+        videos: Path = Argument(..., help='Video file to extract frames from.'),
         output: Path = Argument(..., help='Output directory.'),
         phash_size: int = Option(64, help='Size of perceptual hash.'),
         colorhash_size: int = Option(8, help='Size of color hash.'),
