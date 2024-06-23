@@ -7,14 +7,17 @@ Created by kinami on 2023-08-06
 """
 
 import logging
+import multiprocessing as mp
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 import cv2
 import numpy as np
 import peakutils
 from PIL import Image
+from ffmpeg import FFmpeg, Progress as FFmpegProgress
 from imagehash import phash, colorhash
-from rich.progress import Progress
+from rich.progress import Progress, MofNCompleteColumn, TimeElapsedColumn
 from vidgear.gears import CamGear
 
 logger = logging.getLogger(__name__)
@@ -25,8 +28,62 @@ def total_frames(video: Path) -> int:
     return int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 
+def transcode(video: Path, output: Path, total: int, width: int, height: int):
+    logger.debug(f'Transcoding "{video.absolute()}" to "{output.absolute()}"...')
+    ffmpeg = (
+        FFmpeg()
+        .option('y')
+        .input(str(video))
+        .output(
+            str(output),
+            vcodec="libx264",
+            vf=f'scale={width}:{height}',
+            an=None,
+            vsync='passthrough',
+        )
+    )
+
+    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn()) as progress:
+        task = progress.add_task(f'Transcoding "{video}" to {height}p', total=total)
+
+        @ffmpeg.on('progress')
+        def on_progress(ffmpeg_progress: FFmpegProgress):
+            progress.update(task, completed=ffmpeg_progress.frame)
+
+        ffmpeg.execute()
+
+    logger.debug(f'Transcoded "{video.absolute()}" to "{output.absolute()}".')
+    return output
+
+
 def score(img: np.ndarray):
     return cv2.Laplacian(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.CV_16S).var()
+
+
+def process_frame(frame, phash_size, colorhash_size):
+    img = Image.fromarray(frame)
+    return phash(img, hash_size=phash_size), colorhash(img, binbits=colorhash_size), score(frame)
+
+
+def frame_reader(video, frame_queue, stop_event):
+    stream = CamGear(source=str(video), logging=False).start()
+    while not stop_event.is_set():
+        frame = stream.read()
+        if frame is None:
+            break
+        frame_queue.put(frame)
+    stream.stop()
+    frame_queue.put(None)  # Signal the end of the stream
+
+
+def frame_worker(frame_queue, result_queue, phash_size, colorhash_size, stop_event):
+    while not stop_event.is_set():
+        frame = frame_queue.get()
+        if frame is None:
+            result_queue.put(None)  # Signal the end of processing
+            break
+        result = process_frame(frame, phash_size, colorhash_size)
+        result_queue.put(result)
 
 
 def hashdiff(phash1, phash2):
@@ -41,36 +98,50 @@ def extract(
         video: Path,
         phash_size: int,
         colorhash_size: int,
+        baseline_degree: int,
+        threshold: float,
+        min_distance: int,
         output: Path
 ):
     logger.info(f'Extracting frames from "{video.absolute()}" to "{output.absolute()}"...')
 
-    i = 0
-    pls = []
-    cls = []
-    sls = []
-    total = total_frames(video)
+    with NamedTemporaryFile(suffix='.mp4') as tmp:
+        total = total_frames(video)
+        lowres_video = Path(tmp.name)
+        transcode(video, lowres_video, total, 640, 480)
 
-    with Progress(transient=True) as progress:
-        task = progress.add_task(f'Analyzing {video}', total=total)
-        stream = CamGear(source=str(video), logging=False).start()
+        i = 0
+        pls = []
+        cls = []
+        sls = []
+        total = total_frames(lowres_video)
+        frame_queue = mp.Queue(maxsize=15)  # Bounded queue to limit memory usage
+        result_queue = mp.Queue()
+        stop_event = mp.Event()
 
-        while True:
-            frame = stream.read()
-            if frame is None:
-                stream.stop()
-                break
+        with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn()) as progress:
+            task = progress.add_task(f'Analyzing {lowres_video}', total=total)
 
-            img = Image.fromarray(frame)
+            reader_process = mp.Process(target=frame_reader, args=(lowres_video, frame_queue, stop_event))
+            reader_process.start()
+            pool = mp.Pool(mp.cpu_count(), frame_worker,
+                           (frame_queue, result_queue, phash_size, colorhash_size, stop_event))
+            while True:
+                result = result_queue.get()
+                if result is None:
+                    break
+                p_hash, c_hash, s = result
+                pls.append(p_hash)
+                cls.append(c_hash)
+                sls.append(s)
+                i += 1
+                progress.update(task, completed=i)
 
-            pls.append(phash(img, hash_size=phash_size))
-            cls.append(colorhash(img, binbits=colorhash_size))
-            sls.append(score(frame))
-
-            i += 1
-            progress.update(task, completed=i)
-
-        logger.debug(f'Analyzed {i} frames in {progress.get_time()}.')
+            stop_event.set()
+            reader_process.join()
+            pool.terminate()
+            pool.join()
+            logger.debug(f'Analyzed {i} frames in {progress.get_time()}.')
 
     pdiff = []
     cdiff = []
@@ -79,8 +150,8 @@ def extract(
         cdiff.append(hashdiff(cls[i], cls[i + 1]))
 
     y = np.multiply(np.array(pdiff), np.array(cdiff))
-    base = peakutils.baseline(y, 2)
-    peaks = peakutils.indexes(y - base, 0.2, min_dist=10)
+    base = peakutils.baseline(y, deg=baseline_degree)
+    peaks = peakutils.indexes(y - base, threshold, min_dist=min_distance)
 
     indices = [
         max(range(i + 1, j), key=lambda k: sls[k])

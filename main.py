@@ -32,8 +32,11 @@ def extract(
         output: Path = Argument(..., help='Output directory.'),
         phash_size: int = Option(64, help='Size of perceptual hash.'),
         colorhash_size: int = Option(8, help='Size of color hash.'),
+        baseline_degree: int = Option(3, help='Baseline degree for peak detection.'),
+        threshold: float = Option(0.2, help='Threshold for peak detection.'),
+        min_distance: int = Option(10, help='Minimum distance between peaks for peak detection.'),
 ):
-    ext(videos, phash_size, colorhash_size, output)
+    ext(videos, phash_size, colorhash_size, baseline_degree, threshold, min_distance, output)
 
 
 if __name__ == '__main__':
