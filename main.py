@@ -28,15 +28,19 @@ def callback(
 
 @app.command()
 def extract(
-        videos: Path = Argument(..., help='Video file to extract frames from.'),
-        output: Path = Argument(..., help='Output directory.'),
+        videos: Path = Argument(..., help='Video file to extract frames from.', exists=True),
+        output: Path = Argument(..., help='Output directory.', exists=True),
+        transcode: bool = Option(False, help='Transcode video before extracting frames.'),
+        transcode_width: int = Option(1280, help='Width of the transcoded video.'),
+        transcode_height: int = Option(720, help='Height of transcoded the video.'),
         phash_size: int = Option(64, help='Size of perceptual hash.'),
         colorhash_size: int = Option(8, help='Size of color hash.'),
         baseline_degree: int = Option(3, help='Baseline degree for peak detection.'),
         threshold: float = Option(0.2, help='Threshold for peak detection.'),
         min_distance: int = Option(10, help='Minimum distance between peaks for peak detection.'),
 ):
-    ext(videos, phash_size, colorhash_size, baseline_degree, threshold, min_distance, output)
+    ext(videos, transcode, transcode_width, transcode_height, phash_size, colorhash_size, baseline_degree, threshold,
+        min_distance, output)
 
 
 if __name__ == '__main__':

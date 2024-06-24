@@ -5,9 +5,9 @@ Package extract
 
 Created by kinami on 2023-08-06
 """
-
 import logging
 import multiprocessing as mp
+from datetime import timedelta
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
@@ -15,12 +15,17 @@ import cv2
 import numpy as np
 import peakutils
 from PIL import Image
+from cachier import cachier, set_default_params as set_default_cachier_params
 from ffmpeg import FFmpeg, Progress as FFmpegProgress
 from imagehash import phash, colorhash
 from rich.progress import Progress, MofNCompleteColumn, TimeElapsedColumn
 from vidgear.gears import CamGear
 
 logger = logging.getLogger(__name__)
+set_default_cachier_params(
+    separate_files=True,
+    stale_after=timedelta(days=7),
+)
 
 
 def total_frames(video: Path) -> int:
@@ -28,8 +33,26 @@ def total_frames(video: Path) -> int:
     return int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 
-def transcode(video: Path, output: Path, total: int, width: int, height: int):
-    logger.debug(f'Transcoding "{video.absolute()}" to "{output.absolute()}"...')
+def score(img: np.ndarray):
+    return cv2.Laplacian(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.CV_16S).var()
+
+
+def hashdiff(phash1, phash2):
+    return phash1 - phash2
+
+
+@cachier()
+def process_frame(frame, phash_size, colorhash_size):
+    img = Image.fromarray(frame)
+    return phash(img, hash_size=phash_size), colorhash(img, binbits=colorhash_size), score(frame)
+
+
+def save_frame(frame, output: Path, i: int):
+    cv2.imwrite(str(output / f'{i}.jpg'), frame)
+
+
+def transcode_video(video: Path, output: Path, width: int, height: int):
+    total = total_frames(video)
     ffmpeg = (
         FFmpeg()
         .option('y')
@@ -43,7 +66,8 @@ def transcode(video: Path, output: Path, total: int, width: int, height: int):
         )
     )
 
-    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn()) as progress:
+    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn(),
+                  transient=True) as progress:
         task = progress.add_task(f'Transcoding "{video}" to {height}p', total=total)
 
         @ffmpeg.on('progress')
@@ -51,18 +75,6 @@ def transcode(video: Path, output: Path, total: int, width: int, height: int):
             progress.update(task, completed=ffmpeg_progress.frame)
 
         ffmpeg.execute()
-
-    logger.debug(f'Transcoded "{video.absolute()}" to "{output.absolute()}".')
-    return output
-
-
-def score(img: np.ndarray):
-    return cv2.Laplacian(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY), cv2.CV_16S).var()
-
-
-def process_frame(frame, phash_size, colorhash_size):
-    img = Image.fromarray(frame)
-    return phash(img, hash_size=phash_size), colorhash(img, binbits=colorhash_size), score(frame)
 
 
 def frame_reader(video, frame_queue, stop_event):
@@ -86,63 +98,44 @@ def frame_worker(frame_queue, result_queue, phash_size, colorhash_size, stop_eve
         result_queue.put(result)
 
 
-def hashdiff(phash1, phash2):
-    return phash1 - phash2
+def analyze_frames(video, phash_size, colorhash_size):
+    i = 0
+    pls = []
+    cls = []
+    sls = []
+    total = total_frames(video)
+    frame_queue = mp.Queue(maxsize=15)  # Bounded queue to limit memory usage
+    result_queue = mp.Queue()
+    stop_event = mp.Event()
+
+    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn(),
+                  transient=True) as progress:
+        task = progress.add_task(f'Analyzing {video}', total=total)
+
+        reader_process = mp.Process(target=frame_reader, args=(video, frame_queue, stop_event))
+        reader_process.start()
+        pool = mp.Pool(mp.cpu_count(), frame_worker,
+                       (frame_queue, result_queue, phash_size, colorhash_size, stop_event))
+        while True:
+            result = result_queue.get()
+            if result is None:
+                break
+            p_hash, c_hash, s = result
+            pls.append(p_hash)
+            cls.append(c_hash)
+            sls.append(s)
+            i += 1
+            progress.update(task, completed=i)
+
+        stop_event.set()
+        reader_process.join()
+        pool.terminate()
+        pool.join()
+    return pls, cls, sls
 
 
-def save_frame(frame, output: Path, i: int):
-    cv2.imwrite(str(output / f'{i}.jpg'), frame)
-
-
-def extract(
-        video: Path,
-        phash_size: int,
-        colorhash_size: int,
-        baseline_degree: int,
-        threshold: float,
-        min_distance: int,
-        output: Path
-):
-    logger.info(f'Extracting frames from "{video.absolute()}" to "{output.absolute()}"...')
-
-    with NamedTemporaryFile(suffix='.mp4') as tmp:
-        total = total_frames(video)
-        lowres_video = Path(tmp.name)
-        transcode(video, lowres_video, total, 640, 480)
-
-        i = 0
-        pls = []
-        cls = []
-        sls = []
-        total = total_frames(lowres_video)
-        frame_queue = mp.Queue(maxsize=15)  # Bounded queue to limit memory usage
-        result_queue = mp.Queue()
-        stop_event = mp.Event()
-
-        with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn()) as progress:
-            task = progress.add_task(f'Analyzing {lowres_video}', total=total)
-
-            reader_process = mp.Process(target=frame_reader, args=(lowres_video, frame_queue, stop_event))
-            reader_process.start()
-            pool = mp.Pool(mp.cpu_count(), frame_worker,
-                           (frame_queue, result_queue, phash_size, colorhash_size, stop_event))
-            while True:
-                result = result_queue.get()
-                if result is None:
-                    break
-                p_hash, c_hash, s = result
-                pls.append(p_hash)
-                cls.append(c_hash)
-                sls.append(s)
-                i += 1
-                progress.update(task, completed=i)
-
-            stop_event.set()
-            reader_process.join()
-            pool.terminate()
-            pool.join()
-            logger.debug(f'Analyzed {i} frames in {progress.get_time()}.')
-
+@cachier()
+def select_frames(pls, cls, sls, baseline_degree, threshold, min_distance):
     pdiff = []
     cdiff = []
     for i in range(len(pls) - 1):
@@ -157,7 +150,10 @@ def extract(
         max(range(i + 1, j), key=lambda k: sls[k])
         for i, j in zip([0, *peaks], [*peaks, len(sls) - 1])
     ]
+    return indices
 
+
+def extract_frames(video, output, indices):
     i = 0
     with Progress(transient=True) as progress:
         task = progress.add_task(f'Extracting frames from {video}', total=len(indices))
@@ -172,7 +168,39 @@ def extract(
             if i in indices:
                 save_frame(frame, output, i)
 
-            progress.update(task, completed=i)
             i += 1
 
-    logger.info(f'Selected {len(indices)} from {total} frames ({len(indices) / total * 100:.2f}%).')
+            if i in indices:
+                progress.update(task, completed=i)
+
+    logger.info(f'Extracted {len(indices)} frames to "{output.absolute()}".')
+
+
+def extract(
+        video: Path,
+        transcode: bool,
+        transcode_width: int,
+        transcode_height: int,
+        phash_size: int,
+        colorhash_size: int,
+        baseline_degree: int,
+        threshold: float,
+        min_distance: int,
+        output: Path
+):
+    logger.info(f'Extracting frames from "{video.absolute()}" to "{output.absolute()}"...')
+
+    if transcode:
+        with NamedTemporaryFile(suffix='.mp4') as tmp:
+            lowres_video = Path(tmp.name)
+            transcode_video(video, lowres_video, transcode_width, transcode_height)
+            logger.info(f'Transcoded "{video.absolute()}" to "{lowres_video.absolute()}"')
+            pls, cls, sls = analyze_frames(lowres_video, phash_size, colorhash_size)
+    else:
+        pls, cls, sls = analyze_frames(video, phash_size, colorhash_size)
+    logger.info(f'Analyzed {len(pls)} frames.')
+
+    selected_frames = select_frames(pls, cls, sls, baseline_degree, threshold, min_distance)
+    logger.info(
+        f'Selected {len(selected_frames)} from {len(pls)} frames ({len(selected_frames) / len(pls) * 100:.2f}%).')
+    extract_frames(video, output, selected_frames)
