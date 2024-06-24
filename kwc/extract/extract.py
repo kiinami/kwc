@@ -7,6 +7,7 @@ Created by kinami on 2023-08-06
 """
 import logging
 import multiprocessing as mp
+import os
 from datetime import timedelta
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -51,7 +52,31 @@ def save_frame(frame, output: Path, i: int):
     cv2.imwrite(str(output / f'{i}.jpg'), frame)
 
 
-def transcode_video(video: Path, output: Path, width: int, height: int):
+def trim_video(video: Path, output: Path, start: str = None, end: str = None):
+    if start and end:
+        options = {"ss": start, "to": end}
+    elif start:
+        options = {"ss": start}
+    elif end:
+        options = {"to": end}
+    else:
+        options = {}
+    options.update({'c:v': 'copy'})
+    ffmpeg = (
+        FFmpeg()
+        .option('y')
+        .input(str(video))
+        .output(
+            str(output),
+            options,
+            an=None,
+        )
+    )
+    ffmpeg.execute()
+    logger.info(f'Trimmed "{video.absolute()}" to "{output.absolute()}"')
+
+
+def transcode_video(video: Path, output: Path, width: int, height: int, start: str = None, end: str = None):
     total = total_frames(video)
     ffmpeg = (
         FFmpeg()
@@ -178,6 +203,8 @@ def extract_frames(video, output, indices):
 
 def extract(
         video: Path,
+        trim_start: str,
+        trim_end: str,
         transcode: bool,
         transcode_width: int,
         transcode_height: int,
@@ -189,11 +216,16 @@ def extract(
         output: Path
 ):
     logger.info(f'Extracting frames from "{video.absolute()}" to "{output.absolute()}"...')
+    if trim_start or trim_end:
+        video_tmpfile = NamedTemporaryFile(delete=False, suffix=video.suffix)
+        video_tmpfile.close()
+        trim_video(video, Path(video_tmpfile.name), trim_start, trim_end)
+        video = Path(video_tmpfile.name)
 
     if transcode:
         with NamedTemporaryFile(suffix='.mp4') as tmp:
             lowres_video = Path(tmp.name)
-            transcode_video(video, lowres_video, transcode_width, transcode_height)
+            transcode_video(video, lowres_video, transcode_width, transcode_height, trim_start, trim_end)
             logger.info(f'Transcoded "{video.absolute()}" to "{lowres_video.absolute()}"')
             pls, cls, sls = analyze_frames(lowres_video, phash_size, colorhash_size)
     else:
@@ -204,3 +236,6 @@ def extract(
     logger.info(
         f'Selected {len(selected_frames)} from {len(pls)} frames ({len(selected_frames) / len(pls) * 100:.2f}%).')
     extract_frames(video, output, selected_frames)
+
+    if trim_start or trim_end:
+        os.remove(video_tmpfile.name)
