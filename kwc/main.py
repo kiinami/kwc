@@ -28,7 +28,7 @@ def callback(
 
 @app.command()
 def extract(
-        videos: Path = Argument(..., help='Video file to extract frames from.', exists=True),
+        video: Path = Argument(..., help='Video file to extract frames from.', exists=True),
         output: Path = Argument(..., help='Output directory.', exists=True),
         trim_start: str = Option(None, help='Start time for trimming, in HH:MM:SS format.'),
         trim_end: str = Option(None, help='End time for trimming, in HH:MM:SS format.'),
@@ -41,7 +41,7 @@ def extract(
         threshold: float = Option(0.2, help='Threshold for peak detection.'),
         min_distance: int = Option(10, help='Minimum distance between peaks for peak detection.'),
 ):
-    ext(videos, trim_start, trim_end, transcode, transcode_width, transcode_height, phash_size, colorhash_size,
+    ext(video, trim_start, trim_end, transcode, transcode_width, transcode_height, phash_size, colorhash_size,
         baseline_degree, threshold, min_distance, output)
 
 

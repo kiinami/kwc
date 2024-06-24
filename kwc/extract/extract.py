@@ -48,8 +48,8 @@ def process_frame(frame, phash_size, colorhash_size):
     return phash(img, hash_size=phash_size), colorhash(img, binbits=colorhash_size), score(frame)
 
 
-def save_frame(frame, output: Path, i: int):
-    cv2.imwrite(str(output / f'{i}.jpg'), frame)
+def save_frame(frame, output: Path, name: str, i: int):
+    cv2.imwrite(str(output / f'{name}_{i}.jpg'), frame)
 
 
 def trim_video(video: Path, output: Path, start: str = None, end: str = None):
@@ -178,7 +178,7 @@ def select_frames(pls, cls, sls, baseline_degree, threshold, min_distance):
     return indices
 
 
-def extract_frames(video, output, indices):
+def extract_frames(video, output, indices, name: str):
     i = 0
     with Progress(transient=True) as progress:
         task = progress.add_task(f'Extracting frames from {video}', total=len(indices))
@@ -191,7 +191,7 @@ def extract_frames(video, output, indices):
                 break
 
             if i in indices:
-                save_frame(frame, output, i)
+                save_frame(frame, output, name, i)
 
             i += 1
 
@@ -216,6 +216,7 @@ def extract(
         output: Path
 ):
     logger.info(f'Extracting frames from "{video.absolute()}" to "{output.absolute()}"...')
+    video_name = video.stem
     if trim_start or trim_end:
         video_tmpfile = NamedTemporaryFile(delete=False, suffix=video.suffix)
         video_tmpfile.close()
@@ -235,7 +236,7 @@ def extract(
     selected_frames = select_frames(pls, cls, sls, baseline_degree, threshold, min_distance)
     logger.info(
         f'Selected {len(selected_frames)} from {len(pls)} frames ({len(selected_frames) / len(pls) * 100:.2f}%).')
-    extract_frames(video, output, selected_frames)
+    extract_frames(video, output, selected_frames, video_name)
 
     if trim_start or trim_end:
         os.remove(video_tmpfile.name)
