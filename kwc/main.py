@@ -13,6 +13,7 @@ from rich.logging import RichHandler
 from typer import Typer, Option, Argument
 
 from kwc.extract import extract as ext
+from kwc.select import select as sel
 
 app = Typer()
 
@@ -43,6 +44,15 @@ def extract(
 ):
     ext(video, trim_start, trim_end, transcode, transcode_width, transcode_height, phash_size, colorhash_size,
         baseline_degree, threshold, min_distance, output)
+
+
+@app.command()
+def select(
+        directory: Path = Argument(..., help='Directory containing images to select.'),
+        selected: Path = Option('./selected', help='Directory to move selected images to.'),
+        discarded: Path = Option('./discarded', help='Directory to move discarded images to.')
+):
+    sel(directory, selected, discarded)
 
 
 if __name__ == '__main__':
