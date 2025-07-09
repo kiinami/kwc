@@ -72,6 +72,8 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
 
     def __init__(self, source_dir: Path, selected_dir: Path, discarded_dir: Path, **kwargs):
         super().__init__(**kwargs, title='KWC Selector')
+        self.set_focusable(True)
+        self.connect('map', lambda *a: self.grab_focus())
         self.source_dir = source_dir
         self.selected_dir = selected_dir
         self.discarded_dir = discarded_dir
@@ -164,10 +166,18 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
 
         self.keep_button = Gtk.Button.new_with_label('Keep (q)')
         self.keep_button.connect('clicked', lambda _: self.on_keep())
+        # Add key event controller for arrow keys
+        keycont_keep = Gtk.EventControllerKey()
+        keycont_keep.connect('key-pressed', self.on_key_press_event)
+        self.keep_button.add_controller(keycont_keep)
         hbox.append(self.keep_button)
 
         self.discard_button = Gtk.Button.new_with_label('Discard (w)')
         self.discard_button.connect('clicked', lambda _: self.on_discard())
+        # Add key event controller for arrow keys
+        keycont_discard = Gtk.EventControllerKey()
+        keycont_discard.connect('key-pressed', self.on_key_press_event)
+        self.discard_button.add_controller(keycont_discard)
         hbox.append(self.discard_button)
 
         hbox.set_halign(Gtk.Align.CENTER)
@@ -426,16 +436,18 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
             self.keep_button.set_css_classes([])
             self.discard_button.set_css_classes([])
 
-    def on_key_press_event(self, keyval, keycode, state, *args):
+    def on_key_press_event(self, controller, keyval, keycode, state, *args):
         """Handle keyboard input."""
         ctrl = state & Gdk.ModifierType.CONTROL_MASK
         if (keyval == Gdk.KEY_z or keycode == ord('z')) and ctrl:
             self.undo_last_action()
             return True
         if keyval == Gdk.KEY_Left:
-            return self._navigate_to_image(self.current_index - 1)
+            self._navigate_to_image(self.current_index - 1)
+            return True
         elif keyval == Gdk.KEY_Right:
-            return self._navigate_to_image(self.current_index + 1)
+            self._navigate_to_image(self.current_index + 1)
+            return True
         elif keycode == ord('q'):
             self.on_keep()
             return True
