@@ -79,9 +79,36 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
         self.picture_path = None
         self.thumb_buttons = []
 
+        # Create a modern GTK4 header bar with a dynamic, bold title and subtitle
+        self.header_bar = Gtk.HeaderBar()
+        self.title_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.title_box.set_valign(Gtk.Align.CENTER)
+        self.title_label = Gtk.Label()
+        self.title_label.set_markup('<b>KWC Selector</b>')
+        self.subtitle_label = Gtk.Label()
+        self.subtitle_label.set_margin_top(2)
+        self.subtitle_label.set_margin_bottom(2)
+        self.subtitle_label.set_css_classes(["dim-label"])  # Optionally style subtitle
+        self.title_box.append(self.title_label)
+        self.title_box.append(self.subtitle_label)
+        self.header_bar.set_title_widget(self.title_box)
+        self.header_bar.set_show_title_buttons(True)
+        self.set_titlebar(self.header_bar)
+
         self._setup_ui()
         self._setup_images()
         self._setup_event_handlers()
+        self.update_header_title()
+
+    def update_header_title(self):
+        total = len(self.all_images) if hasattr(self, 'all_images') else 0
+        if total == 0:
+            percent = 0
+        else:
+            classified = sum(1 for img in self.all_images if img.parent in (self.selected_dir, self.discarded_dir))
+            percent = int(classified / total * 100)
+        self.title_label.set_markup('<b>KWC Selector</b>')
+        self.subtitle_label.set_text(f'{percent}% classified')
 
     def _setup_ui(self):
         """Initialize the main UI components."""
@@ -219,6 +246,7 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
 
         # Load thumbnails that are initially visible
         GObject.idle_add(self.load_visible_thumbnails)
+        self.update_header_title()
 
     def set_initial_selection(self):
         """Set the initial image selection, preferring images from source directory."""
@@ -341,6 +369,7 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
         self._update_button_styles(self.current_index)
         self.update_main_image(self.current_index)
         GObject.idle_add(self.center_filmstrip_on_selected, self.current_index)
+        self.update_header_title()
 
     def _update_button_styles(self, current_idx):
         """Update CSS classes for all thumbnail buttons."""
@@ -419,6 +448,7 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
         if next_idx is not None:
             self.update_main_image(next_idx)
             GObject.idle_add(self.center_filmstrip_on_selected, next_idx)
+        self.update_header_title()
 
     def on_discard(self):
         """Move current image to discarded directory and skip to next unclassified image."""
@@ -427,6 +457,7 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
         if next_idx is not None:
             self.update_main_image(next_idx)
             GObject.idle_add(self.center_filmstrip_on_selected, next_idx)
+        self.update_header_title()
 
     def on_filmstrip_scroll(self, *args):
         """Handle filmstrip scroll events to trigger lazy loading."""
