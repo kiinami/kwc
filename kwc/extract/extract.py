@@ -16,14 +16,14 @@ import cv2
 import numpy as np
 import peakutils
 from PIL import Image
-from cachier import cachier, set_default_params as set_default_cachier_params
+from cachier import cachier, set_global_params as set_global_cachier_params
 from ffmpeg import FFmpeg, Progress as FFmpegProgress
 from imagehash import phash, colorhash
 from rich.progress import Progress, MofNCompleteColumn, TimeElapsedColumn
 from vidgear.gears import CamGear
 
 logger = logging.getLogger(__name__)
-set_default_cachier_params(
+set_global_cachier_params(
     separate_files=True,
     stale_after=timedelta(days=7),
 )
