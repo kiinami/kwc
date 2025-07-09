@@ -94,6 +94,15 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
         self.title_box.append(self.subtitle_label)
         self.header_bar.set_title_widget(self.title_box)
         self.header_bar.set_show_title_buttons(True)
+
+        # Add Undo button to the left side of the header bar
+        self.undo_button = Gtk.Button()
+        icon = Gtk.Image.new_from_icon_name("edit-undo")
+        self.undo_button.set_child(icon)
+        self.undo_button.set_tooltip_text("Undo (Ctrl+Z)")
+        self.undo_button.connect("clicked", lambda _: self.undo_last_action())
+        self.header_bar.pack_start(self.undo_button)
+
         self.set_titlebar(self.header_bar)
 
         self._setup_ui()
