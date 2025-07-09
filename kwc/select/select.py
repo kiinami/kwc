@@ -264,22 +264,21 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
             if img.parent == self.source_dir:
                 self.current_index = i
                 self.update_main_image(i)
-                GObject.idle_add(self.center_filmstrip_on_selected, i)
+                GObject.idle_add(self.center_filmstrip_on_selected, i, False)  # Jump instantly
                 return
 
         # Fallback to first image if no source images found
         if self.all_images:
             self.current_index = 0
             self.update_main_image(0)
-            GObject.idle_add(self.center_filmstrip_on_selected, 0)
+            GObject.idle_add(self.center_filmstrip_on_selected, 0, False)
 
-    def center_filmstrip_on_selected(self, idx):
-        """Center the filmstrip view on the selected thumbnail with smooth animation."""
+    def center_filmstrip_on_selected(self, idx, animate=True):
+        """Center the filmstrip view on the selected thumbnail, optionally with animation."""
         if not (0 <= idx < len(self.thumb_buttons)):
             return False
 
         button = self.thumb_buttons[idx]
-
         # Ensure the selected thumbnail is loaded
         if not button.is_loaded:
             button.load_thumbnail()
@@ -291,7 +290,10 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
             visible_width = hadj.get_page_size() or self.filmstrip_scroller.get_allocation().width or 1
             target_x = alloc.x + alloc.width // 2 - visible_width // 2
             target_x = max(0, min(target_x, hadj.get_upper() - visible_width))
-            self._animate_scroll_to(hadj, target_x)
+            if animate:
+                self._animate_scroll_to(hadj, target_x)
+            else:
+                hadj.set_value(target_x)
 
         return False
 
