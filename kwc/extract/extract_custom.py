@@ -201,7 +201,7 @@ def extract_frames(video, output, indices, name: str):
     logger.info(f'Extracted {len(indices)} frames to "{output.absolute()}".')
 
 
-def extract(
+def extract_custom(
         video: Path,
         trim_start: str,
         trim_end: str,
