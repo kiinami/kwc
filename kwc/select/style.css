@@ -1,0 +1,19 @@
+/* Highlight selected (kept) thumbnails with green */
+button.thumb-selected {
+    background: #c6f7c6;
+    border: 2px solid #2ecc40;
+}
+
+/* Highlight discarded thumbnails with red */
+button.thumb-discarded {
+    background: #ffd6d6;
+    border: 2px solid #ff4136;
+}
+
+/* Highlight the current image with a blue frame */
+frame.current-thumb {
+    border: 3px solid #0074d9;
+    border-radius: 6px;
+    padding: 2px;
+}
+
