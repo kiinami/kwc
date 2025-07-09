@@ -1,19 +1,39 @@
+/* Main image viewer styling */
+stack > picture {
+    border-radius: 12px;
+}
+
+/* Additional styling for thumbnails and buttons */
+.thumbnail-placeholder {
+    background-color: #f0f0f0;
+    border-radius: 6px;
+}
+
 /* Highlight selected (kept) thumbnails with green */
-button.thumb-selected {
+.thumb-selected {
     background: #c6f7c6;
-    border: 2px solid #2ecc40;
+    border-color: #4CAF50;
+    border-radius: 6px;
 }
 
 /* Highlight discarded thumbnails with red */
-button.thumb-discarded {
+.thumb-discarded {
     background: #ffd6d6;
-    border: 2px solid #ff4136;
+    border-color: #f44336;
+    border-radius: 6px;
 }
 
 /* Highlight the current image with a blue frame */
-frame.current-thumb {
-    border: 3px solid #0074d9;
+.current-thumb {
+    border: 3px solid #2196F3;
     border-radius: 6px;
     padding: 2px;
 }
 
+button.thumb-selected {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+button.thumb-discarded {
+    background-color: rgba(244, 67, 54, 0.1);
+}
