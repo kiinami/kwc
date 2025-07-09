@@ -78,6 +78,7 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
         self.current_index = 0
         self.picture_path = None
         self.thumb_buttons = []
+        self.undo_stack = []  # Stack to keep track of actions for undo
 
         # Create a modern GTK4 header bar with a dynamic, bold title and subtitle
         self.header_bar = Gtk.HeaderBar()
@@ -354,22 +355,36 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
         return False
 
     def _move_image_to_directory(self, target_dir):
-        """Move current image to target directory and update UI."""
+        """Move current image to target directory and update UI. Also record action for undo."""
         if self.picture_path.parent == target_dir:
             # Already in target directory, just update UI
             self.update_main_image(self.current_index)
             return
 
         dest = target_dir / self.picture_path.name
+        # Record the action for undo (src, dest, index)
+        self.undo_stack.append((self.picture_path, dest, self.current_index))
         os.rename(self.picture_path, dest)
         self.all_images[self.current_index] = dest
-
-        # Update only the current button's image path and style
         self.thumb_buttons[self.current_index].update_image_path(dest)
         self._update_button_styles(self.current_index)
         self.update_main_image(self.current_index)
         GObject.idle_add(self.center_filmstrip_on_selected, self.current_index)
         self.update_header_title()
+
+    def undo_last_action(self):
+        """Undo the last image move action."""
+        if not self.undo_stack:
+            return
+        src, dest, idx = self.undo_stack.pop()
+        if dest.exists():
+            os.rename(dest, src)
+            self.all_images[idx] = src
+            self.thumb_buttons[idx].update_image_path(src)
+            self._update_button_styles(idx)
+            self.update_main_image(idx)
+            GObject.idle_add(self.center_filmstrip_on_selected, idx)
+            self.update_header_title()
 
     def _update_button_styles(self, current_idx):
         """Update CSS classes for all thumbnail buttons."""
@@ -400,8 +415,12 @@ class ImageSelectorWindow(Gtk.ApplicationWindow):
             self.keep_button.set_css_classes([])
             self.discard_button.set_css_classes([])
 
-    def on_key_press_event(self, keyval, keycode, *args):
+    def on_key_press_event(self, keyval, keycode, state, *args):
         """Handle keyboard input."""
+        ctrl = state & Gdk.ModifierType.CONTROL_MASK
+        if (keyval == Gdk.KEY_z or keycode == ord('z')) and ctrl:
+            self.undo_last_action()
+            return True
         if keyval == Gdk.KEY_Left:
             return self._navigate_to_image(self.current_index - 1)
         elif keyval == Gdk.KEY_Right:
