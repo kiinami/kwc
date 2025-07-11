@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def extract_ffmpeg(
         video: Path,
-        output_dir: Path = Path('out2'),
+        output_dir: Path = Path('out'),
 ):
     """
     Extract frames from a video file.
@@ -41,4 +41,4 @@ def extract_ffmpeg(
 
         ffmpeg.execute()
 
-    logger.info(f'Extracted frames from "{video}" to "{output_dir}"!')
+    logger.info(f'Extracted {len(output_dirt)} frames from "{video}" to "{output_dir}"!')

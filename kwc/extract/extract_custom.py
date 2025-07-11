@@ -215,6 +215,9 @@ def extract_custom(
         min_distance: int,
         output: Path
 ):
+    if not output.exists():
+        output.mkdir(parents=True, exist_ok=True)
+
     logger.info(f'Extracting frames from "{video.absolute()}" to "{output.absolute()}"...')
     video_name = video.stem
     if trim_start or trim_end:
