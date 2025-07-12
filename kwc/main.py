@@ -26,37 +26,18 @@ def callback(
     )
 
 
-class Extractor(str, Enum):
-    custom = 'custom'
-    ffmpeg = 'ffmpeg'
-
-
 @app.command()
 def extract(
-        video: Path = Argument(..., help='Video file to extract frames from.', exists=True),
+        video: Path = Argument(..., help='Video file to extract frames from.', exists=True, dir_okay=False),
         output: Path = Argument(..., help='Output directory.'),
-        algorithm: Annotated[
-            Extractor, Option(case_sensitive=False)
-        ] = Extractor.ffmpeg,
-        trim_start: str = Option(None, help='[custom algorithm] Start time for trimming, in HH:MM:SS format.'),
-        trim_end: str = Option(None, help='[custom algorithm] End time for trimming, in HH:MM:SS format.'),
-        transcode: bool = Option(False, help='[custom algorithm] Transcode video before extracting frames.'),
-        transcode_width: int = Option(1280, help='[custom algorithm] Width of the transcoded video.'),
-        transcode_height: int = Option(720, help='[custom algorithm] Height of transcoded the video.'),
-        phash_size: int = Option(64, help='[custom algorithm] Size of perceptual hash.'),
-        colorhash_size: int = Option(8, help='[custom algorithm] Size of color hash.'),
-        baseline_degree: int = Option(3, help='[custom algorithm] Baseline degree for peak detection.'),
-        threshold: float = Option(0.2, help='[custom algorithm] Threshold for peak detection.'),
-        min_distance: int = Option(10, help='[custom algorithm] Minimum distance between peaks for peak detection.'),
+        transcode: Annotated[bool, Option(help='Transcode video to a specific resolution before extracting frames.')] = False,
+        transcode_width: Annotated[int, Option(help='Width of the transcoded video.')] = 1920,
+        transcode_height: Annotated[int, Option(help='Height of the transcoded video.')] = 1080,
+        trim_intervals: Annotated[list[str], Option(help='Trim intervals in the format "start-end" (e.g., "00:00:10-00:00:20").')] = None,
 ):
     """Extract frames from a video file."""
-    if algorithm == Extractor.ffmpeg:
-        from kwc.extract.extract_ffmpeg import extract_ffmpeg
-        extract_ffmpeg(video, output)
-    elif algorithm == Extractor.custom:
-        from kwc.extract.extract_custom import extract_custom
-        extract_custom(video, trim_start, trim_end, transcode, transcode_width, transcode_height, phash_size, colorhash_size,
-        baseline_degree, threshold, min_distance, output)
+    from kwc.extract import extract
+    extract(video, output, transcode, transcode_width, transcode_height, trim_intervals)
 
 
 @app.command()

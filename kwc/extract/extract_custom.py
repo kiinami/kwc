@@ -17,21 +17,17 @@ import numpy as np
 import peakutils
 from PIL import Image
 from cachier import cachier, set_global_params as set_global_cachier_params
-from ffmpeg import FFmpeg, Progress as FFmpegProgress
 from imagehash import phash, colorhash
 from rich.progress import Progress, MofNCompleteColumn, TimeElapsedColumn
 from vidgear.gears import CamGear
+
+from .utils import total_frames, trim_video, transcode_video
 
 logger = logging.getLogger(__name__)
 set_global_cachier_params(
     separate_files=True,
     stale_after=timedelta(days=7),
 )
-
-
-def total_frames(video: Path) -> int:
-    cap = cv2.VideoCapture(str(video))
-    return int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
 
 def score(img: np.ndarray):
@@ -50,56 +46,6 @@ def process_frame(frame, phash_size, colorhash_size):
 
 def save_frame(frame, output: Path, name: str, i: int):
     cv2.imwrite(str(output / f'{name}_{i}.jpg'), frame)
-
-
-def trim_video(video: Path, output: Path, start: str = None, end: str = None):
-    if start and end:
-        options = {"ss": start, "to": end}
-    elif start:
-        options = {"ss": start}
-    elif end:
-        options = {"to": end}
-    else:
-        options = {}
-    options.update({'c:v': 'copy'})
-    ffmpeg = (
-        FFmpeg()
-        .option('y')
-        .input(str(video))
-        .output(
-            str(output),
-            options,
-            an=None,
-        )
-    )
-    ffmpeg.execute()
-    logger.info(f'Trimmed "{video.absolute()}" to "{output.absolute()}"')
-
-
-def transcode_video(video: Path, output: Path, width: int, height: int, start: str = None, end: str = None):
-    total = total_frames(video)
-    ffmpeg = (
-        FFmpeg()
-        .option('y')
-        .input(str(video))
-        .output(
-            str(output),
-            vcodec="libx264",
-            vf=f'scale={width}:{height}',
-            an=None,
-            vsync='passthrough',
-        )
-    )
-
-    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn(),
-                  transient=True) as progress:
-        task = progress.add_task(f'Transcoding "{video}" to {height}p', total=total)
-
-        @ffmpeg.on('progress')
-        def on_progress(ffmpeg_progress: FFmpegProgress):
-            progress.update(task, completed=ffmpeg_progress.frame)
-
-        ffmpeg.execute()
 
 
 def frame_reader(video, frame_queue, stop_event):
