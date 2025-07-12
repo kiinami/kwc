@@ -466,14 +466,53 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
             grid.set_halign(Gtk.Align.FILL)
             grid.set_valign(Gtk.Align.FILL)
             max_cols = 4
+            def on_group_keep(btn, img_path=...):
+                self._move_image_to_directory_for_group(img_path, self.selected_dir, group_idx)
+            def on_group_discard(btn, img_path=...):
+                self._move_image_to_directory_for_group(img_path, self.discarded_dir, group_idx)
             for i, img_path in enumerate(group):
+                # Create a box to strictly size the overlay to the image
+                img_box = Gtk.Box()
+                img_box.set_size_request(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
+                img_box.set_hexpand(False)
+                img_box.set_vexpand(False)
+                overlay = Gtk.Overlay()
+                overlay.set_size_request(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
+                overlay.set_hexpand(False)
+                overlay.set_vexpand(False)
                 pic = Gtk.Picture.new_for_file(Gio.File.new_for_path(str(img_path)))
                 pic.set_size_request(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
-                pic.set_hexpand(True)
-                pic.set_vexpand(True)
+                pic.set_hexpand(False)
+                pic.set_vexpand(False)
                 pic.set_halign(Gtk.Align.FILL)
                 pic.set_valign(Gtk.Align.FILL)
-                grid.attach(pic, i % max_cols, i // max_cols, 1, 1)
+                img_box.append(pic)
+                overlay.set_child(img_box)
+                # Keep button (top-left)
+                keep_btn = Gtk.Button()
+                keep_btn.set_child(Gtk.Image.new_from_icon_name("object-select-symbolic"))
+                keep_btn.set_tooltip_text("Keep this image")
+                keep_btn.set_css_classes(["suggested-action"])
+                keep_btn.set_halign(Gtk.Align.START)
+                keep_btn.set_valign(Gtk.Align.START)
+                keep_btn.set_margin_top(4)
+                keep_btn.set_margin_start(4)
+                keep_btn.set_size_request(28, 28)
+                keep_btn.connect("clicked", on_group_keep, img_path)
+                overlay.add_overlay(keep_btn)
+                # Discard button (top-right)
+                discard_btn = Gtk.Button()
+                discard_btn.set_child(Gtk.Image.new_from_icon_name("window-close"))
+                discard_btn.set_tooltip_text("Discard this image")
+                discard_btn.set_css_classes(["destructive-action"])
+                discard_btn.set_halign(Gtk.Align.END)
+                discard_btn.set_valign(Gtk.Align.START)
+                discard_btn.set_margin_top(4)
+                discard_btn.set_margin_end(4)
+                discard_btn.set_size_request(28, 28)
+                discard_btn.connect("clicked", on_group_discard, img_path)
+                overlay.add_overlay(discard_btn)
+                grid.attach(overlay, i % max_cols, i // max_cols, 1, 1)
             self._main_image_area.append(grid)
             self._current_group_grid = grid
         else:
@@ -490,6 +529,34 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         # Update current state
         self.current_index = idx
         self.picture_path = image_path
+
+    def _move_image_to_directory_for_group(self, img_path, target_dir, group_idx):
+        """Move an image from a group to the target directory and refresh the group grid."""
+        if img_path.parent == target_dir:
+            self.update_main_image(self.current_index)
+            return
+        dest = target_dir / img_path.name
+        self.undo_stack.append((img_path, dest, self.all_images.index(img_path)))
+        os.rename(img_path, dest)
+        # Update all_images and image_groups
+        idx = self.all_images.index(img_path)
+        self.all_images[idx] = dest
+        self.image_hashes[dest] = self.image_hashes.pop(img_path)
+        # Update group in image_groups
+        group = self.image_groups[group_idx]
+        group[group.index(img_path)] = dest
+        # Remove from group if all classified
+        if all(img.parent in (self.selected_dir, self.discarded_dir) for img in group):
+            # Move to next unclassified image
+            next_idx = self._find_next_unclassified_index()
+            if next_idx is not None:
+                self.update_main_image(next_idx)
+                GObject.idle_add(self.center_filmstrip_on_selected, next_idx)
+            else:
+                self.update_main_image(self.current_index)
+        else:
+            self.update_main_image(self.current_index)
+        self.update_header_title()
 
     def _find_next_unclassified_index(self, start_idx=None):
         """Find the next image not in selected or discarded directories."""
