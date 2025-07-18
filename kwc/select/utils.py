@@ -1,18 +1,24 @@
+# Standard library imports
 from pathlib import Path
-import imagehash
-from PIL import Image, ExifTags
 import os
 
-HASH_EXIF_TAG = None
-for k, v in ExifTags.TAGS.items():
-    if v == 'UserComment':
-        HASH_EXIF_TAG = k
-        break
-HASH_EXIF_PREFIX = b'kwc_hash:'
+# Third-party imports
+import imagehash
+from PIL import Image, ExifTags
+
+# Local application imports
+from .constants import HASH_EXIF_TAG, HASH_EXIF_PREFIX
 
 
-def get_or_compute_hash(img_path):
-    """Get hash from EXIF or compute and store it."""
+def get_or_compute_hash(img_path: Path) -> str:
+    """Get hash from EXIF or compute and store it if missing.
+
+    Args:
+        img_path: Path to the image file.
+
+    Returns:
+        The perceptual hash as a hex string.
+    """
     try:
         with Image.open(img_path) as im:
             exif = im.getexif()
@@ -33,7 +39,8 @@ def get_or_compute_hash(img_path):
         print(f"Error hashing {img_path}: {e}")
         return '0'*16
 
-def group_images_by_hash(all_images, image_hashes, max_distance=5):
+
+def group_images_by_hash(all_images: list[Path], image_hashes: dict, max_distance: int = 5) -> list[list[Path]]:
     """Group adjacent images by perceptual hash distance."""
     image_groups = []
     if not all_images:
@@ -53,7 +60,9 @@ def group_images_by_hash(all_images, image_hashes, max_distance=5):
         image_groups.append(group)
     return image_groups
 
-def get_all_images(source_dir: Path, selected_dir: Path, discarded_dir: Path):
+
+def get_all_images(source_dir: Path, selected_dir: Path, discarded_dir: Path) -> list[Path]:
+    """Get all .jpg images from the three directories, sorted by numeric suffix."""
     images = list(source_dir.glob('*.jpg'))
     images += list(selected_dir.glob('*.jpg'))
     images += list(discarded_dir.glob('*.jpg'))

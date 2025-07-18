@@ -1,43 +1,22 @@
-import gi
-gi.require_version('Gtk', '4.0')
-gi.require_version('Adw', '1')
+# Standard library imports
+import time
+from pathlib import Path
+
+# Third-party imports
+from PIL import Image, ExifTags
 from gi.repository import Gtk, Gdk, GObject, Gio, Adw
 
+# Local imports
 from .utils import get_or_compute_hash, get_all_images
 from .widgets import LazyThumbnailButton
-from pathlib import Path
-from PIL import Image
-from PIL import ExifTags
+from .constants import (
+    THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, CROSSFADE_DURATION, SCROLL_ANIMATION_DURATION,
+    SCROLL_ANIMATION_STEPS, LAZY_LOAD_BUFFER, HASH_EXIF_TAG, HASH_EXIF_PREFIX
+)
+from .style import load_css
 
-# Constants
-THUMBNAIL_WIDTH = 160
-THUMBNAIL_HEIGHT = 100
-CROSSFADE_DURATION = 200  # milliseconds
-SCROLL_ANIMATION_DURATION = 300  # milliseconds
-SCROLL_ANIMATION_STEPS = 30
-LAZY_LOAD_BUFFER = 200  # pixels
-
-# Custom EXIF tag for hash (use UserComment if nothing else is available)
-HASH_EXIF_TAG = None
-for k, v in ExifTags.TAGS.items():
-    if v == 'UserComment':
-        HASH_EXIF_TAG = k
-        break
-HASH_EXIF_PREFIX = b'kwc_hash:'
-
-
-# Load CSS for thumbnail coloring
-def _load_css():
-    """Load CSS styling for the application."""
-    css_provider = Gtk.CssProvider()
-    css_provider.load_from_path(str(Path(__file__).parent / "style.css"))
-    Gtk.StyleContext.add_provider_for_display(
-        Gdk.Display.get_default(),
-        css_provider,
-        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-    )
-
-_load_css()
+# CSS loading
+load_css()
 
 
 class ImageSelectorWindow(Adw.ApplicationWindow):
@@ -45,25 +24,31 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
 
     def __init__(self, source_dir: Path, selected_dir: Path, discarded_dir: Path, hash_group_distance: int = 5, **kwargs):
         super().__init__(**kwargs, title='KWC Selector')
-        self.set_focusable(True)
-        self.connect('map', lambda *a: self.grab_focus())
-        self.source_dir = source_dir
-        self.selected_dir = selected_dir
-        self.discarded_dir = discarded_dir
-        self.hash_group_distance = hash_group_distance  # Configurable similarity threshold
-        self.current_index = 0
-        self.picture_path = None
-        self.thumb_buttons = []
-        self.undo_stack = []  # Stack to keep track of actions for undo
+        # State variables
+        self.source_dir: Path = source_dir
+        self.selected_dir: Path = selected_dir
+        self.discarded_dir: Path = discarded_dir
+        self.hash_group_distance: int = hash_group_distance
+        self.current_index: int = 0  # Index of the currently displayed image
+        self.picture_path: Path | None = None  # Path of the current image
+        self.thumb_buttons: list = []  # List of thumbnail button widgets
+        self.undo_stack: list = []  # Stack of (src, dest, index) for undo
 
-        # Use Adw.HeaderBar for a modern look
+        self._init_header_bar()
+        self._init_main_layout()
+        self._setup_ui()
+        self._setup_images()
+        self._setup_event_handlers()
+        self.update_header_title()
+
+    def _init_header_bar(self):
+        """Create and configure the Adw.HeaderBar."""
         self.header_bar = Adw.HeaderBar()
         self.header_bar.set_show_end_title_buttons(True)
         self.header_bar.set_show_start_title_buttons(True)
         self.header_bar.title = 'KWC Selector'
         self.header_bar.subtitle = '0% classified'
 
-        # Undo button (Adwaita style)
         self.undo_button = Gtk.Button()
         icon = Gtk.Image.new_from_icon_name("edit-undo")
         self.undo_button.set_child(icon)
@@ -72,28 +57,44 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         self.undo_button.connect("clicked", lambda _: self.undo_last_action())
         self.header_bar.pack_start(self.undo_button)
 
-        # Main content box: header bar + main content (use Adw.Bin for Adwaita)
+    def _init_main_layout(self):
+        """Create the main vertical layout and add the header bar."""
         self._main_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.set_content(self._main_vbox)
         self._main_vbox.append(self.header_bar)
 
-        self._setup_ui()
-        self._setup_images()
-        self._setup_event_handlers()
-        self.update_header_title()
+    def _setup_ui(self):
+        """Set up the main UI containers and widgets."""
+        # Main image area
+        self._create_image_stack()
+        self._main_vbox.append(self.picture_stack)
 
-    def update_header_title(self):
+        # Progress bar
+        self.progressbar = Gtk.ProgressBar()
+        self.progressbar.set_hexpand(True)
+        self.progressbar.set_margin_top(8)
+        self.progressbar.set_margin_bottom(8)
+        self._main_vbox.append(self.progressbar)
+
+        # Filmstrip
+        self._create_filmstrip()
+        self._main_vbox.append(self.filmstrip_scroller)
+
+        # Action buttons
+        self._main_vbox.append(self._create_action_buttons())
+
+    def update_header_title(self) -> None:
         """Update the header title and subtitle with classification progress."""
         total = len(self.all_images) if hasattr(self, 'all_images') else 0
         if total == 0:
             percent = 0
         else:
-            classified = sum(1 for img in self.all_images if img.parent in (self.selected_dir, self.discarded_dir))
-            percent = int(classified / total * 100)
+            classified = sum(1 for img in self.all_images if img.parent in [self.selected_dir, self.discarded_dir])
+            percent = int((classified / total) * 100)
         self.header_bar.title = 'KWC Selector'
         self.header_bar.subtitle = f'{percent}% classified'
 
-    def _create_main_container(self):
+    def _create_main_container(self) -> Gtk.Box:
         """Create and configure the main container box (Adwaita style)."""
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         box.set_margin_top(24)
@@ -103,22 +104,20 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         box.add_css_class("boxed-list")
         return box
 
-    def _create_image_stack(self):
+    def _create_image_stack(self) -> None:
         """Create the image stack for crossfade animations."""
         self.picture_stack = Gtk.Stack()
         self.picture_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
         self.picture_stack.set_transition_duration(CROSSFADE_DURATION)
-
         self.picture_a = Gtk.Picture()
         self.picture_b = Gtk.Picture()
         self.picture_stack.add_child(self.picture_a)
         self.picture_stack.add_child(self.picture_b)
         self.current_picture = self.picture_a
 
-    def _create_action_buttons(self):
+    def _create_action_buttons(self) -> Gtk.Box:
         """Create the Keep/Discard action buttons (Adwaita style)."""
         hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-
         self.keep_button = Gtk.Button.new_with_label('Keep (q)')
         self.keep_button.add_css_class("suggested-action")
         self.keep_button.connect('clicked', lambda _: self.on_keep())
@@ -126,7 +125,6 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         keycont_keep.connect('key-pressed', self.on_key_press_event)
         self.keep_button.add_controller(keycont_keep)
         hbox.append(self.keep_button)
-
         self.discard_button = Gtk.Button.new_with_label('Discard (w)')
         self.discard_button.add_css_class("destructive-action")
         self.discard_button.connect('clicked', lambda _: self.on_discard())
@@ -134,7 +132,6 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         keycont_discard.connect('key-pressed', self.on_key_press_event)
         self.discard_button.add_controller(keycont_discard)
         hbox.append(self.discard_button)
-
         hbox.set_halign(Gtk.Align.CENTER)
         return hbox
 
@@ -285,43 +282,53 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         """Handle thumbnail button clicks."""
         self._navigate_to_image(idx)
 
-    def _navigate_to_image(self, new_index):
+    def _navigate_to_image(self, new_index: int):
         """Navigate to a specific image index."""
+        if not self.all_images:
+            return False
         if 0 <= new_index < len(self.all_images):
             self.current_index = new_index
             self.picture_path = self.all_images[new_index]
-            self.update_main_image(new_index)
-            self.center_filmstrip_on_selected(new_index)
+            try:
+                self.update_main_image(new_index)
+            except Exception as e:
+                print(f"Error updating main image: {e}")
             self._update_button_styles(new_index)
             self._update_action_button_styles(self.picture_path)
+            self.center_filmstrip_on_selected(new_index)
         return False
 
-    def _move_image_to_directory(self, target_dir):
+    def _move_image_to_directory(self, target_dir: Path):
         """Move current image to target directory and update UI. Also record action for undo."""
-        if self.picture_path.parent == target_dir:
+        if self.picture_path is None or self.picture_path.parent == target_dir:
             return
         dest = target_dir / self.picture_path.name
-        # Record the action for undo (src, dest, index)
-        self.undo_stack.append((self.picture_path, dest, self.current_index))
-        self.picture_path.rename(dest)
-        self.all_images[self.current_index] = dest
-        self.picture_path = dest
-        self._update_button_styles(self.current_index)
-        self._update_action_button_styles(self.picture_path)
-        self.update_header_title()
+        try:
+            self.undo_stack.append((self.picture_path, dest, self.current_index))
+            self.picture_path.rename(dest)
+            self.all_images[self.current_index] = dest
+            self.picture_path = dest
+            self._update_button_styles(self.current_index)
+            self._update_action_button_styles(self.picture_path)
+            self.update_header_title()
+        except Exception as e:
+            print(f"Error moving {self.picture_path} to {dest}: {e}")
 
     def undo_last_action(self):
+        """Undo the last image move action."""
         if not self.undo_stack:
             return
         src, dest, idx = self.undo_stack.pop()
-        if dest.exists():
-            dest.rename(src)
-            self.all_images[idx] = src
-            if self.current_index == idx:
+        try:
+            if dest.exists():
+                dest.rename(src)
+                self.all_images[idx] = src
                 self.picture_path = src
-            self._update_button_styles(idx)
-            self._update_action_button_styles(src)
-            self.update_header_title()
+                self._update_button_styles(idx)
+                self._update_action_button_styles(src)
+                self.update_header_title()
+        except Exception as e:
+            print(f"Error undoing move from {dest} to {src}: {e}")
 
     def _update_button_styles(self, current_idx):
         for idx, button in enumerate(self.thumb_buttons):
@@ -439,17 +446,6 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         focus_controller = Gtk.EventControllerFocus()
         focus_controller.connect('enter', self.on_scroller_focus_change)
         self.filmstrip_scroller.add_controller(focus_controller)
-
-    def _setup_ui(self):
-        # Main UI setup
-        self._create_image_stack()
-        self._create_filmstrip()
-        self.progressbar = Gtk.ProgressBar()
-        self._main_vbox.append(self.picture_stack)
-        self._main_vbox.append(self._create_action_buttons())
-        self._main_vbox.append(self.filmstrip_scroller)
-        self._main_vbox.append(self.progressbar)
-        self.progressbar.hide()
 
 def select(source_dir: Path, selected_dir: Path, discarded_dir: Path, hash_group_distance: int = 5):
     """
