@@ -3,12 +3,9 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Gtk, Gdk, GObject, Gio, Adw
 
-from .utils import get_or_compute_hash, group_images_by_hash, get_all_images
-from .widgets import LazyThumbnailButton, GroupThumbnailButton
-
-import os
+from .utils import get_or_compute_hash, get_all_images
+from .widgets import LazyThumbnailButton
 from pathlib import Path
-import imagehash
 from PIL import Image
 from PIL import ExifTags
 
@@ -146,9 +143,9 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         self.progressbar.set_fraction(fraction)
         percent = int(fraction * 100)
         if eta is not None:
-            self.progressbar.set_text(f"{percent}%  (ETA: {eta:.1f}s)")
+            self.progressbar.set_text(f"Hashing images... {percent}% (ETA: {eta:.1f}s)")
         else:
-            self.progressbar.set_text(f"{percent}%")
+            self.progressbar.set_text(f"Hashing images... {percent}%")
         self.progressbar.show()
         while GObject.main_context_default().pending():
             GObject.main_context_default().iteration(False)
@@ -163,14 +160,12 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         total = len(self.all_images)
         start_time = time.time()
         for idx, img_path in enumerate(self.all_images):
-            hashval = get_or_compute_hash(img_path)
-            self.image_hashes[img_path] = hashval
+            self.image_hashes[img_path] = get_or_compute_hash(img_path)
             fraction = (idx + 1) / total if total else 1
             elapsed = time.time() - start_time
-            eta = (elapsed / (idx + 1)) * (total - (idx + 1)) if idx > 0 else 0
+            eta = (elapsed / (idx + 1)) * (total - idx - 1) if idx > 0 else None
             self._show_progress(fraction, eta)
         self._hide_progress()
-        self.image_groups = group_images_by_hash(self.all_images, self.image_hashes, max_distance=self.hash_group_distance)
         self.populate_filmstrip()
         self.set_initial_selection()
         return False  # Stop idle_add loop
@@ -208,32 +203,19 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         """Create a single thumbnail button with appropriate styling."""
         button = LazyThumbnailButton(img, idx, self)
         button.connect('clicked', self.on_thumbnail_clicked, idx)
-
         # Apply initial styling based on image location
         if img.parent == self.selected_dir:
-            button.set_css_classes(["thumb-selected"])
+            button.add_css_class("thumb-selected")
         elif img.parent == self.discarded_dir:
-            button.set_css_classes(["thumb-discarded"])
-
-        return button
-
-    def _create_group_thumbnail_button(self, group, group_idx):
-        """Create a thumbnail button for a group of images."""
-        button = GroupThumbnailButton(group, group_idx, self)
-        button.connect('clicked', self.on_group_thumbnail_clicked, group_idx)
-        # Style if all images in group are selected/discarded
-        if all(img.parent == self.selected_dir for img in group):
-            button.set_css_classes(["thumb-selected"])
-        elif all(img.parent == self.discarded_dir for img in group):
-            button.set_css_classes(["thumb-discarded"])
+            button.add_css_class("thumb-discarded")
         return button
 
     def populate_filmstrip(self):
-        """Populate the filmstrip with group thumbnail buttons."""
+        """Populate the filmstrip with thumbnail buttons."""
         self._clear_filmstrip()
         self.thumb_buttons = []
-        for group_idx, group in enumerate(self.image_groups):
-            button = self._create_group_thumbnail_button(group, group_idx)
+        for idx, img in enumerate(self.all_images):
+            button = self._create_thumbnail_button(img, idx)
             self.filmstrip_box.append(button)
             self.thumb_buttons.append(button)
         GObject.idle_add(self.load_visible_thumbnails)
@@ -243,68 +225,43 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         """Set the initial image selection, preferring images from source directory."""
         for i, img in enumerate(self.all_images):
             if img.parent == self.source_dir:
-                self.current_index = i
-                self.update_main_image(i)
-                GObject.idle_add(self.center_filmstrip_on_selected, i, False)  # Jump instantly
+                self._navigate_to_image(i)
                 return
-
         # Fallback to first image if no source images found
         if self.all_images:
-            self.current_index = 0
-            self.update_main_image(0)
-            GObject.idle_add(self.center_filmstrip_on_selected, 0, False)
+            self._navigate_to_image(0)
 
     def center_filmstrip_on_selected(self, idx, animate=True):
         """Center the filmstrip view on the selected thumbnail, optionally with animation."""
         if not (0 <= idx < len(self.thumb_buttons)):
             return False
-
         button = self.thumb_buttons[idx]
         # Ensure the selected thumbnail is loaded
         if not button.is_loaded:
             button.load_thumbnail()
-
         alloc = button.get_allocation()
         hadj = self.filmstrip_scroller.get_hadjustment()
-
         if hadj:
-            visible_width = hadj.get_page_size() or self.filmstrip_scroller.get_allocation().width or 1
-            target_x = alloc.x + alloc.width // 2 - visible_width // 2
-            target_x = max(0, min(target_x, hadj.get_upper() - visible_width))
-            if animate:
-                self._animate_scroll_to(hadj, target_x)
-            else:
-                hadj.set_value(target_x)
-
+            target = alloc.x + alloc.width / 2 - hadj.get_page_size() / 2
+            self._animate_scroll_to(hadj, target)
         return False
 
     def _animate_scroll_to(self, adjustment, target_value):
         """Animate smooth scrolling to a target position."""
         start_value = adjustment.get_value()
         diff = target_value - start_value
-
-        if abs(diff) < 1:  # Already close enough
+        if abs(diff) < 1:
             adjustment.set_value(target_value)
             return
-
         step_time = SCROLL_ANIMATION_DURATION // SCROLL_ANIMATION_STEPS
         step_count = [0]  # Use list to make it mutable in closure
-
         def animate_step():
+            frac = min(1, step_count[0] / SCROLL_ANIMATION_STEPS)
+            value = start_value + diff * frac
+            adjustment.set_value(value)
             step_count[0] += 1
-            progress = step_count[0] / SCROLL_ANIMATION_STEPS
-
-            # Easing function (ease-out cubic)
-            eased_progress = 1 - (1 - progress) ** 3
-            current_value = start_value + diff * eased_progress
-            adjustment.set_value(current_value)
-
-            if step_count[0] >= SCROLL_ANIMATION_STEPS:
-                adjustment.set_value(target_value)
-                GObject.idle_add(self.load_visible_thumbnails)
-                return False  # Stop the timer
-            return True  # Continue the timer
-
+            if frac < 1:
+                GObject.timeout_add(step_time, animate_step)
         GObject.timeout_add(step_time, animate_step)
 
     def load_visible_thumbnails(self):
@@ -312,375 +269,187 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         hadj = self.filmstrip_scroller.get_hadjustment()
         if not hadj:
             return False
-
         visible_start = hadj.get_value()
         visible_width = hadj.get_page_size()
         visible_end = visible_start + visible_width
-
         # Add buffer to load thumbnails slightly outside the visible area
         load_start = visible_start - LAZY_LOAD_BUFFER
         load_end = visible_end + LAZY_LOAD_BUFFER
-
         for button in self.thumb_buttons:
-            if not button.is_loaded:
-                alloc = button.get_allocation()
-                button_start = alloc.x
-                button_end = alloc.x + alloc.width
-
-                # Check if button is within the loading area
-                if button_end >= load_start and button_start <= load_end:
-                    button.load_thumbnail()
-
+            alloc = button.get_allocation()
+            if alloc.x + alloc.width > load_start and alloc.x < load_end:
+                button.load_thumbnail()
         return False
 
     def on_thumbnail_clicked(self, button, idx):
         """Handle thumbnail button clicks."""
         self._navigate_to_image(idx)
 
-    def on_group_thumbnail_clicked(self, button, group_idx):
-        """Handle group thumbnail button clicks: select the first image in the group (robust to moves)."""
-        group = self.image_groups[group_idx]
-        # Try to find the first image in the group that is still in self.all_images (by name)
-        idx = None
-        for img in group:
-            for i, aimg in enumerate(self.all_images):
-                if aimg.name == img.name:
-                    idx = i
-                    break
-            if idx is not None:
-                break
-        if idx is None:
-            idx = 0  # fallback to first image
-        self._navigate_to_image(idx)
-
     def _navigate_to_image(self, new_index):
         """Navigate to a specific image index."""
         if 0 <= new_index < len(self.all_images):
             self.current_index = new_index
+            self.picture_path = self.all_images[new_index]
             self.update_main_image(new_index)
             self.center_filmstrip_on_selected(new_index)
-            return True
+            self._update_button_styles(new_index)
+            self._update_action_button_styles(self.picture_path)
         return False
 
     def _move_image_to_directory(self, target_dir):
         """Move current image to target directory and update UI. Also record action for undo."""
         if self.picture_path.parent == target_dir:
-            self.update_main_image(self.current_index)
             return
         dest = target_dir / self.picture_path.name
         # Record the action for undo (src, dest, index)
         self.undo_stack.append((self.picture_path, dest, self.current_index))
-        os.rename(self.picture_path, dest)
+        self.picture_path.rename(dest)
         self.all_images[self.current_index] = dest
-        self.thumb_buttons[self.current_index].update_image_path(dest)
+        self.picture_path = dest
         self._update_button_styles(self.current_index)
-        self.update_main_image(self.current_index)
-        GObject.idle_add(self.center_filmstrip_on_selected, self.current_index)
+        self._update_action_button_styles(self.picture_path)
         self.update_header_title()
 
     def undo_last_action(self):
-        """Undo the last image move action."""
         if not self.undo_stack:
             return
         src, dest, idx = self.undo_stack.pop()
         if dest.exists():
-            os.rename(dest, src)
+            dest.rename(src)
             self.all_images[idx] = src
-            self.thumb_buttons[idx].update_image_path(src)
+            if self.current_index == idx:
+                self.picture_path = src
             self._update_button_styles(idx)
-            self.update_main_image(idx)
-            GObject.idle_add(self.center_filmstrip_on_selected, idx)
+            self._update_action_button_styles(src)
             self.update_header_title()
 
     def _update_button_styles(self, current_idx):
-        """Update CSS classes for all thumbnail buttons."""
-        for i, btn in enumerate(self.thumb_buttons):
-            css_classes = []
-            # Add base styling based on image location
-            if self.all_images[i].parent == self.selected_dir:
-                css_classes.append("thumb-selected")
-            elif self.all_images[i].parent == self.discarded_dir:
-                css_classes.append("thumb-discarded")
-            # Add current selection styling
-            if i == current_idx:
-                css_classes.append("current-thumb")
-            btn.set_css_classes(css_classes)
+        for idx, button in enumerate(self.thumb_buttons):
+            button.remove_css_class("current-thumb")
+            if idx == current_idx:
+                button.add_css_class("current-thumb")
+            # Update selected/discarded styles
+            button.remove_css_class("thumb-selected")
+            button.remove_css_class("thumb-discarded")
+            img = self.all_images[idx]
+            if img.parent == self.selected_dir:
+                button.add_css_class("thumb-selected")
+            elif img.parent == self.discarded_dir:
+                button.add_css_class("thumb-discarded")
 
     def _update_action_button_styles(self, image_path):
-        """Update CSS classes for Keep/Discard buttons."""
+        # Optionally update action button states (e.g., disable if already in that dir)
         if image_path.parent == self.selected_dir:
-            self.keep_button.set_css_classes(["thumb-selected"])
-            self.discard_button.set_css_classes([])
+            self.keep_button.set_sensitive(False)
+            self.discard_button.set_sensitive(True)
         elif image_path.parent == self.discarded_dir:
-            self.keep_button.set_css_classes([])
-            self.discard_button.set_css_classes(["thumb-discarded"])
+            self.keep_button.set_sensitive(True)
+            self.discard_button.set_sensitive(False)
         else:
-            self.keep_button.set_css_classes([])
-            self.discard_button.set_css_classes([])
+            self.keep_button.set_sensitive(True)
+            self.discard_button.set_sensitive(True)
 
     def on_key_press_event(self, controller, keyval, keycode, state, *args):
-        """Handle keyboard input."""
-        ctrl = state & Gdk.ModifierType.CONTROL_MASK
-        if (keyval == Gdk.KEY_z or keycode == ord('z')) and ctrl:
-            self.undo_last_action()
-            return True
-        if keyval == Gdk.KEY_Left:
-            self._navigate_to_image(self.current_index - 1)
-            return True
-        elif keyval == Gdk.KEY_Right:
-            self._navigate_to_image(self.current_index + 1)
-            return True
-        elif keycode == ord('q'):
+        # Handle key events for navigation and actions
+        if keyval == Gdk.KEY_q:
             self.on_keep()
             return True
-        elif keycode == ord('w'):
+        elif keyval == Gdk.KEY_w:
             self.on_discard()
+            return True
+        elif keyval == Gdk.KEY_z and (state & Gdk.ModifierType.CONTROL_MASK):
+            self.undo_last_action()
+            return True
+        elif keyval == Gdk.KEY_Left:
+            self._navigate_to_image(max(0, self.current_index - 1))
+            return True
+        elif keyval == Gdk.KEY_Right:
+            self._navigate_to_image(min(len(self.all_images) - 1, self.current_index + 1))
             return True
         return False
 
     def update_main_image(self, idx):
-        """Update the main image display and UI state."""
-        image_path = self.all_images[idx]
-        group_idx = None
-        for i, group in enumerate(self.image_groups):
-            if image_path in group:
-                group_idx = i
-                break
-        if group_idx is not None:
-            group = self.image_groups[group_idx]
+        # Update the main image display
+        img_path = self.all_images[idx]
+        file = Gio.File.new_for_path(str(img_path))
+        if self.current_picture == self.picture_a:
+            self.picture_b.set_file(file)
+            self.picture_stack.set_visible_child(self.picture_b)
+            self.current_picture = self.picture_b
         else:
-            group = [image_path]
-        # Remove any previous child from the main image area (GTK4 compatible)
-        child = self._main_image_area.get_first_child()
-        while child is not None:
-            next_child = child.get_next_sibling()
-            self._main_image_area.remove(child)
-            child = next_child
-        # Show grid if group has more than one image, else show single image
-        if len(group) > 1:
-            grid = Gtk.Grid()
-            grid.set_row_spacing(12)
-            grid.set_column_spacing(12)
-            grid.set_hexpand(True)
-            grid.set_vexpand(True)
-            grid.set_halign(Gtk.Align.FILL)
-            grid.set_valign(Gtk.Align.FILL)
-            max_cols = 4
-            def on_group_keep(btn, img_path=...):
-                self._move_image_to_directory_for_group(img_path, self.selected_dir, group_idx)
-            def on_group_discard(btn, img_path=...):
-                self._move_image_to_directory_for_group(img_path, self.discarded_dir, group_idx)
-            for i, img_path in enumerate(group):
-                # Create a box to strictly size the overlay to the image
-                img_box = Gtk.Box()
-                img_box.set_size_request(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
-                img_box.set_hexpand(False)
-                img_box.set_vexpand(False)
-                overlay = Gtk.Overlay()
-                overlay.set_size_request(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
-                overlay.set_hexpand(False)
-                overlay.set_vexpand(False)
-                pic = Gtk.Picture.new_for_file(Gio.File.new_for_path(str(img_path)))
-                pic.set_size_request(THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT)
-                pic.set_hexpand(False)
-                pic.set_vexpand(False)
-                pic.set_halign(Gtk.Align.FILL)
-                pic.set_valign(Gtk.Align.FILL)
-                img_box.append(pic)
-                overlay.set_child(img_box)
-                # Keep button (top-left)
-                keep_btn = Gtk.Button()
-                keep_btn.set_child(Gtk.Image.new_from_icon_name("object-select-symbolic"))
-                keep_btn.set_tooltip_text("Keep this image")
-                keep_btn.set_css_classes(["suggested-action"])
-                keep_btn.set_halign(Gtk.Align.START)
-                keep_btn.set_valign(Gtk.Align.START)
-                keep_btn.set_margin_top(4)
-                keep_btn.set_margin_start(4)
-                keep_btn.set_size_request(28, 28)
-                keep_btn.connect("clicked", on_group_keep, img_path)
-                overlay.add_overlay(keep_btn)
-                # Discard button (top-right)
-                discard_btn = Gtk.Button()
-                discard_btn.set_child(Gtk.Image.new_from_icon_name("window-close"))
-                discard_btn.set_tooltip_text("Discard this image")
-                discard_btn.set_css_classes(["destructive-action"])
-                discard_btn.set_halign(Gtk.Align.END)
-                discard_btn.set_valign(Gtk.Align.START)
-                discard_btn.set_margin_top(4)
-                discard_btn.set_margin_end(4)
-                discard_btn.set_size_request(28, 28)
-                discard_btn.connect("clicked", on_group_discard, img_path)
-                overlay.add_overlay(discard_btn)
-                grid.attach(overlay, i % max_cols, i // max_cols, 1, 1)
-            self._main_image_area.append(grid)
-            self._current_group_grid = grid
-        else:
-            self.animate_image_transition(image_path)
-            self.picture_stack.set_hexpand(True)
-            self.picture_stack.set_vexpand(True)
-            self.picture_stack.set_halign(Gtk.Align.FILL)
-            self.picture_stack.set_valign(Gtk.Align.FILL)
-            self._main_image_area.append(self.picture_stack)
-            self._current_group_grid = None
-        # Update all button styles
-        self._update_button_styles(idx)
-        self._update_action_button_styles(image_path)
-        # Update current state
-        self.current_index = idx
-        self.picture_path = image_path
-
-    def _move_image_to_directory_for_group(self, img_path, target_dir, group_idx):
-        """Move an image from a group to the target directory and refresh the group grid."""
-        if img_path.parent == target_dir:
-            self.update_main_image(self.current_index)
-            return
-        dest = target_dir / img_path.name
-        self.undo_stack.append((img_path, dest, self.all_images.index(img_path)))
-        os.rename(img_path, dest)
-        # Update all_images and image_groups
-        idx = self.all_images.index(img_path)
-        self.all_images[idx] = dest
-        self.image_hashes[dest] = self.image_hashes.pop(img_path)
-        # Update group in image_groups
-        group = self.image_groups[group_idx]
-        group[group.index(img_path)] = dest
-        # Remove from group if all classified
-        if all(img.parent in (self.selected_dir, self.discarded_dir) for img in group):
-            # Move to next unclassified image
-            next_idx = self._find_next_unclassified_index()
-            if next_idx is not None:
-                self.update_main_image(next_idx)
-                GObject.idle_add(self.center_filmstrip_on_selected, next_idx)
-            else:
-                self.update_main_image(self.current_index)
-        else:
-            self.update_main_image(self.current_index)
-        self.update_header_title()
+            self.picture_a.set_file(file)
+            self.picture_stack.set_visible_child(self.picture_a)
+            self.current_picture = self.picture_a
 
     def _find_next_unclassified_index(self, start_idx=None):
-        """Find the next image not in selected or discarded directories."""
+        # Find the next image in source_dir
         if start_idx is None:
-            start_idx = self.current_index
-        n = len(self.all_images)
-        for offset in range(1, n):
-            idx = (start_idx + offset) % n
-            parent = self.all_images[idx].parent
-            if parent != self.selected_dir and parent != self.discarded_dir:
-                return idx
-        return None  # All images classified
+            start_idx = self.current_index + 1
+        for i in range(start_idx, len(self.all_images)):
+            if self.all_images[i].parent == self.source_dir:
+                return i
+        return None
 
     def on_keep(self):
-        """Move current image to selected directory and skip to next unclassified image."""
-        self._move_image_to_directory(self.selected_dir)
-        next_idx = self._find_next_unclassified_index()
-        if next_idx is not None:
-            self.update_main_image(next_idx)
-            GObject.idle_add(self.center_filmstrip_on_selected, next_idx)
-        self.update_header_title()
+        if self.picture_path.parent != self.selected_dir:
+            self._move_image_to_directory(self.selected_dir)
+            next_idx = self._find_next_unclassified_index()
+            if next_idx is not None:
+                self._navigate_to_image(next_idx)
 
     def on_discard(self):
-        """Move current image to discarded directory and skip to next unclassified image."""
-        self._move_image_to_directory(self.discarded_dir)
-        next_idx = self._find_next_unclassified_index()
-        if next_idx is not None:
-            self.update_main_image(next_idx)
-            GObject.idle_add(self.center_filmstrip_on_selected, next_idx)
-        self.update_header_title()
+        if self.picture_path.parent != self.discarded_dir:
+            self._move_image_to_directory(self.discarded_dir)
+            next_idx = self._find_next_unclassified_index()
+            if next_idx is not None:
+                self._navigate_to_image(next_idx)
 
     def on_filmstrip_scroll(self, controller, dx, dy):
-        """Handle filmstrip scroll events to trigger lazy loading."""
-        GObject.idle_add(self.load_visible_thumbnails)
-        return False
+        # Optionally handle scroll events for navigation
+        if dy < 0:
+            self._navigate_to_image(max(0, self.current_index - 1))
+        elif dy > 0:
+            self._navigate_to_image(min(len(self.all_images) - 1, self.current_index + 1))
+        return True
 
     def on_scroll_value_changed(self, adjustment):
-        """Handle scroll adjustment changes to trigger lazy loading."""
         GObject.idle_add(self.load_visible_thumbnails)
 
     def animate_image_transition(self, new_image_path):
-        """Animate the transition between main images using crossfade effect."""
-        # Use the non-visible picture for the new image
-        next_picture = self.picture_b if self.current_picture == self.picture_a else self.picture_a
-        self.current_picture = next_picture
+        # Optionally implement crossfade or other animation
+        pass
 
-        # Load new image into the hidden picture
-        next_picture.set_filename(str(new_image_path))
-
-        # Crossfade to the new picture
-        self.picture_stack.set_visible_child(next_picture)
-
-    def on_window_resize(self, *args):
-        """Handle window resize events to update thumbnail visibility."""
+    def on_window_resize(self, widget, param):
         GObject.idle_add(self.load_visible_thumbnails)
 
     def on_scroller_focus_change(self, controller, *args):
-        """Handle focus changes on the filmstrip scroller."""
         GObject.idle_add(self.load_visible_thumbnails)
 
     def delayed_initial_load(self):
-        """Perform delayed initial loading of visible thumbnails."""
         GObject.idle_add(self.load_visible_thumbnails)
-        return False  # Run once only
 
     def _setup_event_handlers(self):
-        """Set up event handlers for the application."""
-        # Add key event controller for the main window
-        key_controller = Gtk.EventControllerKey()
-        key_controller.connect('key-pressed', self.on_key_press_event)
-        self.add_controller(key_controller)
-        # Connect resize handler
-        self.connect('notify::default-width', self.on_window_resize)
-        self.connect('notify::default-height', self.on_window_resize)
-        # Connect filmstrip scroll handlers
-        scroll_controller = Gtk.EventControllerScroll()
-        scroll_controller.set_flags(Gtk.EventControllerScrollFlags.BOTH_AXES)
+        # Connect scroll and resize events
+        scroll_controller = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL)
         scroll_controller.connect('scroll', self.on_filmstrip_scroll)
         self.filmstrip_scroller.add_controller(scroll_controller)
-        self.filmstrip_scroller.get_hadjustment().connect('value-changed', self.on_scroll_value_changed)
+        hadj = self.filmstrip_scroller.get_hadjustment()
+        hadj.connect('value-changed', self.on_scroll_value_changed)
+        self._main_vbox.connect('notify::allocation', self.on_window_resize)
+        focus_controller = Gtk.EventControllerFocus()
+        focus_controller.connect('enter', self.on_scroller_focus_change)
+        self.filmstrip_scroller.add_controller(focus_controller)
 
     def _setup_ui(self):
-        """Initialize the main UI components."""
-        main_box = self._create_main_container()
-        self._main_vbox.append(main_box)
-
-        # Create main image area container (fixed position, expands to fill)
-        self._main_image_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self._main_image_area.set_hexpand(True)
-        self._main_image_area.set_vexpand(True)
-        self._main_image_area.set_halign(Gtk.Align.FILL)
-        self._main_image_area.set_valign(Gtk.Align.FILL)
-        main_box.append(self._main_image_area)
-
-        # Create image stack (for single image mode)
+        # Main UI setup
         self._create_image_stack()
-        self.picture_stack.set_hexpand(True)
-        self.picture_stack.set_vexpand(True)
-        self.picture_stack.set_halign(Gtk.Align.FILL)
-        self.picture_stack.set_valign(Gtk.Align.FILL)
-        # Initially add the image stack to the main image area
-        self._main_image_area.append(self.picture_stack)
-
-        # Create progress bar (hidden by default)
-        self.progressbar = Gtk.ProgressBar()
-        self.progressbar.set_show_text(True)
-        self.progressbar.set_hexpand(True)
-        self.progressbar.set_vexpand(False)
-        self.progressbar.set_margin_top(20)
-        self.progressbar.set_margin_bottom(20)
-        self.progressbar.set_margin_start(40)
-        self.progressbar.set_margin_end(40)
-        self.progressbar.set_valign(Gtk.Align.CENTER)
-        self.progressbar.set_halign(Gtk.Align.FILL)
-        self.progressbar.hide()
-        main_box.append(self.progressbar)
-
-        # Create action buttons
-        button_box = self._create_action_buttons()
-        main_box.append(button_box)
-
-        # Create filmstrip (always at the bottom)
         self._create_filmstrip()
-        main_box.append(self.filmstrip_scroller)
+        self.progressbar = Gtk.ProgressBar()
+        self._main_vbox.append(self.picture_stack)
+        self._main_vbox.append(self._create_action_buttons())
+        self._main_vbox.append(self.filmstrip_scroller)
+        self._main_vbox.append(self.progressbar)
+        self.progressbar.hide()
 
 def select(source_dir: Path, selected_dir: Path, discarded_dir: Path, hash_group_distance: int = 5):
     """
@@ -690,7 +459,7 @@ def select(source_dir: Path, selected_dir: Path, discarded_dir: Path, hash_group
         source_dir: Directory containing source images
         selected_dir: Directory for selected/kept images
         discarded_dir: Directory for discarded images
-        hash_group_distance: Perceptual hash distance threshold for grouping
+        hash_group_distance: Perceptual hash distance threshold for grouping (ignored)
     """
     # Ensure target directories exist
     selected_dir.mkdir(exist_ok=True)
@@ -698,7 +467,7 @@ def select(source_dir: Path, selected_dir: Path, discarded_dir: Path, hash_group
 
     app = Adw.Application(application_id='com.kwc.Selector')
     def on_activate_with_distance(app, source_dir, selected_dir, discarded_dir, hash_group_distance):
-        win = ImageSelectorWindow(source_dir, selected_dir, discarded_dir, hash_group_distance=hash_group_distance, application=app)
+        win = ImageSelectorWindow(source_dir, selected_dir, discarded_dir, hash_group_distance, application=app)
         win.present()
     app.connect('activate', on_activate_with_distance, source_dir, selected_dir, discarded_dir, hash_group_distance)
     app.run(None)
