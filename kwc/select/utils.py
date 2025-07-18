@@ -33,7 +33,7 @@ def get_or_compute_hash(img_path: Path) -> str:
                 hashval = str(imagehash.phash(im))
                 if HASH_EXIF_TAG:
                     exif[HASH_EXIF_TAG] = HASH_EXIF_PREFIX + hashval.encode('utf-8')
-                    # im.save(img_path, exif=exif)
+                    im.save(img_path, exif=exif)
             return hashval
     except Exception as e:
         print(f"Error hashing {img_path}: {e}")
