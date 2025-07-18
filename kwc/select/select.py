@@ -4,6 +4,10 @@ from pathlib import Path
 
 # Third-party imports
 from PIL import Image, ExifTags
+import gi
+# Specify required versions before importing Gtk and Adw
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
 from gi.repository import Gtk, Gdk, GObject, Gio, Adw
 
 # Local imports
