@@ -3,6 +3,20 @@ stack > picture {
     border-radius: 12px;
 }
 
+/* Add vertical margin to the main image stack for separation */
+.main-image-stack {
+    margin-top: 16px;
+    margin-bottom: 16px;
+}
+
+/* Filmstrip scroller styling */
+.filmstrip-scroller {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
 /* Additional styling for thumbnails and buttons */
 .thumbnail-placeholder {
     background-color: #f0f0f0;

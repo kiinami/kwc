@@ -67,9 +67,13 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         """Set up the main UI containers and widgets."""
         # Main image area
         self._create_image_stack()
+        self.picture_stack.set_vexpand(True)  # Make main image viewer expand vertically
         self._main_vbox.append(self.picture_stack)
 
-        # Progress bar
+        # Action buttons (Keep/Discard)
+        self._main_vbox.append(self._create_action_buttons())
+
+        # Progress bar (optional, can be moved or hidden as needed)
         self.progressbar = Gtk.ProgressBar()
         self.progressbar.set_hexpand(True)
         self.progressbar.set_margin_top(8)
@@ -79,9 +83,6 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         # Filmstrip
         self._create_filmstrip()
         self._main_vbox.append(self.filmstrip_scroller)
-
-        # Action buttons
-        self._main_vbox.append(self._create_action_buttons())
 
     def update_header_title(self) -> None:
         """Update the header title and subtitle with classification progress."""
@@ -114,6 +115,10 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         self.picture_stack.add_child(self.picture_a)
         self.picture_stack.add_child(self.picture_b)
         self.current_picture = self.picture_a
+        # Add vertical margins for separation from header and filmstrip
+        self.picture_stack.set_margin_top(16)
+        self.picture_stack.set_margin_bottom(16)
+        self.picture_stack.add_css_class("main-image-stack")
 
     def _create_action_buttons(self) -> Gtk.Box:
         """Create the Keep/Discard action buttons (Adwaita style)."""
@@ -174,6 +179,7 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
 
         self.filmstrip_scroller = Gtk.ScrolledWindow()
         self.filmstrip_scroller.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.NEVER)
+        self.filmstrip_scroller.add_css_class("filmstrip-scroller")
         self.filmstrip_scroller.set_child(self.filmstrip_box)
         self.filmstrip_scroller.set_min_content_height(100)
 
