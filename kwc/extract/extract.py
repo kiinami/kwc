@@ -55,4 +55,4 @@ def extract(
 
         ffmpeg.execute()
 
-    logger.info(f'Extracted {len(output_dir.glob("*.jpg"))} frames from "{video}" to "{output_dir}"!')
+    logger.info(f'Extracted {len(list(output_dir.glob("*.jpg")))} frames from "{video}" to "{output_dir}"!')

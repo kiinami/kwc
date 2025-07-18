@@ -42,7 +42,7 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         self._init_main_layout()
         self._setup_ui()
         self._setup_images()
-        self._setup_event_handlers()
+        # self._setup_event_handlers()  # <-- Remove from here
         self.update_header_title()
 
     def _init_header_bar(self):
@@ -67,26 +67,40 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         self.set_content(self._main_vbox)
         self._main_vbox.append(self.header_bar)
 
-    def _setup_ui(self):
-        """Set up the main UI containers and widgets."""
-        # Main image area
-        self._create_image_stack()
-        self.picture_stack.set_vexpand(True)  # Make main image viewer expand vertically
-        self._main_vbox.append(self.picture_stack)
-
-        # Action buttons (Keep/Discard)
-        self._main_vbox.append(self._create_action_buttons())
-
-        # Progress bar (optional, can be moved or hidden as needed)
+        # Create a loading group (centered vbox) for progress bar and label
+        self.loading_group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        self.loading_group.set_halign(Gtk.Align.CENTER)
+        self.loading_group.set_valign(Gtk.Align.CENTER)
+        self.loading_group.set_vexpand(True)
+        self.loading_group.set_hexpand(True)
+        self.loading_group.set_margin_top(0)
+        self.loading_group.set_margin_bottom(0)
+        self.loading_group.set_margin_start(0)
+        self.loading_group.set_margin_end(0)
+        self.progress_label = Gtk.Label(label="Loading images… 0 of 0")
+        self.progress_label.set_justify(Gtk.Justification.CENTER)
+        self.progress_label.set_halign(Gtk.Align.CENTER)
+        self.progress_label.set_valign(Gtk.Align.CENTER)
+        self.progress_label.set_margin_bottom(8)
+        self.progress_label.add_css_class("progress-label-large")
+        self.loading_group.append(self.progress_label)
         self.progressbar = Gtk.ProgressBar()
         self.progressbar.set_hexpand(True)
-        self.progressbar.set_margin_top(8)
-        self.progressbar.set_margin_bottom(8)
-        self._main_vbox.append(self.progressbar)
+        self.progressbar.set_halign(Gtk.Align.CENTER)
+        self.progressbar.set_valign(Gtk.Align.CENTER)
+        self.progressbar.set_margin_top(0)
+        self.progressbar.set_margin_bottom(0)
+        self.progressbar.set_show_text(False)
+        self.progressbar.set_fraction(0.0)
+        self.progressbar.set_size_request(600, -1)  # Max width, let theme handle height
+        self.loading_group.append(self.progressbar)
+        self._main_vbox.append(self.loading_group)
+        self.loading_group.show()
 
-        # Filmstrip
-        self._create_filmstrip()
-        self._main_vbox.append(self.filmstrip_scroller)
+    def _setup_ui(self):
+        """Set up the main UI containers and widgets."""
+        # Only set up the rest of the UI after loading is complete
+        pass
 
     def update_header_title(self) -> None:
         """Update the header title and subtitle with classification progress."""
@@ -153,36 +167,69 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         return hbox
 
     def _show_progress(self, fraction, eta=None):
-        """Update and show the progress bar."""
+        """Show and update the progress bar and label."""
+        self.loading_group.set_visible(True)
+        total = len(self.all_images)
+        current = getattr(self, '_hash_index', 0)
         self.progressbar.set_fraction(fraction)
-        percent = int(fraction * 100)
-        if eta is not None:
-            self.progressbar.set_text(f"Hashing images... {percent}% (ETA: {eta:.1f}s)")
-        else:
-            self.progressbar.set_text(f"Hashing images... {percent}%")
-        self.progressbar.show()
-        while GObject.main_context_default().pending():
-            GObject.main_context_default().iteration(False)
+        self.progress_label.set_text(f"Loading images… {current} of {total}")
+        self.progress_label.set_visible(True)
+        self.progressbar.remove_css_class("fade-out")
 
     def _hide_progress(self):
-        """Hide the progress bar."""
-        self.progressbar.hide()
+        """Fade out and hide the progress bar overlay, then show main UI."""
+        def on_fade_out(*_):
+            self.loading_group.set_visible(False)
+            self._setup_main_ui_after_loading()
+        self.progressbar.add_css_class("fade-out")
+        from gi.repository import GObject
+        GObject.timeout_add(400, on_fade_out)
 
-    def _ensure_hashes_with_progress(self):
-        """Compute image hashes with progress feedback."""
-        import time
-        total = len(self.all_images)
-        start_time = time.time()
-        for idx, img_path in enumerate(self.all_images):
-            self.image_hashes[img_path] = get_or_compute_hash(img_path)
-            fraction = (idx + 1) / total if total else 1
-            elapsed = time.time() - start_time
-            eta = (elapsed / (idx + 1)) * (total - idx - 1) if idx > 0 else None
-            self._show_progress(fraction, eta)
-        self._hide_progress()
+    def _setup_main_ui_after_loading(self):
+        """Show the main UI after loading is complete."""
+        # Main image area
+        self._create_image_stack()
+        self.picture_stack.set_vexpand(True)
+        self._main_vbox.append(self.picture_stack)
+
+        # Action buttons (Keep/Discard)
+        self._main_vbox.append(self._create_action_buttons())
+
+        # Filmstrip
+        self._create_filmstrip()
+        self._main_vbox.append(self.filmstrip_scroller)
+        self._setup_event_handlers()
+        # Now that filmstrip UI exists, populate it
         self.populate_filmstrip()
         self.set_initial_selection()
-        return False  # Stop idle_add loop
+
+    def update_progress_label(self, current, total):
+        """Update the progress label text."""
+        self.progress_label.set_text(f"Loading images… {current} of {total}")
+
+    def _ensure_hashes_with_progress(self):
+        """Compute hashes for all images, updating the progress bar asynchronously."""
+        from gi.repository import GLib
+        total = len(self.all_images)
+        if total == 0:
+            self._hide_progress()
+            return
+        self.loading_group.set_visible(True)
+        self.progressbar.set_fraction(0.0)
+        self.progress_label.set_text("Loading images… 0 of {}".format(total))
+        self.progress_label.set_visible(True)
+        self._hash_index = 0
+        def process_next():
+            if self._hash_index >= total:
+                self._hide_progress()
+                return False  # Stop the idle handler
+            img = self.all_images[self._hash_index]
+            self.image_hashes[img] = get_or_compute_hash(img)
+            self._hash_index += 1
+            fraction = self._hash_index / total
+            self._show_progress(fraction)
+            return True  # Continue processing
+        GLib.idle_add(process_next)
 
     def _create_filmstrip(self):
         """Create the filmstrip thumbnail viewer."""
@@ -196,15 +243,10 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         self.filmstrip_scroller.set_min_content_height(100)
 
     def _setup_images(self):
-        """Initialize images, compute hashes, and set initial selection."""
+        """Set up image list and start hash computation with progress."""
         self.all_images = get_all_images(self.source_dir, self.selected_dir, self.discarded_dir)
         self.image_hashes = {}
-        # Show progress bar before hashing
-        self.progressbar.set_fraction(0)
-        self.progressbar.set_text("Hashing images...")
-        self.progressbar.show()
-        GObject.idle_add(self._ensure_hashes_with_progress)
-        # The rest of setup will be called after hashing completes
+        self._ensure_hashes_with_progress()
 
     def _clear_filmstrip(self):
         """Remove all children from the filmstrip box."""

@@ -51,3 +51,34 @@ button.thumb-selected {
 button.thumb-discarded {
     background-color: rgba(244, 67, 54, 0.1);
 }
+
+/* Centered modern progress bar styling */
+.center-progressbar, .center-progressbar.fade-out {
+    /* Remove custom background, border, and z-index for theme compatibility */
+    background: none;
+    color: inherit;
+    min-width: unset;
+    min-height: unset;
+    font-size: unset;
+    box-shadow: none;
+    border-radius: unset;
+    transition: none;
+    padding: unset;
+}
+
+.center-progressbar {
+    font-size: 1.5em;
+    padding: 8px 0;
+}
+
+/* Fade-out animation for the progress bar */
+.fade-out {
+    opacity: 0;
+    transition: opacity 0.4s cubic-bezier(.4,0,.2,1);
+}
+
+.progress-label-large {
+    font-size: 1.4em;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
