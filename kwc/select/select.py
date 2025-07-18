@@ -112,6 +112,14 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         self.picture_stack.set_transition_duration(CROSSFADE_DURATION)
         self.picture_a = Gtk.Picture()
         self.picture_b = Gtk.Picture()
+        # Ensure pictures and stack do not expand horizontally
+        self.picture_stack.set_hexpand(False)
+        self.picture_stack.set_halign(Gtk.Align.CENTER)
+        self.picture_stack.set_valign(Gtk.Align.CENTER)
+        self.picture_a.set_hexpand(False)
+        self.picture_a.set_halign(Gtk.Align.CENTER)
+        self.picture_b.set_hexpand(False)
+        self.picture_b.set_halign(Gtk.Align.CENTER)
         self.picture_stack.add_child(self.picture_a)
         self.picture_stack.add_child(self.picture_b)
         self.current_picture = self.picture_a
