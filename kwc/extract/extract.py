@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
 import subprocess
+import concurrent.futures
+import os
 
 import json
 
@@ -10,6 +12,18 @@ from rich.progress import Progress, TimeElapsedColumn, MofNCompleteColumn
 from .utils import transcode_video, cut_video, get_iframe_timestamps
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_frame(args):
+    video, ts, output_file = args
+    ffmpeg = (
+        FFmpeg()
+        .option('y')
+        .input(str(video), ss=ts)
+        .output(str(output_file), frames='1', q='2')
+    )
+    ffmpeg.execute()
+    return output_file
 
 
 def extract(
@@ -46,21 +60,19 @@ def extract(
 
     # Get I-frame timestamps
     timestamps = get_iframe_timestamps(video)
-    logger.info(f'Found {len(timestamps)} I-frames.')
+    logger.debug(f'Found {len(timestamps)} keyframes')
+
+    frame_args = [
+        (video, ts, output_dir / f"output_{idx:04d}.jpg")
+        for idx, ts in enumerate(timestamps, 1)
+    ]
 
     with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn(),
-                      transient=True) as progress:
+                  transient=True) as progress:
         task = progress.add_task(f'Extracting frames from "{video}"', total=len(timestamps))
-
-        for idx, ts in enumerate(timestamps, 1):
-            output_file = output_dir / f"output_{idx:04d}.jpg"
-            ffmpeg = (
-                FFmpeg()
-                .option('y')
-                .input(str(video), ss=ts)
-                .output(str(output_file), frames='1', q='2')
-            )
-            ffmpeg.execute()
-            progress.update(task, completed=idx)
+        with concurrent.futures.ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+            futures = {executor.submit(_extract_frame, arg): arg for arg in frame_args}
+            for future in concurrent.futures.as_completed(futures):
+                progress.update(task, advance=1)
 
     logger.info(f'Extracted {len(list(output_dir.glob("*.jpg")))} frames from "{video}" to "{output_dir}"!')
