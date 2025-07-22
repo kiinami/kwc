@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "cachier>=3.4.1",
-    "imagehash>=4.3.2",
     "opencv-python-headless>=4.12.0.88",
     "peakutils>=1.3.5",
     "pygobject>=3.52.3",
