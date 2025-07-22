@@ -107,3 +107,23 @@ def cut_video(video: Path, intervals: list[tuple[str, ...]]):
             logger.info(f'Cut video saved to "{output.absolute()}"')
 
         return output
+
+
+def get_iframe_timestamps(video: Path) -> list[float]:
+    """
+    Return a list of timestamps (in seconds) for all I-frames in the video.
+    """
+    ffprobe = FFmpeg(executable="ffprobe").input(
+        video,
+        select_streams="v:0",
+        skip_frame="nokey",
+        show_entries="frame=pict_type,best_effort_timestamp_time",
+        print_format="json",
+        show_frames=None,
+    )
+    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), transient=True) as progress:
+        progress.add_task(f'Getting keyframe timestamps for "{video}"', total=None)
+        output = ffprobe.execute()
+    data = json.loads(output)
+    timestamps = [float(f["best_effort_timestamp_time"]) for f in data.get("frames", []) if f.get("pict_type") == "I" and f.get("best_effort_timestamp_time") is not None]
+    return timestamps

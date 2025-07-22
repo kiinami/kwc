@@ -1,10 +1,13 @@
 import logging
 from pathlib import Path
+import subprocess
+
+import json
 
 from ffmpeg import FFmpeg, Progress as FFmpegProgress
 from rich.progress import Progress, TimeElapsedColumn, MofNCompleteColumn
 
-from .utils import transcode_video, cut_video, total_keyframes
+from .utils import transcode_video, cut_video, get_iframe_timestamps
 
 logger = logging.getLogger(__name__)
 
@@ -40,26 +43,24 @@ def extract(
 
 
     logger.info(f'Extracting frames from "{video.absolute()}" to "{output_dir.absolute()}"...')
-    ffmpeg = (
-        FFmpeg()
-        .option('y')
-        .input(str(video))
-        .output(
-            f"{str(output_dir)}/output_%04d.jpg",
-            vf='select=eq(pict_type\\,I)',
-            vsync='vfr'
-        )
-    )
-    tkf = total_keyframes(video)
+
+    # Get I-frame timestamps
+    timestamps = get_iframe_timestamps(video)
+    logger.info(f'Found {len(timestamps)} I-frames.')
 
     with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn(),
                       transient=True) as progress:
-        task = progress.add_task(f'Extracting frames from "{video}"', total=tkf)
+        task = progress.add_task(f'Extracting frames from "{video}"', total=len(timestamps))
 
-        @ffmpeg.on('progress')
-        def on_progress(ffmpeg_progress: FFmpegProgress):
-            progress.update(task, completed=ffmpeg_progress.frame)
-
-        ffmpeg.execute()
+        for idx, ts in enumerate(timestamps, 1):
+            output_file = output_dir / f"output_{idx:04d}.jpg"
+            ffmpeg = (
+                FFmpeg()
+                .option('y')
+                .input(str(video), ss=ts)
+                .output(str(output_file), frames='1', q='2')
+            )
+            ffmpeg.execute()
+            progress.update(task, completed=idx)
 
     logger.info(f'Extracted {len(list(output_dir.glob("*.jpg")))} frames from "{video}" to "{output_dir}"!')
