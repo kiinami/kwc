@@ -43,11 +43,15 @@ def extract(
 @app.command()
 def select(
         directory: Path = Argument(..., help='Directory containing images to select.'),
-        selected: Path = Option('./selected', help='Directory to move selected images to.'),
-        discarded: Path = Option('./discarded', help='Directory to move discarded images to.')
+        selected: Path = Option(None, help='Directory to move selected images to.'),
+        discarded: Path = Option(None, help='Directory to move discarded images to.')
 ):
     """Classify images in a directory into selected and discarded with a GUI."""
     from kwc.select import select as sel
+    if not selected:
+        selected = directory / 'selected'
+    if not discarded:
+        discarded = directory / 'discarded'
     sel(directory, selected, discarded)
 
 

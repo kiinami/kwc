@@ -10,10 +10,7 @@ from gi.repository import Gtk, Gdk, GObject, Gio, Adw
 
 # Local imports
 from .widgets import LazyThumbnailButton
-from .constants import (
-    CROSSFADE_DURATION, SCROLL_ANIMATION_DURATION,
-    SCROLL_ANIMATION_STEPS, LAZY_LOAD_BUFFER
-)
+from .constants import CROSSFADE_DURATION, SCROLL_ANIMATION_DURATION, SCROLL_ANIMATION_STEPS, LAZY_LOAD_BUFFER
 from .style import load_css
 
 # CSS loading
@@ -22,23 +19,19 @@ load_css()
 
 def get_all_images(source_dir: Path, selected_dir: Path, discarded_dir: Path) -> list[Path]:
     """Get all .jpg images from the three directories, sorted by numeric suffix."""
-    images = list(source_dir.glob('*.jpg'))
-    images += list(selected_dir.glob('*.jpg'))
-    images += list(discarded_dir.glob('*.jpg'))
-    images = sorted(images, key=lambda x: int(x.stem.split('_')[-1]))
+    images = sorted(list(source_dir.glob('*.jpg')) + list(selected_dir.glob('*.jpg')) + list(discarded_dir.glob('*.jpg')), key=lambda x: int(x.stem.split('_')[-1]))
     return images
 
 
 class ImageSelectorWindow(Adw.ApplicationWindow):
     """Main window for the image selector application (Adwaita style)."""
 
-    def __init__(self, source_dir: Path, selected_dir: Path, discarded_dir: Path, hash_group_distance: int = 5, **kwargs):
+    def __init__(self, source_dir: Path, selected_dir: Path, discarded_dir: Path, **kwargs):
         super().__init__(**kwargs, title='KWC Selector')
         # State variables
         self.source_dir: Path = source_dir
         self.selected_dir: Path = selected_dir
         self.discarded_dir: Path = discarded_dir
-        self.hash_group_distance: int = hash_group_distance
         self.current_index: int = 0  # Index of the currently displayed image
         self.picture_path: Path | None = None  # Path of the current image
         self.thumb_buttons: list = []  # List of thumbnail button widgets
@@ -660,7 +653,7 @@ class ImageSelectorWindow(Adw.ApplicationWindow):
         done.show()
 
 
-def select(source_dir: Path, selected_dir: Path, discarded_dir: Path, hash_group_distance: int = 5):
+def select(source_dir: Path, selected_dir: Path, discarded_dir: Path):
     """
     Main entry point for the image selector application.
 
@@ -668,15 +661,14 @@ def select(source_dir: Path, selected_dir: Path, discarded_dir: Path, hash_group
         source_dir: Directory containing source images
         selected_dir: Directory for selected/kept images
         discarded_dir: Directory for discarded images
-        hash_group_distance: Perceptual hash distance threshold for grouping (ignored)
     """
     # Ensure target directories exist
     selected_dir.mkdir(exist_ok=True)
     discarded_dir.mkdir(exist_ok=True)
 
     app = Adw.Application(application_id='com.kwc.Selector')
-    def on_activate_with_distance(app, source_dir, selected_dir, discarded_dir, hash_group_distance):
-        win = ImageSelectorWindow(source_dir, selected_dir, discarded_dir, hash_group_distance, application=app)
+    def on_activate_with_distance(app, source_dir, selected_dir, discarded_dir):
+        win = ImageSelectorWindow(source_dir, selected_dir, discarded_dir, application=app)
         win.present()
-    app.connect('activate', on_activate_with_distance, source_dir, selected_dir, discarded_dir, hash_group_distance)
+    app.connect('activate', on_activate_with_distance, source_dir, selected_dir, discarded_dir)
     app.run(None)
