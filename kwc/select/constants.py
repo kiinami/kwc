@@ -17,3 +17,6 @@ for k, v in ExifTags.TAGS.items():
         HASH_EXIF_TAG = k
         break
 HASH_EXIF_PREFIX = b'kwc_hash:'
+
+# Default parent directory for commit feature
+DEFAULT_PARENT_DIRECTORY = "/home/kinami/media/wallpapers"
