@@ -1,10 +1,10 @@
 import logging
 from pathlib import Path
 
-from ffmpeg import FFmpeg
-from rich.progress import Progress, TimeElapsedColumn
+from ffmpeg import FFmpeg, Progress as FFmpegProgress
+from rich.progress import Progress, TimeElapsedColumn, MofNCompleteColumn
 
-from .utils import transcode_video, cut_video
+from .utils import transcode_video, cut_video, total_keyframes
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +50,15 @@ def extract(
             vsync='vfr'
         )
     )
-    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), transient=True) as progress:
-        progress.add_task(f'Extracting frames from "{video}"', total=None)
+    tkf = total_keyframes(video)
+
+    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), MofNCompleteColumn(),
+                      transient=True) as progress:
+        task = progress.add_task(f'Extracting frames from "{video}"', total=tkf)
+
+        @ffmpeg.on('progress')
+        def on_progress(ffmpeg_progress: FFmpegProgress):
+            progress.update(task, completed=ffmpeg_progress.frame)
 
         ffmpeg.execute()
 

@@ -3,6 +3,7 @@ import logging
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
 import cv2
+import json
 from ffmpeg import FFmpeg, Progress as FFmpegProgress
 from rich.progress import Progress, TimeElapsedColumn, MofNCompleteColumn
 
@@ -12,6 +13,26 @@ logger = logging.getLogger(__name__)
 def total_frames(video: Path) -> int:
     cap = cv2.VideoCapture(str(video))
     return int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+def total_keyframes(video: Path) -> int:
+    ffprobe = FFmpeg(executable="ffprobe").input(
+        video,
+        select_streams="v:0",
+        skip_frame="nokey",
+        show_entries="frame=pict_type",
+        print_format="json",
+        show_frames=None,
+    )
+    
+    with Progress(*Progress.get_default_columns(), TimeElapsedColumn(), transient=True) as progress:
+        progress.add_task(f'Getting keyframe count for "{video}"', total=None)
+
+        output = ffprobe.execute()
+        
+    data = json.loads(output)
+    
+    i_frames = [f for f in data.get("frames", []) if f.get("pict_type") == "I"]
+    return len(i_frames)
 
 
 def trim_video(video: Path, output: Path, start: str = None, end: str = None):
