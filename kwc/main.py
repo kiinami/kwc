@@ -54,6 +54,20 @@ def select(
         discarded = directory / 'discarded'
     sel(directory, selected, discarded)
 
+models = Enum('Models', {model.replace("-", "_"): model for model in pyanime4k.pyac.specs.ModelNameList})
+processors = Enum('Processors', {proc.replace("-", "_"): proc for proc in pyanime4k.pyac.specs.ProcessorNameList})
+
+@app.command()
+def upscale(
+    directory: Path = Argument(..., help='Directory containing images to upscale.'),
+    scale: Annotated[float, Option("-s", "--scale", help='Scale factor for upscaling images.')] = 2.0,
+    model: Annotated[models, Option("-m", "--model", help='Model to use for upscaling.')] = models.acnet_gan,
+    processor: Annotated[processors, Option("-p", "--processor", help='Processor to use for upscaling (e.g., "opencl", "cpu").')] = processors.opencl,
+    suffix: Annotated[str, Option("-S", "--suffix", help='Suffix to append to upscaled images.')] = 'U'
+):
+    """Upscale images in a directory using a specified model."""
+    from kwc.upscale import upscale
+    upscale(directory, scale, model, processor, suffix)
 
 if __name__ == '__main__':
     logger = logging.getLogger(__name__)

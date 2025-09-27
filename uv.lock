@@ -138,6 +138,7 @@ dependencies = [
     { name = "cachier" },
     { name = "opencv-python-headless" },
     { name = "peakutils" },
+    { name = "pyanime4k" },
     { name = "pygobject" },
     { name = "pygobject-stubs" },
     { name = "python-ffmpeg" },
@@ -152,6 +153,7 @@ requires-dist = [
     { name = "cachier", specifier = ">=3.4.1" },
     { name = "opencv-python-headless", specifier = ">=4.12.0.88" },
     { name = "peakutils", specifier = ">=1.3.5" },
+    { name = "pyanime4k", specifier = ">=3.0.1" },
     { name = "pygobject", specifier = ">=3.52.3" },
     { name = "pygobject-stubs", specifier = ">=2.13.0" },
     { name = "python-ffmpeg", specifier = ">=2.0.12" },
@@ -260,6 +262,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/5e/77/65b857a69ed876e1951e88aaba60f5ce6120c33703f7cb61a3c894b8c1b6/portalocker-3.2.0.tar.gz", hash = "sha256:1f3002956a54a8c3730586c5c77bf18fae4149e07eaf1c29fc3faf4d5a3f89ac", size = 95644, upload-time = "2025-06-14T13:20:40.03Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4b/a6/38c8e2f318bf67d338f4d629e93b0b4b9af331f455f0390ea8ce4a099b26/portalocker-3.2.0-py3-none-any.whl", hash = "sha256:3cdc5f565312224bc570c49337bd21428bba0ef363bbcf58b9ef4a9f11779968", size = 22424, upload-time = "2025-06-14T13:20:38.083Z" },
+]
+
+[[package]]
+name = "pyanime4k"
+version = "3.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/fb/71/04a05122e651232c843806c63c419f34cde243a54bbd48d51467bb75ed5d/pyanime4k-3.0.1.tar.gz", hash = "sha256:d340af1acc072821096d604defc4348267e20639e62ba7d2fd1d911584eceab9", size = 247113, upload-time = "2025-05-31T15:35:48.256Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ea/6b/812995a25e504b8dfec7115d4f465f48a9044aedf9a1a08ecdd046d45c47/pyanime4k-3.0.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:4b09eddeae85974dd50fddd4cc10aec33f54f53f6ab8911967cb7cf35af46989", size = 453346, upload-time = "2025-05-31T15:35:22.449Z" },
+    { url = "https://files.pythonhosted.org/packages/44/cc/cf655b255c699fa6261fd89681b125795dcd6476f6ffe925a324261dcdf2/pyanime4k-3.0.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:0b31cd65c6afe795ab8daa829244656775306001f6bd6ab978a4b27ffdcd7b02", size = 395494, upload-time = "2025-05-31T15:35:24.096Z" },
+    { url = "https://files.pythonhosted.org/packages/31/f3/c3a75ccaa51150f6d32e6879c5e14727f26695d4091df206a4ec75a60420/pyanime4k-3.0.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:33339e803daae0b66ce2108ee474ce0f4f0fb1257af330be1546ab8017ce02d1", size = 553100, upload-time = "2025-05-31T15:35:25.799Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/93/b10189380b5826692282cfd21cb295f1d63b03828ef85fffe92809ec706a/pyanime4k-3.0.1-cp312-cp312-win_amd64.whl", hash = "sha256:867678ad4fd10527669cd4380e8748a906de7cb3f57f291d07a50faa9f7f6063", size = 698685, upload-time = "2025-05-31T15:35:27.097Z" },
+    { url = "https://files.pythonhosted.org/packages/df/5e/06129834028caf50a09f1d2660e1eeeb5e7d2667a0104f2edd66e6d09923/pyanime4k-3.0.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:8de18544d7d7cce0ace0a350d89e716b7d52096a51bcce0414d95c83b7f121d0", size = 453395, upload-time = "2025-05-31T15:35:28.911Z" },
+    { url = "https://files.pythonhosted.org/packages/37/9a/e9cb1e6fefb520f631d7453c7780b94395d3d514fe2febc40a1ad73b977d/pyanime4k-3.0.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:d603b9ad9ca330b2ce7398d5eafece4e26a54e43a8e8ea15611065e69ef55019", size = 395541, upload-time = "2025-05-31T15:35:30.585Z" },
+    { url = "https://files.pythonhosted.org/packages/be/da/ed261dc6d483538b672683ce9599a1c3e37903eb2d2c18e00a1049d37562/pyanime4k-3.0.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3cd50ff5c0c25adf4ef5dd03990ccdbde581c1d7f1e305901f2776e09714790a", size = 553925, upload-time = "2025-05-31T15:35:31.845Z" },
+    { url = "https://files.pythonhosted.org/packages/5d/52/76e4bf6913a4ce8355fc101b791a50ed44a60dd013d4231a063d68591de7/pyanime4k-3.0.1-cp313-cp313-win_amd64.whl", hash = "sha256:99c44584a2795623f676e2256c32e68987dc0f5fce4f8a4edcc70d98710ac110", size = 698652, upload-time = "2025-05-31T15:35:33.552Z" },
 ]
 
 [[package]]
