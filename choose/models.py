@@ -1,0 +1,26 @@
+from django.db import models
+
+
+class ImageDecision(models.Model):
+	DECISION_KEEP = 'keep'
+	DECISION_DELETE = 'delete'
+	DECISIONS = [
+		(DECISION_KEEP, 'Keep'),
+		(DECISION_DELETE, 'Delete'),
+	]
+
+	folder = models.CharField(max_length=512)
+	filename = models.CharField(max_length=512)
+	decision = models.CharField(max_length=10, choices=DECISIONS)
+	decided_at = models.DateTimeField(auto_now=True)
+
+	class Meta:
+		unique_together = ('folder', 'filename')
+		indexes = [
+			models.Index(fields=['folder']),
+		]
+
+	def __str__(self) -> str:
+		return f"{self.folder}/{self.filename}: {self.decision}"
+
+# Create your models here.

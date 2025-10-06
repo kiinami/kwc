@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}KWC{% endblock %}</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #121933;
+        --text: #e6e9ef;
+        --muted: #9aa3b2;
+        --accent: #4c8bf5;
+        --accent-2: #7c4cf5;
+        /* State colors */
+        --state-done: #22c55e;     /* green */
+        --state-running: #60a5fa;  /* blue */
+        --state-pending: #f59e0b;  /* amber */
+        --state-error: #ef4444;    /* red */
+      }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        /* Solid background to avoid gradient repetition */
+        background: var(--bg);
+        color: var(--text);
+      }
+      .container { max-width: 960px; margin: 0 auto; padding: 1rem; }
+      .navbar {
+        position: sticky; top: 0; z-index: 10;
+        backdrop-filter: blur(10px);
+        background-color: rgba(10, 15, 32, 0.6);
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+      }
+      .nav-inner { display: flex; align-items: center; gap: 1rem; padding: .75rem 0; }
+      .brand { font-weight: 700; letter-spacing: .2px; }
+      .spacer { flex: 1; }
+      a { color: var(--text); text-decoration: none; }
+      .nav a { color: var(--muted); padding: .5rem .75rem; border-radius: .5rem; }
+      .nav a.active, .nav a:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+      .content { padding: 2rem 0; }
+      footer { border-top: 1px solid rgba(255,255,255,0.06); color: var(--muted); padding: 2rem 0; }
+      .pill { display: inline-block; padding: .25rem .5rem; border-radius: 999px; background: rgba(124,76,245,0.15); color: #c9b5ff; font-size: .8rem; }
+      .cta {
+        display: inline-block; margin-top: 1rem; padding: .6rem 1rem; border-radius: .6rem;
+        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+        color: white; font-weight: 600;
+      }
+      .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1.25rem; }
+      .card { background: var(--panel); border: 1px solid rgba(255,255,255,0.06); border-radius: .8rem; padding: 1rem; }
+      .muted { color: var(--muted); }
+      /* Buttons */
+      .btn { display: inline-block; padding: .55rem 1rem; border-radius: .6rem; font-weight: 600; border: 1px solid transparent; }
+      .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
+      .btn-ghost { background: transparent; color: var(--text); border-color: rgba(255,255,255,0.16); }
+      .btn + .btn { margin-left: .5rem; }
+      /* Status coloring */
+      .status { color: var(--muted); }
+      .status--done { color: var(--state-done); }
+      .status--running { color: var(--state-running); }
+      .status--pending { color: var(--state-pending); }
+      .status--error { color: var(--state-error); }
+      .status-icon { display: inline-flex; width: 1rem; height: 1rem; }
+      /* Modern form components */
+      .field { display: grid; gap: .4rem; }
+      .field + .field { margin-top: 1rem; }
+      .field-label { font-weight: 600; }
+      .input {
+        width: 100%;
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.16);
+        color: var(--text);
+        border-radius: .6rem;
+        padding: .6rem .75rem;
+        outline: none;
+        transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+      }
+      .input::placeholder { color: #9aa3b2; opacity: .8; }
+      .input:hover { border-color: rgba(255,255,255,0.26); }
+      .input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(76,139,245,0.25);
+        background: rgba(255,255,255,0.08);
+      }
+      .input-narrow { max-width: 560px; }
+      .input-group { display: flex; gap: .5rem; align-items: center; }
+      .sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+      /* Switch (checkbox) */
+      .switch { display: inline-flex; align-items: center; gap: .5rem; cursor: pointer; user-select: none; }
+      .switch-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+      .switch-ui { position: relative; width: 44px; height: 26px; border-radius: 999px; background: rgba(255,255,255,0.16); transition: background .2s ease; border: 1px solid rgba(255,255,255,0.16); }
+      .switch-ui::after { content: ""; position: absolute; top: 50%; left: 3px; transform: translateY(-50%); width: 20px; height: 20px; border-radius: 999px; background: #fff; transition: left .2s ease, background .2s ease; }
+      .switch-input:checked + .switch-ui { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; }
+      .switch-input:checked + .switch-ui::after { left: 21px; background: #fff; }
+      .switch-label { color: var(--text); opacity: .9; }
+      /* File input */
+      .file-input { display: flex; align-items: center; gap: .75rem; }
+      .file-name { color: var(--muted); font-size: .95rem; }
+  .file-input input[type="file"] { display: none; }
+  /* Number input polish */
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  /* Layout helpers */
+  .two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; align-items: start; }
+  .two-col > label { display: grid; gap: .25rem; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+  .form-actions { display: flex; justify-content: center; gap: .5rem; margin-top: .75rem; }
+  /* Disabled inputs */
+  .input[disabled] { opacity: .6; cursor: not-allowed; }
+    </style>
+  </head>
+  <body>
+    <div class="navbar">
+      <div class="container nav-inner">
+  <a class="brand" href="{% url 'home' %}" title="KWC">KWC</a>
+        <div class="spacer"></div>
+        <nav class="nav">
+          <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
+          <a href="{% url 'extract:index' %}" class="{% if request.resolver_match.namespace == 'extract' %}active{% endif %}">Extract</a>
+          <a href="{% url 'choose:index' %}" class="{% if request.resolver_match.namespace == 'choose' %}active{% endif %}">Choose</a>
+        </nav>
+      </div>
+    </div>
+
+    <main class="container content">
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>

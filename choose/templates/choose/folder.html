@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% block title %}{{ folder }} · Choose · KWC{% endblock %}
+{% block content %}
+  <style>
+    /* Page-local: disable body vertical scroll so only sidebar can scroll */
+    body { overflow-y: hidden; overscroll-behavior: contain; }
+    /* Remove extra vertical padding added by base .content on this page */
+    .content { padding-top: 0 !important; padding-bottom: 0 !important; }
+    /* Full-bleed wrapper that escapes the base .container width without touching other pages */
+    .fullbleed {
+      position: relative;
+      left: 50%;
+      right: 50%;
+      margin-left: -50vw;
+      margin-right: -50vw;
+      width: 100vw;
+      max-width: 100vw;
+      box-sizing: border-box; /* include padding in width to avoid overflow */
+      overflow-x: hidden; /* guard against sub-pixel overflow */
+      padding-left: .75rem;  /* small horizontal padding */
+      padding-right: .75rem;
+    }
+    @media (min-width: 1024px) {
+      .fullbleed { padding-left: 1rem; padding-right: 1rem; }
+    }
+  .chooser-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; height: calc(100vh - 72px); overflow: hidden; }
+  .chooser-sidebar { border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-header { display: grid; gap: .25rem; padding: .6rem .6rem; border-bottom: 1px solid rgba(255,255,255,0.08); flex: 0 0 auto; }
+  .sidebar-title { font-weight: 700; line-height: 1.25; white-space: normal; overflow: visible; text-overflow: initial; word-break: break-word; }
+  .sidebar-count { color: var(--muted); font-size: .9rem; }
+  .sidebar-list { overflow-y: auto; padding: .5rem; flex: 1 1 auto; }
+  .chooser-viewport { position: relative; overflow: hidden; }
+  .thumb { position: relative; border-radius: .5rem; overflow: hidden; margin-bottom: .75rem; background: rgba(255,255,255,0.06); cursor: pointer; }
+  /* Hover hint only for undecided and not active */
+  .thumb:hover:not(.active):not(.keep):not(.delete) { outline: 3px solid rgba(124,76,245,0.35); }
+  /* Persistent decisions */
+  .thumb.keep { outline: 4px solid #22c55e; }
+  .thumb.delete { outline: 4px solid #ef4444; }
+  /* Active selection always shows blue border and takes precedence */
+  .thumb.active { outline: 5px solid rgba(124,76,245,0.95); }
+    .thumb-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
+    .thumb.loading .thumb-img { opacity: .2; }
+  .thumb .spinner { position: absolute; inset: 0; display: grid; place-items: center; }
+  .viewport-inner .spinner { position: absolute; inset: 0; display: grid; place-items: center; }
+    .thumb:not(.loading) .spinner { display: none; }
+    .spinner::before { content: ""; width: 20px; height: 20px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; animation: spin 0.9s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  .viewport-inner { width: 100%; height: calc(100% - 46px); display: grid; place-items: center; box-sizing: border-box; padding: .75rem; }
+  .viewport-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .25s ease; border-radius: .6rem; }
+    .viewport-img.loaded { opacity: 1; }
+    @media (max-width: 800px) { .chooser-layout { grid-template-columns: 1fr; height: auto; } .chooser-sidebar { order: 2; max-height: 40vh; } .chooser-viewport { order: 1; min-height: 50vh; } }
+
+  /* Modal */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 50; }
+  .modal-backdrop.show { display: flex; }
+  .modal { background: var(--panel, #111319); border: 1px solid rgba(255,255,255,0.08); border-radius: .75rem; width: min(520px, 92vw); box-shadow: 0 10px 30px rgba(0,0,0,0.45); }
+  .modal header { padding: .9rem 1rem; font-weight: 700; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .modal .body { padding: 1rem; color: var(--muted); }
+  .modal .body p { margin: .5rem 0; }
+  .modal footer { display: flex; gap: .5rem; justify-content: flex-end; padding: .8rem 1rem; border-top: 1px solid rgba(255,255,255,0.08); }
+  </style>
+
+  <div class="fullbleed">
+  <div class="chooser-layout">
+    <aside class="chooser-sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">{{ folder }}</div>
+        <div class="sidebar-count">{{ images|length }} images</div>
+        {% if images %}
+        <div>
+          <button id="btnOpenSave" class="btn btn-ghost" type="button" title="Apply decisions and rename">Save…</button>
+        </div>
+        {% endif %}
+      </div>
+      <div class="sidebar-list">
+        {% if images %}
+          {% for img in images %}
+            <div class="thumb loading{% if forloop.counter0 == selected_index %} active{% endif %}{% if img.decision %} {{ img.decision }}{% endif %}" data-index="{{ forloop.counter0 }}" data-url="{{ img.url }}" data-decision="{{ img.decision }}" title="{{ img.name }}">
+              <div class="spinner"></div>
+              <img class="thumb-img" src="{{ img.url }}" alt="{{ img.name }}" loading="lazy" onload="this.closest('.thumb').classList.remove('loading')" />
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted" style="padding:.5rem;">No images in this folder.</p>
+        {% endif %}
+      </div>
+    </aside>
+    <section class="chooser-viewport">
+      <div class="viewport-inner">
+        {% if images %}
+          <div id="mainSpinner" class="spinner" aria-hidden="true"></div>
+          <img id="mainImage" class="viewport-img" src="{{ selected_image_url }}" alt="{{ selected_image_name }}" onload="this.classList.add('loaded'); document.getElementById('mainSpinner')?.remove();" />
+        {% else %}
+          <div class="muted">No image selected</div>
+        {% endif %}
+      </div>
+      {% if images %}
+      <div style="position:absolute; bottom:.75rem; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:.5rem;">
+        <button id="btnDelete" class="btn btn-ghost" type="button" title="Delete (D)" style="border-color: rgba(239,68,68,.6); color:#fff;">Delete</button>
+        <button id="btnKeep" class="btn btn-primary" type="button" title="Keep (K)">Keep</button>
+      </div>
+      {% endif %}
+    </section>
+  </div>
+  </div>
+
+  <!-- Save confirmation modal -->
+  <div id="saveModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="saveTitle">
+      <header id="saveTitle">Apply and Save</header>
+      <div class="body">
+        <p>You're about to apply your choices to this folder.</p>
+        <p><strong><span id="saveKeepCount">0</span></strong> image(s) will be kept and renamed to close gaps.</p>
+        <p><strong><span id="saveDeleteCount">0</span></strong> image(s) will be permanently deleted.</p>
+        <p id="saveUndecidedWarn" style="color:#eab308; display:none;">Some images are undecided; they'll be treated as Keep.</p>
+      </div>
+      <footer>
+        <button id="btnCancelSave" class="btn btn-ghost" type="button">Cancel</button>
+        <button id="btnConfirmSave" class="btn btn-primary" type="button">Continue</button>
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const thumbs = Array.from(document.querySelectorAll('.thumb'));
+      const main = document.getElementById('mainImage');
+  const sidebar = document.querySelector('.sidebar-list');
+  const btnKeep = document.getElementById('btnKeep');
+  const btnDelete = document.getElementById('btnDelete');
+  const btnOpenSave = document.getElementById('btnOpenSave');
+  const saveModal = document.getElementById('saveModal');
+  const btnCancelSave = document.getElementById('btnCancelSave');
+  const btnConfirmSave = document.getElementById('btnConfirmSave');
+  const keepCountEl = document.getElementById('saveKeepCount');
+  const deleteCountEl = document.getElementById('saveDeleteCount');
+  const undecidedWarnEl = document.getElementById('saveUndecidedWarn');
+
+      function activateThumb(el) {
+        if (!el) return;
+        const url = el.getAttribute('data-url');
+        // Update active state
+        document.querySelectorAll('.thumb.active').forEach(a => a.classList.remove('active'));
+        el.classList.add('active');
+        // Ensure selected is centered in sidebar
+        el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+        if (main && url) {
+          main.classList.remove('loaded');
+          // show spinner
+          let sp = document.getElementById('mainSpinner');
+          if (!sp) {
+            sp = document.createElement('div');
+            sp.id = 'mainSpinner';
+            sp.className = 'spinner';
+            main.parentElement?.appendChild(sp);
+          }
+          const onLoad = () => { main.classList.add('loaded'); sp?.remove(); main.removeEventListener('load', onLoad); };
+          main.addEventListener('load', onLoad);
+          main.src = url;
+          // alt text from last segment
+          const parts = url.split('/');
+          main.alt = decodeURIComponent(parts[parts.length - 1] || 'image');
+        }
+      }
+
+      // On load, ensure the initially active item is centered
+      (function(){
+        const current = document.querySelector('.thumb.active');
+        if (current) current.scrollIntoView({ block: 'center', inline: 'nearest' });
+      })();
+
+      // Mouse selection
+      thumbs.forEach(el => {
+        el.addEventListener('click', () => activateThumb(el));
+      });
+
+      // Keyboard navigation: ArrowUp / ArrowDown
+      window.addEventListener('keydown', (e) => {
+        if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+        e.preventDefault();
+        const current = document.querySelector('.thumb.active');
+        let idx = current ? parseInt(current.getAttribute('data-index') || '0', 10) : 0;
+        if (Number.isNaN(idx)) idx = 0;
+        if (e.key === 'ArrowUp') idx = Math.max(0, idx - 1);
+        if (e.key === 'ArrowDown') idx = Math.min(thumbs.length - 1, idx + 1);
+        const target = thumbs[idx];
+        activateThumb(target);
+      });
+
+      function getCsrf(){
+        const name = 'csrftoken=';
+        const cookie = document.cookie.split(';').map(s=>s.trim()).find(s=>s.startsWith(name));
+        return cookie ? decodeURIComponent(cookie.substring(name.length)) : '';
+      }
+
+      async function decide(decision){
+        const active = document.querySelector('.thumb.active');
+        if (!active) return;
+        const url = active.getAttribute('data-url') || '';
+        const parts = url.split('/');
+        const filename = decodeURIComponent(parts[parts.length - 1] || '');
+
+        // Optimistically mark decision on current thumb
+        active.classList.remove('keep','delete');
+        active.classList.add(decision);
+
+        // Compute next and advance immediately for fast workflow
+        let idx = parseInt(active.getAttribute('data-index') || '0', 10);
+        if (Number.isNaN(idx)) idx = 0;
+        const next = thumbs[idx + 1];
+        if (next) activateThumb(next);
+
+        // Persist in background
+        try {
+          const res = await fetch(`${window.location.pathname}decide`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+            body: JSON.stringify({ filename, decision })
+          });
+          if (!res.ok) throw new Error('request_failed');
+        } catch (e) {
+          console.error('Failed to save decision', e);
+        }
+      }
+
+      btnKeep?.addEventListener('click', () => decide('keep'));
+      btnDelete?.addEventListener('click', () => decide('delete'));
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'k' || e.key === 'K') { e.preventDefault(); decide('keep'); }
+        if (e.key === 'd' || e.key === 'D') { e.preventDefault(); decide('delete'); }
+      });
+
+      function openSaveModal(){
+        // Compute counts from current DOM state
+        const total = thumbs.length;
+        const deletes = thumbs.filter(t => t.classList.contains('delete')).length;
+        const keeps = thumbs.filter(t => t.classList.contains('keep')).length;
+        const undecided = total - deletes - keeps;
+        // undecided are treated as keep
+        const finalKeep = keeps + undecided;
+        keepCountEl.textContent = String(finalKeep);
+        deleteCountEl.textContent = String(deletes);
+        undecidedWarnEl.style.display = undecided > 0 ? '' : 'none';
+        saveModal?.classList.add('show');
+      }
+      function closeSaveModal(){ saveModal?.classList.remove('show'); }
+
+      btnOpenSave?.addEventListener('click', openSaveModal);
+      btnCancelSave?.addEventListener('click', closeSaveModal);
+      saveModal?.addEventListener('click', (e) => { if (e.target === saveModal) closeSaveModal(); });
+
+      btnConfirmSave?.addEventListener('click', async () => {
+        btnConfirmSave.disabled = true;
+        btnConfirmSave.textContent = 'Applying…';
+        try {
+          const res = await fetch(`${window.location.pathname}save`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': getCsrf() },
+          });
+          if (!res.ok) throw new Error('request_failed');
+          // Redirect to chooser home on success
+          window.location.assign('/choose/');
+        } catch (e) {
+          console.error('Save failed', e);
+          alert('Saving failed. Please try again.');
+          btnConfirmSave.disabled = false;
+          btnConfirmSave.textContent = 'Continue';
+        }
+      });
+    })();
+  </script>
+{% endblock %}

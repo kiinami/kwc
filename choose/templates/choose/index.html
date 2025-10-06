@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Choose · KWC{% endblock %}
+{% block content %}
+  <style>
+    .poster-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+    @media (min-width: 768px) { .poster-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
+    .poster-card { background: var(--panel); border: 1px solid rgba(255,255,255,0.06); border-radius: .8rem; overflow: hidden; transition: transform .15s ease, box-shadow .15s ease; }
+    .poster-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.25); }
+    .poster-media { position: relative; width: 100%; aspect-ratio: 2 / 3; background: rgba(255,255,255,0.04); }
+    .poster-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .25s ease; }
+    .poster-media img.loaded { opacity: 1; }
+    .poster-meta { padding: .6rem .75rem .8rem; }
+    .poster-title { font-weight: 600; line-height: 1.2; }
+    .poster-year { color: var(--muted); font-size: .9rem; }
+    .poster-link { display: block; color: inherit; }
+  </style>
+
+  <div class="container" style="max-width: 1120px; margin: 0 auto;">
+    <h1>Choose</h1>
+
+    {% if folders %}
+      <div class="poster-grid">
+        {% for f in folders %}
+          <a class="poster-link" href="{{ f.url }}" title="{{ f.title }}">
+            <div class="poster-card">
+              <div class="poster-media">
+                {% if f.cover_url %}
+                  <img src="{{ f.cover_url }}" alt="{{ f.title }} poster" loading="lazy" onload="this.classList.add('loaded')" />
+                {% else %}
+                  <div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);">No image</div>
+                {% endif %}
+              </div>
+              <div class="poster-meta">
+                <div class="poster-title">{{ f.title }}</div>
+                {% if f.year %}<div class="poster-year">{{ f.year }}</div>{% endif %}
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>No folders found yet. Run an extraction first.</p>
+    {% endif %}
+  </div>
+{% endblock %}

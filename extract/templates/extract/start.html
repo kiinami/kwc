@@ -1,0 +1,363 @@
+{% extends 'base.html' %}
+{% load naming %}
+{% block title %}Extract · KWC{% endblock %}
+{% block content %}
+<div style="min-height: 60vh; display: grid; place-items: center;">
+  <div style="width: 100%; max-width: 720px;">
+  <h1>New extraction</h1>
+  <form method="post" action="" novalidate>
+      {% csrf_token %}
+      <div class="card">
+        <div class="field">
+          {% if form.non_field_errors %}
+            <div class="status status--error">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="field">
+            <div class="field-label">Video file</div>
+            <div class="input-group">
+              {{ form.video }}
+              <button type="button" class="btn btn-ghost" onclick="openBrowseModal('video')">Browse…</button>
+            </div>
+            {% if form.video.errors %}<div class="status status--error">{{ form.video.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="field">
+            <div class="field-label">Title</div>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
+            
+          </div>
+
+          <div class="two-col">
+            <label>
+              <div style="margin-bottom:.25rem;">Year</div>
+              {{ form.year }}
+              {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
+            </label>
+            <label>
+              <div style="margin-bottom:.25rem;">Season</div>
+              {{ form.season }}
+              {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
+            </label>
+          </div>
+
+          <div class="field">
+            <div style="margin-bottom:.25rem;">Episode</div>
+            {{ form.episode }}
+            {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div id="namingPreview" class="muted" style="margin-top:.25rem;"></div>
+
+          <div class="field">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div class="field-label" style="margin:0">Trim intervals</div>
+              <button type="button" class="btn btn-ghost" onclick="addInterval()">Add</button>
+            </div>
+            <input type="hidden" name="{{ form.trim_intervals.html_name }}" id="id_trim_intervals" />
+            <div id="intervals" class="grid" style="margin-top:.5rem;"></div>
+            {% if form.trim_intervals.errors %}<div class="status status--error">{{ form.trim_intervals.errors|striptags }}</div>{% endif %}
+          </div>
+
+          <div class="form-actions">
+            <button class="btn btn-primary" type="submit" id="startBtn">Start</button>
+            <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+  // Enhance default Django widgets with .input class
+  for (const el of document.querySelectorAll('input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea')) {
+    el.classList.add('input');
+  }
+  // Also apply to output_dir by id and number fields (if missing)
+  const videoEl = document.getElementById('{{ form.video.auto_id }}');
+  // Title input
+  const titleEl = document.getElementById('{{ form.title.auto_id }}');
+  if (titleEl) { titleEl.classList.add('input'); titleEl.classList.add('input-narrow'); }
+  const yearEl = document.getElementById('{{ form.year.auto_id }}');
+  const seasonEl = document.getElementById('{{ form.season.auto_id }}');
+  const episodeEl = document.getElementById('{{ form.episode.auto_id }}');
+  if (yearEl) { yearEl.classList.add('input'); yearEl.style.maxWidth = '200px'; }
+  if (seasonEl) { seasonEl.classList.add('input'); seasonEl.style.maxWidth = '200px'; }
+  if (episodeEl) { episodeEl.classList.add('input'); episodeEl.classList.add('input-narrow'); }
+  const namingPreview = document.getElementById('namingPreview');
+  const folderPattern = "{{ folder_pattern|escapejs }}";
+  const imagePattern = "{{ image_pattern|escapejs }}";
+  function renderWith(values, pattern) {
+    // Support a minimal subset of Django template syntax for preview:
+    // - {% if season %}...{% endif %} and {% if episode %}...{% endif %}
+    // - {{ title }}, {{ year }}, {{ season }}, {{ episode }}
+    // - {{ episode|pad:2 }} and {{ season|pad:2 }}
+    pattern = pattern.replace(/\{\%\s*if\s+season\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.season ? inner : ''));
+    pattern = pattern.replace(/\{\%\s*if\s+episode\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.episode ? inner : ''));
+    pattern = pattern.replace(/\{\%\s*if\s+year\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.year ? inner : ''));
+    // Simple variable replacements
+    pattern = pattern.replace(/\{\{\s*title\s*\}\}/g, values.title);
+    pattern = pattern.replace(/\{\{\s*year\s*\}\}/g, values.year);
+  // counter pad filter and plain counter
+  pattern = pattern.replace(/\{\{\s*counter\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => String(1).padStart(parseInt(w, 10) || 0, '0'));
+  pattern = pattern.replace(/\{\{\s*counter\s*\}\}/g, '1');
+    // pad filter for season/episode
+    pattern = pattern.replace(/\{\{\s*season\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => {
+      const num = parseInt(values.season, 10);
+      return Number.isNaN(num) ? (values.season || '') : String(num).padStart(parseInt(w, 10) || 0, '0');
+    });
+    pattern = pattern.replace(/\{\{\s*episode\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => {
+      const num = parseInt(values.episode, 10);
+      return Number.isNaN(num) ? (values.episode || '') : String(num).padStart(parseInt(w, 10) || 0, '0');
+    });
+    pattern = pattern.replace(/\{\{\s*season\s*\}\}/g, values.season);
+    pattern = pattern.replace(/\{\{\s*episode\s*\}\}/g, values.episode);
+  // After handling Django-like parts, also support brace placeholders for backwards compatibility
+  // replace {title}
+    let s = pattern.replaceAll('{title}', values.title);
+    // year/season/episode (no padding preview here except episode and counter padding)
+    s = s.replaceAll('{year}', values.year);
+    // Optional leading space for season/episode: replace " {season[:N]}" only when present
+    s = s.replace(/( )?\{season:(\d+)\}/g, (_m, space, w) => {
+      const num = parseInt(values.season, 10);
+      if (!Number.isNaN(num)) return (space || '') + String(num).padStart(parseInt(w, 10) || 0, '0');
+      return values.season ? (space || '') + values.season : '';
+    });
+    s = s.replace(/( )?\{season\}/g, (_m, space) => (values.season ? (space || '') + values.season : ''));
+    // episode zero padding like {episode:02} with optional leading space
+    s = s.replace(/( )?\{episode:(\d+)\}/g, (_m, space, w) => {
+      const num = parseInt(values.episode, 10);
+      if (!Number.isNaN(num)) return (space || '') + String(num).padStart(parseInt(w, 10) || 0, '0');
+      return values.episode ? (space || '') + values.episode : '';
+    });
+    s = s.replace(/( )?\{episode\}/g, (_m, space) => (values.episode ? (space || '') + values.episode : ''));
+    return s;
+  }
+
+  function formatPreview() {
+    const title = (titleEl?.value || '').trim() || 'Sample title';
+    const year = (yearEl?.value || '').trim();
+    const season = (seasonEl?.value || '').trim();
+    const episode = (episodeEl?.value || '').trim();
+    let folder = renderWith({ title, year, season, episode }, folderPattern);
+    let file = renderWith({ title, year, season, episode }, imagePattern);
+    // Replace counter with optional zero padding syntax {counter:NN}
+    file = file.replace(/\{counter:(\d+)\}/g, (_m, w) => String(1).padStart(parseInt(w, 10) || 0, '0'));
+    file = file.replace(/\{counter\}/g, '1');
+    const text = `Files will be named: ${folder}/${file}`;
+    if (namingPreview) namingPreview.textContent = text;
+  }
+  titleEl?.addEventListener('input', formatPreview);
+  yearEl?.addEventListener('input', formatPreview);
+  seasonEl?.addEventListener('input', formatPreview);
+  episodeEl?.addEventListener('input', formatPreview);
+  // Initialize preview
+  formatPreview();
+  
+
+  // Show chosen file name next to the file input
+  // Server-side path browsing modal
+  let browseTarget = null; // 'video'
+  function openBrowseModal(target, dirsOnly=false) {
+    browseTarget = target;
+    const modal = ensureBrowseModal();
+    modal.classList.add('open');
+    loadDir('/');
+    modal.dataset.dirsOnly = target === 'video' ? '0' : '1';
+    const useBtn = document.getElementById('useCurrentBtn');
+    if (useBtn) { useBtn.style.display = 'none'; }
+  }
+  function ensureBrowseModal() {
+    let modal = document.getElementById('browseModal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'browseModal';
+    modal.innerHTML = `
+      <div style="position:fixed; inset:0; background: rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; padding:1rem;">
+        <div class="card" style="width: 100%; max-width: 720px; max-height: 80vh; overflow:auto;">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <div class="field-label">Browse server</div>
+            <button type="button" class="btn btn-ghost" onclick="closeBrowseModal()">Close</button>
+          </div>
+          <div class="muted" id="browsePath" style="margin-top:.25rem;"></div>
+          <div id="browseList" class="grid" style="margin-top: .75rem;"></div>
+          <div style="display:flex; justify-content:flex-end; margin-top:.75rem;">
+            <button type="button" id="useCurrentBtn" class="btn btn-primary" style="display:none;">Use this folder</button>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal.firstElementChild) closeBrowseModal(); });
+
+    // No new-folder UI when selecting files
+    return modal;
+  }
+  function closeBrowseModal() {
+    const modal = document.getElementById('browseModal');
+    if (modal) modal.classList.remove('open'), modal.remove();
+  }
+  async function loadDir(path) {
+    const modal = document.getElementById('browseModal');
+    if (!modal) return;
+    const dirsOnly = modal.dataset.dirsOnly === '1';
+    const res = await fetch(`{% url 'extract:browse_api' %}?path=${encodeURIComponent(path)}&dirs_only=${dirsOnly ? '1' : '0'}`);
+    if (!res.ok) {
+      document.getElementById('browseList').innerHTML = `<div class="status status--error">Error loading directory</div>`;
+      return;
+    }
+    const data = await res.json();
+    document.getElementById('browsePath').textContent = data.path;
+  modal.dataset.currentPath = data.path;
+    const list = document.getElementById('browseList');
+    list.innerHTML = '';
+    // Parent link if not root
+    const parent = data.path !== '/' ? data.path.replace(/\/?[^\/]+\/?$/, '') || '/' : null;
+    if (parent) {
+      const up = document.createElement('div');
+      up.className = 'card';
+      up.textContent = '…';
+      up.style.cursor = 'pointer';
+      up.onclick = () => loadDir(parent);
+      list.appendChild(up);
+    }
+    for (const e of data.entries) {
+      const item = document.createElement('div');
+      item.className = 'card';
+      item.style.cursor = 'pointer';
+      item.textContent = e.is_dir ? `📁 ${e.name}` : `📄 ${e.name}`;
+      item.onclick = () => {
+        if (e.is_dir) {
+          loadDir(e.path);
+        } else {
+          applyPath(e.path);
+        }
+      };
+      list.appendChild(item);
+    }
+  }
+  function applyPath(path) {
+    if (!browseTarget) return;
+    const el = document.getElementById('{{ form.video.auto_id }}');
+    if (el) el.value = path;
+    closeBrowseModal();
+    // Auto-guess when a file is chosen
+    guessFromVideoInput();
+  }
+
+  // CSRF helper (Django docs)
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Output folder: plain server path text field; no folder picker used
+
+  // Dynamic trim intervals
+  const container = document.getElementById('intervals');
+  const hidden = document.getElementById('id_trim_intervals');
+  const TIME_HINT = 'HH:MM:SS';
+  const TIME_RE = /^\d{2}:\d{2}:\d{2}$/;
+
+  function splitInterval(str) {
+    const parts = (str || '').split('-');
+    const start = parts[0] || '';
+    const end = parts[1] || '';
+    return [start, end];
+  }
+  function joinInterval(start, end) { return `${start || ''}-${end || ''}`; }
+
+  function renderIntervals(items) {
+    container.innerHTML = '';
+    items.forEach((val, idx) => {
+      const [start, end] = splitInterval(val);
+      const row = document.createElement('div');
+      row.className = 'card';
+      row.style.display = 'flex';
+      row.style.alignItems = 'center';
+      row.style.gap = '.5rem';
+      row.style.padding = '.5rem';
+      row.innerHTML = `
+        <input type="text" class="input" value="${start}" placeholder="${TIME_HINT}" style="flex:1;" aria-label="Start time (HH:MM:SS)" oninput="updateStart(${idx}, this.value)">
+        <input type="text" class="input" value="${end}" placeholder="${TIME_HINT}" style="flex:1;" aria-label="End time (HH:MM:SS)" oninput="updateEnd(${idx}, this.value)">
+        <button type="button" class="btn btn-ghost" onclick="removeInterval(${idx})">Remove</button>
+      `;
+      container.appendChild(row);
+    });
+  }
+
+  function getItems() {
+    try { return JSON.parse(hidden.value || '[]'); } catch { return []; }
+  }
+  function setItems(items) { hidden.value = JSON.stringify(items); renderIntervals(items); }
+  function addInterval() { const items = getItems(); items.push(''); setItems(items); }
+  function removeInterval(i) { const items = getItems(); items.splice(i,1); setItems(items); }
+  function updateStart(i, v) {
+    const items = getItems();
+    const [_, end] = splitInterval(items[i] || '');
+    items[i] = joinInterval(v, end);
+    hidden.value = JSON.stringify(items);
+  }
+  function updateEnd(i, v) {
+    const items = getItems();
+    const [start, _] = splitInterval(items[i] || '');
+    items[i] = joinInterval(start, v);
+    hidden.value = JSON.stringify(items);
+  }
+  function syncIntervals() {
+    // Keep only complete intervals (both start and end match HH:MM:SS)
+    const items = getItems();
+    const filtered = items.filter((s) => {
+      const [a,b] = splitInterval(s);
+      return TIME_RE.test(a) && TIME_RE.test(b);
+    });
+    hidden.value = JSON.stringify(filtered);
+  }
+
+  
+
+  // Hook submit to ensure intervals are synced
+  const startBtn = document.getElementById('startBtn');
+  const formEl = startBtn?.closest('form');
+  formEl?.addEventListener('submit', (e) => {
+    syncIntervals();
+  });
+
+  // Initialize
+  setItems(getItems());
+
+  // Guessit integration
+  async function guessFromVideoInput() {
+    try {
+      const val = (videoEl?.value || '').trim();
+      if (!val) return;
+      const url = `{% url 'extract:guess_api' %}?${new URLSearchParams({ path: val }).toString()}`;
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (titleEl && data.title !== undefined && !titleEl.value) titleEl.value = data.title || '';
+      if (yearEl && data.year !== undefined && !yearEl.value) yearEl.value = data.year || '';
+      if (seasonEl && data.season !== undefined && !seasonEl.value) seasonEl.value = data.season || '';
+      if (episodeEl && data.episode !== undefined && !episodeEl.value) episodeEl.value = data.episode || '';
+      formatPreview();
+    } catch (e) {
+      // Silent failure; user can fill manually
+      console.warn('guess failed', e);
+    }
+  }
+
+  // Auto-run when user edits the video path
+  videoEl?.addEventListener('change', () => guessFromVideoInput());
+  videoEl?.addEventListener('blur', () => guessFromVideoInput());
+</script>
+{% endblock %}

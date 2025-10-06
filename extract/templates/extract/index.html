@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Extract · KWC{% endblock %}
+{% block content %}
+  <div style="min-height: 60vh; display: grid; place-items: center;">
+    <div style="text-align:center; width: 100%;">
+      <h1>Extract</h1>
+      <div style="margin-top: .75rem;">
+        <a class="btn btn-primary" href="{% url 'extract:start' %}">Start new extraction</a>
+      </div>
+      <div style="margin-top: 1.25rem; max-width: 640px; margin-inline: auto; text-align:left;">
+        <h3 style="margin-top:0">Jobs</h3>
+        <div id="jobs-list" class="grid">
+          {% for j in jobs %}
+            <div class="card">
+              <div style="display:flex; align-items:center; gap:.5rem;">
+                <span class="status-icon {% if j.status == 'done' %}status--done{% elif j.status == 'running' %}status--running{% elif j.status == 'pending' %}status--pending{% else %}status--error{% endif %}" aria-hidden="true">
+                  {% if j.status == 'done' %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
+                  {% elif j.status == 'running' %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>
+                  {% elif j.status == 'pending' %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                  {% else %}
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  {% endif %}
+                </span>
+                <a href="{% url 'extract:job' job_id=j.id %}">{{ j.id }}</a>
+                <span class="status {% if j.status == 'done' %}status--done{% elif j.status == 'running' %}status--running{% elif j.status == 'pending' %}status--pending{% else %}status--error{% endif %}" style="margin-left:auto">{{ j.status }}</span>
+              </div>
+              <div class="bar-wrap" style="margin-top: .5rem; background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden; {% if j.status == 'done' %}display:none{% endif %}">
+                <div class="bar" style="height: 8px; width: {{ j.percent }}%; background: linear-gradient(135deg, #4c8bf5, #7c4cf5);"></div>
+              </div>
+            </div>
+          {% empty %}
+            <div class="muted">No jobs.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    const list = document.getElementById('jobs-list');
+    const api = "{% url 'extract:jobs_api' %}";
+  const ICON_DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>';
+  const ICON_RUNNING = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><path d="M21 12a9 9 0 1 1-3-6.7"/><polyline points="21 3 21 9 15 9"/></svg>';
+  const ICON_PENDING = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>';
+  const ICON_ERROR = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    async function refresh() {
+      try {
+        const res = await fetch(api, {cache: 'no-store'});
+        if (!res.ok) return;
+        const data = await res.json();
+        const jobs = data.jobs || [];
+        if (!jobs.length) {
+          list.innerHTML = '<div class="muted">No jobs.</div>';
+          return;
+        }
+        const iconFor = s => (s === 'done' ? ICON_DONE : s === 'running' ? ICON_RUNNING : s === 'pending' ? ICON_PENDING : ICON_ERROR);
+        list.innerHTML = jobs.map(j => {
+          const href = encodeURI(`{% url 'extract:job' job_id='__ID__' %}`.replace('__ID__', j.id));
+          const hideBar = (j.status === 'done');
+          const statusClass = j.status === 'done' ? 'status--done' : j.status === 'running' ? 'status--running' : j.status === 'pending' ? 'status--pending' : 'status--error';
+          return `
+            <div class="card">
+              <div style="display:flex; align-items:center; gap:.5rem;">
+                <span class="status-icon ${statusClass}" aria-hidden="true">${iconFor(j.status)}</span>
+                <a href="${href}">${j.id}</a>
+                <span class="status ${statusClass}" style="margin-left:auto">${j.status}</span>
+              </div>
+              <div class="bar-wrap" style="margin-top: .5rem; background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden; ${hideBar ? 'display:none' : ''}">
+                <div class="bar" style="height: 8px; width: ${j.percent}%; background: linear-gradient(135deg, #4c8bf5, #7c4cf5);"></div>
+              </div>
+            </div>`;
+        }).join('');
+      } catch (e) {
+        // ignore
+      }
+    }
+    setInterval(refresh, 1000);
+    refresh();
+  </script>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block title %}KWC{% endblock %}
+{% block content %}
+  <div style="min-height: 60vh; display: grid; place-items: center;">
+    <div style="text-align:center; width: 100%;">
+      <h1>Welcome</h1>
+      <div style="margin-top: .75rem;">
+        <a class="cta" href="{% url 'extract:index' %}">Open Extract →</a>
+        <a class="cta" href="{% url 'choose:index' %}">Open Choose →</a>
+      </div>
+    </div>
+  </div>
+{% endblock %}

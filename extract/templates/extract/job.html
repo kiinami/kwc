@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}Job · KWC{% endblock %}
+{% block content %}
+<div style="min-height: 60vh; display: grid; place-items: center;">
+  <div class="card" style="max-width: 720px; width: 100%;">
+    <h1 style="margin-top:0">Extraction</h1>
+
+    <div id="progress" style="margin-top: .75rem; {% if is_done %}display:none{% endif %}">
+      <div style="background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden;">
+        <div id="bar" style="height: 12px; width: {{ percent }}%; background: linear-gradient(135deg, #4c8bf5, #7c4cf5);"></div>
+      </div>
+      <div class="muted" style="margin-top: .5rem;">
+        <span id="counts">
+          {% if total %}
+            <span id="current">{{ current }}</span> / <span id="total">{{ total }}</span>
+          {% else %}
+            Getting total frames…
+          {% endif %}
+        </span>
+        (<span id="percent">{{ percent }}</span>%) — <span id="elapsed">{{ elapsed|floatformat:1 }}</span>s
+      </div>
+    </div>
+
+    <div id="summary" style="margin-top: 1rem; {% if not is_done %}display:none{% endif %}">
+      <h3>Summary</h3>
+      <ul class="muted">
+        <li>Total frames: <span id="frames">{{ results.total_frames }}</span></li>
+        <li>Time taken: <span id="time">{{ results.time_taken }}</span></li>
+        <li>Output dir: {{ results.output_dir }}</li>
+      </ul>
+    </div>
+
+    <div style="margin-top: 1rem;">
+      <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
+      <a class="btn btn-primary" id="chooseBtn" href="{% url 'choose:index' %}" style="{% if not is_done %}display:none{% endif %}">Open Choose</a>
+    </div>
+  </div>
+</div>
+<script>
+  const apiUrl = "{% url 'extract:job_api' job_id=job_id %}";
+  const statusEl = document.getElementById('status');
+  const bar = document.getElementById('bar');
+  const percentEl = document.getElementById('percent');
+  const currentEl = document.getElementById('current');
+  const totalEl = document.getElementById('total');
+  const elapsedEl = document.getElementById('elapsed');
+  const chooseBtn = document.getElementById('chooseBtn');
+  const progress = document.getElementById('progress');
+  const summary = document.getElementById('summary');
+  const framesEl = document.getElementById('frames');
+  const timeEl = document.getElementById('time');
+
+  async function poll() {
+    try {
+      const res = await fetch(apiUrl, {cache: 'no-store'});
+      if (!res.ok) return;
+      const data = await res.json();
+      statusEl.textContent = data.status || '';
+      const pct = data.percent ?? 0;
+      if (bar) bar.style.width = pct + '%';
+      if (percentEl) percentEl.textContent = pct;
+      if (data.total_known) {
+        if (currentEl) currentEl.textContent = data.current ?? 0;
+        if (totalEl) totalEl.textContent = data.total ?? 0;
+        // ensure counts area shows X / Y once we know
+        const counts = document.getElementById('counts');
+        if (counts && !document.getElementById('current')) {
+          counts.innerHTML = `<span id="current">${data.current ?? 0}</span> / <span id="total">${data.total ?? 0}</span>`;
+        }
+      }
+      if (elapsedEl) elapsedEl.textContent = (parseFloat(elapsedEl.textContent) + 1).toFixed(1);
+      if (data.total_frames != null && framesEl) framesEl.textContent = data.total_frames;
+
+      if (data.done) {
+        progress.style.display = 'none';
+        summary.style.display = '';
+        chooseBtn.style.display = '';
+        return; // stop polling
+      }
+    } catch (e) { /* ignore */ }
+    setTimeout(poll, 1000);
+  }
+  // Only poll if not done
+  {% if not is_done %}poll();{% endif %}
+</script>
+{% endblock %}
