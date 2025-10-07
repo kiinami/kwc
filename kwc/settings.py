@@ -29,12 +29,16 @@ except Exception:
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-c=ph*e1er)+jkkg6@+u9m=t2fc6mapv3+3byy)2eob$n41r4po'
+# Prefer DJANGO_SECRET_KEY or SECRET_KEY from env; fall back to the dev key (not for real prod).
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or os.getenv('SECRET_KEY') or 'django-insecure-c=ph*e1er)+jkkg6@+u9m=t2fc6mapv3+3byy)2eob$n41r4po'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Accept DJANGO_DEBUG or fallback to DEBUG
+DEBUG = (os.getenv('DJANGO_DEBUG', os.getenv('DEBUG', 'False'))).lower() in {'1', 'true', 'yes', 'on'}
 
-ALLOWED_HOSTS = []
+# Comma-separated allowed hosts, default to allowing all in container unless specified
+_allowed_hosts_raw = os.getenv('DJANGO_ALLOWED_HOSTS', os.getenv('ALLOWED_HOSTS', '*'))
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_raw.split(',') if h.strip()]
 
 
 # Application definition
@@ -127,6 +131,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = 'static/'
+# Allow overriding static root via env (useful in some container setups)
+STATIC_ROOT = Path(os.getenv('STATIC_ROOT', str(BASE_DIR / 'static')))
+
+# When running behind a reverse proxy (common in containers)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -135,22 +144,19 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Extract/Choose shared configuration via env vars
 # Final wallpapers root directory where extracted frames are stored and later curated.
-# Prefer new env var KWC_WALLPAPERS_FOLDER; fall back to legacy KWC_EXTRACT_ROOT.
-WALLPAPERS_FOLDER = os.getenv('KWC_WALLPAPERS_FOLDER', os.getenv('KWC_EXTRACT_ROOT', str(BASE_DIR / 'extracted')))
+WALLPAPERS_FOLDER = os.getenv('KWC_WALLPAPERS_FOLDER', str(BASE_DIR / 'extracted'))
 
-# Backwards compatibility alias so older code paths keep working if referenced.
-EXTRACT_DEFAULT_ROOT = WALLPAPERS_FOLDER
 
 # Folder pattern (relative to root). Supports Django template syntax and brace placeholders.
 # Example default includes year only when present.
 EXTRACT_FOLDER_PATTERN = os.getenv(
-    'KWC_EXTRACT_FOLDER_PATTERN',
+    'KWC_FOLDER_PATTERN',
     '{{ title }}{% if year %} ({{ year }}){% endif %}'
 )
 
 # Image filename pattern. Supports Django template syntax and brace placeholders.
 # Default: conditionally include season/episode; zero-pad using the 'pad' filter; pad counter to 4.
 EXTRACT_IMAGE_PATTERN = os.getenv(
-    'KWC_EXTRACT_IMAGE_PATTERN',
+    'KWC_IMAGE_PATTERN',
     '{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}{% if episode %}E{{ episode|pad:2 }}{% endif %} 〜 {{ counter|pad:4 }}.jpg'
 )

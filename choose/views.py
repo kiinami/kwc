@@ -13,7 +13,7 @@ from extract.utils import render_pattern
 
 
 def _get_wallpapers_root() -> Path:
-	return Path(getattr(settings, 'WALLPAPERS_FOLDER', getattr(settings, 'EXTRACT_DEFAULT_ROOT', settings.BASE_DIR / 'extracted')))
+	return Path(getattr(settings, 'WALLPAPERS_FOLDER', settings.BASE_DIR / 'extracted'))
 
 
 def index(request: HttpRequest) -> HttpResponse:

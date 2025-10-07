@@ -29,4 +29,4 @@ urlpatterns = [
 
 # In development, serve wallpaper images directly from disk for previews
 if settings.DEBUG:
-    urlpatterns += static('/wallpapers/', document_root=getattr(settings, 'WALLPAPERS_FOLDER', getattr(settings, 'EXTRACT_DEFAULT_ROOT', None)))
+    urlpatterns += static('/wallpapers/', document_root=getattr(settings, 'WALLPAPERS_FOLDER', None))

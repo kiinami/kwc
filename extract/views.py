@@ -97,7 +97,7 @@ def start(request: HttpRequest) -> HttpResponse:
 				params["trim_intervals"] = form.cleaned_data.get("trim_intervals", [])
 				# Compute output directory from settings and title
 				# Use unified wallpapers root
-				root = Path(getattr(settings, 'WALLPAPERS_FOLDER', settings.EXTRACT_DEFAULT_ROOT))
+				root = Path(getattr(settings, 'WALLPAPERS_FOLDER', settings.BASE_DIR / 'extracted'))
 				folder_pattern = settings.EXTRACT_FOLDER_PATTERN
 				folder_rel = render_pattern(
 					folder_pattern,
