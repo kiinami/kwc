@@ -137,6 +137,25 @@ STATIC_ROOT = Path(os.getenv('STATIC_ROOT', str(BASE_DIR / 'static')))
 # When running behind a reverse proxy (common in containers)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# CSRF trusted origins (comma or space separated). Include scheme, e.g. https://example.com
+_csrf_trusted = os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', os.getenv('CSRF_TRUSTED_ORIGINS', '')).strip()
+if _csrf_trusted:
+    # Split by commas/spaces and strip
+    CSRF_TRUSTED_ORIGINS = [o.strip() for part in _csrf_trusted.split(',') for o in part.split() if o.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = []
+
+# Optional security toggles via env
+def _bool_env(name: str, default: str = 'False') -> bool:
+    return os.getenv(name, default).lower() in {'1', 'true', 'yes', 'on'}
+
+SESSION_COOKIE_SECURE = _bool_env('SESSION_COOKIE_SECURE', 'True')
+CSRF_COOKIE_SECURE = _bool_env('CSRF_COOKIE_SECURE', 'True')
+SECURE_SSL_REDIRECT = _bool_env('SECURE_SSL_REDIRECT', 'False')
+SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _bool_env('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False')
+SECURE_HSTS_PRELOAD = _bool_env('SECURE_HSTS_PRELOAD', 'False')
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
