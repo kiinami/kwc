@@ -8,12 +8,6 @@ cmd="${1:-serve}"
 
 case "$cmd" in
   serve|prod)
-    # Persist SQLite DB if a /data volume is mounted
-    if [[ -d /data ]]; then
-      echo "[entrypoint] Ensuring persistent DB at /data/db.sqlite3"
-      ln -sf /data/db.sqlite3 /app/db.sqlite3
-    fi
-
     echo "[entrypoint] Applying migrations..."
     python manage.py migrate --noinput
 

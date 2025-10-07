@@ -2,17 +2,21 @@ services:
   web:
     build: .
     image: kwc-web:latest
+    # Run the app as your host user to avoid root-owned files on bind mounts
+    user: "${KWC_UID:-1000}:${KWC_GID:-1000}"
     env_file:
       - ./.env
     ports:
       - "8080:8000"
     volumes:
-      - db-data:/data
-      - media:/app/media
+      # Use host bind mounts so permissions match your user
+      - "${HOME}/.local/share/kwc/db:/data"
+      - "${HOME}/.local/share/kwc/media:/app/media"
       - "${HOME}/media/wallpapers:/media/wallpapers"
       - "${HOME}/code/kwc:/media/tv"
     restart: unless-stopped
 
 volumes:
+  # No named volumes needed when using host bind mounts above; kept for backward compatibility
   db-data:
   media:

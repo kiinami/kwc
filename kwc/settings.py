@@ -87,10 +87,19 @@ WSGI_APPLICATION = 'kwc.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+_default_db_path = BASE_DIR / 'db.sqlite3'
+# If a persistent data mount exists, prefer placing the DB there without needing symlinks
+_data_dir = Path('/data')
+if _data_dir.is_dir():
+    _default_db_path = _data_dir / 'db.sqlite3'
+
+# Allow overriding DB path explicitly via env
+DB_PATH = Path(os.getenv('DJANGO_DB_PATH', os.getenv('DB_PATH', str(_default_db_path))))
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': DB_PATH,
     }
 }
 
