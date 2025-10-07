@@ -80,6 +80,8 @@ def _run_extract_job(job_id: str):
 			job.status = "done"
 			job.finished_at = time.time()
 	except Exception as e:  # pragma: no cover
+		import logging
+		logging.getLogger(__name__).exception("extract job %s failed", job_id)
 		with _JOBS_LOCK:
 			job.status = "error"
 			job.error = str(e)

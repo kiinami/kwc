@@ -10,6 +10,7 @@ services:
       - db-data:/data
       - media:/app/media
       - "${HOME}/media/wallpapers:/media/wallpapers"
+      - "${HOME}/code/kwc:/media/tv"
     restart: unless-stopped
 
 volumes:

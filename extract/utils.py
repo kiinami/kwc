@@ -27,7 +27,11 @@ def total_frames(video: Path) -> int:
             show_streams=None,
         )
     )
-    out = ffprobe.execute()
+    try:
+        out = ffprobe.execute()
+    except Exception:
+        logger.exception("ffprobe failed reading total_frames for %s", video)
+        return 0
     data = json.loads(out)
     streams = data.get("streams", [])
     if not streams:
@@ -63,7 +67,11 @@ def total_keyframes(video: Path) -> int:
         )
     )
 
-    output = ffprobe.execute()
+    try:
+        output = ffprobe.execute()
+    except Exception:
+        logger.exception("ffprobe failed reading keyframes for %s", video)
+        return 0
     data = json.loads(output)
     i_frames = [f for f in data.get("frames", []) if f.get("pict_type") == "I"]
     return len(i_frames)
@@ -89,7 +97,11 @@ def trim_video(video: Path, output: Path, start: str | None = None, end: str | N
             an=None,
         )
     )
-    ffmpeg.execute()
+    try:
+        ffmpeg.execute()
+    except Exception:
+        logger.exception("ffmpeg trim failed: %s -> %s", video, output)
+        raise
     logger.info('Trimmed "%s" to "%s"', video.absolute(), output.absolute())
 
 
@@ -111,7 +123,11 @@ def cut_video(video: Path, intervals: list[tuple[str, ...]]) -> Path:
                 .input(str(tmpdir_path / "output_%03d.mp4"), pattern_type="glob")
                 .output(str(output_path), c="copy", f="concat")
             )
-            ffmpeg.execute()
+            try:
+                ffmpeg.execute()
+            except Exception:
+                logger.exception("ffmpeg concat failed in cut_video for %s", video)
+                raise
             logger.info('Cut video saved to "%s"', output_path.absolute())
 
         return output_path
@@ -132,7 +148,11 @@ def get_iframe_timestamps(video: Path) -> list[float]:
             show_frames=None,
         )
     )
-    output = ffprobe.execute()
+    try:
+        output = ffprobe.execute()
+    except Exception:
+        logger.exception("ffprobe failed listing iframe timestamps for %s", video)
+        return []
     data = json.loads(output)
     timestamps = [
         float(f["best_effort_timestamp_time"])

@@ -16,9 +16,13 @@ logger = logging.getLogger(__name__)
 
 def _extract_frame(args: tuple[Path, float, Path]) -> Path:
     video, ts, output_file = args
-    ffmpeg = FFmpeg().option("y").input(str(video), ss=ts).output(str(output_file), frames="1", q="2")
-    ffmpeg.execute()
-    return output_file
+    try:
+        ffmpeg = FFmpeg().option("y").input(str(video), ss=ts).output(str(output_file), frames="1", q="2")
+        ffmpeg.execute()
+        return output_file
+    except Exception as e:  # propagate so parent marks job as error
+        logger.exception("ffmpeg failed extracting frame at %s from %s -> %s", ts, video, output_file)
+        raise
 
 
 @dataclass
@@ -85,7 +89,9 @@ def extract(
     if total:
         with concurrent.futures.ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
             futures = {executor.submit(_extract_frame, arg): arg for arg in frame_args}
-            for _ in concurrent.futures.as_completed(futures):
+            for f in concurrent.futures.as_completed(futures):
+                # Retrieve result to surface exceptions immediately
+                f.result()
                 done += 1
                 if on_progress:
                     on_progress(done, total)

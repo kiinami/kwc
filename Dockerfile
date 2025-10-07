@@ -78,6 +78,7 @@ apt-get clean -y && \
 apt-get update -y && \
 apt-get install -y --no-install-recommends \
     bash \
+    ffmpeg \
     ca-certificates \
     && apt-get autoremove -y && \
     apt-get clean -y && \

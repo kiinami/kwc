@@ -27,6 +27,5 @@ urlpatterns = [
     path('extract/', include(('extract.urls', 'extract'), namespace='extract')),
 ]
 
-# In development, serve wallpaper images directly from disk for previews
-if settings.DEBUG:
-    urlpatterns += static('/wallpapers/', document_root=getattr(settings, 'WALLPAPERS_FOLDER', None))
+# Serve wallpaper images directly from disk (internal-only deployment)
+urlpatterns += static('/wallpapers/', document_root=getattr(settings, 'WALLPAPERS_FOLDER', None))

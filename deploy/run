@@ -1,49 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cmd="${1:-prod}"
+cmd="${1:-serve}"
 
 : "${DJANGO_SETTINGS_MODULE:=kwc.settings}"
 : "${PORT:=8000}"
 
-# Sensible default worker count based on CPU, capped to keep memory reasonable
-if [[ -z "${WEB_CONCURRENCY:-}" ]]; then
-  WEB_CONCURRENCY="$(python - <<'PY'
-import multiprocessing as mp
-wc = max(2, min(8, mp.cpu_count()*2 + 1))
-print(wc)
-PY
-)"
-fi
-
 case "$cmd" in
-  prod)
+  serve|prod)
     # Persist SQLite DB if a /data volume is mounted
     if [[ -d /data ]]; then
       echo "[entrypoint] Ensuring persistent DB at /data/db.sqlite3"
       ln -sf /data/db.sqlite3 /app/db.sqlite3
     fi
 
-    # Publish collected static to a shared /static volume for nginx, if present
-    if [[ -d /static ]]; then
-      echo "[entrypoint] Syncing static assets to /static"
-      mkdir -p /static
-      # Clean and copy to keep the volume in sync with the image contents
-      rm -rf /static/*
-      cp -a /app/static/. /static/
-    fi
-
     echo "[entrypoint] Applying migrations..."
     python manage.py migrate --noinput
 
-    echo "[entrypoint] Starting gunicorn on port ${PORT} with ${WEB_CONCURRENCY} workers"
-    exec gunicorn kwc.wsgi:application \
-      --bind "0.0.0.0:${PORT}" \
-      --workers "${WEB_CONCURRENCY}" \
-      --timeout 60 \
-      --log-level info \
-      --access-logfile - \
-      --error-logfile -
+    echo "[entrypoint] Starting Django development server on 0.0.0.0:${PORT} (insecure, internal use only)"
+    exec python manage.py runserver 0.0.0.0:"${PORT}"
     ;;
 
   migrate)
@@ -58,5 +33,4 @@ case "$cmd" in
   *)
     exec "$@"
     ;;
-
 esac
