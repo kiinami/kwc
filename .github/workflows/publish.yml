@@ -1,4 +1,4 @@
-name: Build and Publish Docker image
+name: Docker image
 
 on:
   push:
@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   docker:
+    name: Build and push
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
