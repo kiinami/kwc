@@ -4,28 +4,14 @@ services:
     image: kwc-web:latest
     env_file:
       - ./.env
-    expose:
-      - "8000"
+    ports:
+      - "8080:8000"
     volumes:
       - db-data:/data
       - media:/app/media
-      - static:/static
       - "${HOME}/media/wallpapers:/media/wallpapers"
-    restart: unless-stopped
-
-  nginx:
-    image: nginx:alpine
-    depends_on:
-      - web
-    ports:
-      - "8080:80"
-    volumes:
-      - static:/static:ro
-      - "${HOME}/media/wallpapers:/media/wallpapers:ro"
-      - ./deploy/nginx.conf:/etc/nginx/nginx.conf:ro
     restart: unless-stopped
 
 volumes:
   db-data:
   media:
-  static:

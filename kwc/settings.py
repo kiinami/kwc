@@ -59,7 +59,6 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -149,8 +148,8 @@ else:
 def _bool_env(name: str, default: str = 'False') -> bool:
     return os.getenv(name, default).lower() in {'1', 'true', 'yes', 'on'}
 
-SESSION_COOKIE_SECURE = _bool_env('SESSION_COOKIE_SECURE', 'True')
-CSRF_COOKIE_SECURE = _bool_env('CSRF_COOKIE_SECURE', 'True')
+SESSION_COOKIE_SECURE = _bool_env('SESSION_COOKIE_SECURE', 'False')
+CSRF_COOKIE_SECURE = _bool_env('CSRF_COOKIE_SECURE', 'False')
 SECURE_SSL_REDIRECT = _bool_env('SECURE_SSL_REDIRECT', 'False')
 SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
 SECURE_HSTS_INCLUDE_SUBDOMAINS = _bool_env('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False')
