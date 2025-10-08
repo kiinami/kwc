@@ -1,13 +1,7 @@
 {% extends 'base.html' %}
-{% block title %}KWC{% endblock %}
+{% block title %}Wallpaper library · KWC{% endblock %}
 {% block content %}
-  <div style="min-height: 60vh; display: grid; place-items: center;">
-    <div style="text-align:center; width: 100%;">
-      <h1>Welcome</h1>
-      <div style="margin-top: .75rem;">
-        <a class="cta" href="{% url 'extract:index' %}">Open Extract →</a>
-        <a class="cta" href="{% url 'choose:index' %}">Open Choose →</a>
-      </div>
-    </div>
+  <div style="max-width: 1120px; margin: 0 auto;">
+    {% include 'choose/_library_grid.html' with folders=folders heading='Wallpaper library' intro='Explore your extracted shows and films. Click a cover to open its gallery, then download favorites or switch into choose mode.' %}
   </div>
 {% endblock %}

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, Tuple
+from typing import Iterable, Tuple, TypedDict
 import os
 import time
 from urllib.parse import quote
@@ -11,6 +11,19 @@ from django.conf import settings
 
 # Supported image extensions (lowercase)
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+
+
+class MediaFolder(TypedDict, total=False):
+    """Typed representation of a media folder discovered under the wallpapers root."""
+
+    name: str
+    title: str
+    year: str
+    year_raw: int | None
+    year_sort: int
+    mtime: int
+    cover_filename: str | None
+    cover_url: str | None
 
 
 def wallpapers_root() -> Path:
@@ -85,3 +98,56 @@ def wallpaper_url(folder: str, filename: str, *, root: Path | None = None) -> st
     actual_root = root or wallpapers_root()
     path = actual_root / folder / filename
     return f"{base}?v={_cache_token(path)}"
+
+
+def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Path]:
+    """Scan the wallpapers root for folders containing wallpapers.
+
+    Returns a tuple of (entries, root_path) where entries are already sorted by
+    recency and year similar to the legacy index view behaviour.
+    """
+
+    root_path = root or wallpapers_root()
+    entries: list[MediaFolder] = []
+
+    if root_path.exists() and root_path.is_dir():
+        try:
+            with os.scandir(root_path) as it:
+                for entry in it:
+                    if not entry.is_dir():
+                        continue
+                    if entry.name.startswith('.'):
+                        continue
+
+                    folder_name = entry.name
+                    title, year_int = parse_folder_name(folder_name)
+                    cover_filename = find_cover_filename(root_path / folder_name)
+                    cover_url = (
+                        wallpaper_url(folder_name, cover_filename, root=root_path)
+                        if cover_filename
+                        else None
+                    )
+
+                    try:
+                        mtime = entry.stat().st_mtime_ns
+                    except Exception:
+                        mtime = 0
+
+                    entries.append(
+                        {
+                            'name': folder_name,
+                            'title': title,
+                            'year': str(year_int) if year_int is not None else '',
+                            'year_raw': year_int,
+                            'year_sort': year_int if year_int is not None else -1,
+                            'mtime': mtime,
+                            'cover_filename': cover_filename,
+                            'cover_url': cover_url,
+                        }
+                    )
+        except PermissionError:
+            # If the process lacks permissions, surface an empty list instead of failing.
+            pass
+
+    entries.sort(key=lambda x: (x['year_sort'], x['mtime'], x['name'].lower()), reverse=True)
+    return entries, root_path

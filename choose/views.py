@@ -15,62 +15,64 @@ from .utils import (
 	list_image_files,
 	find_cover_filename,
 	wallpaper_url,
+	list_media_folders,
 )
 
 
 # Parse S01E02-like tokens from filenames
 SEASON_EPISODE_RE = re.compile(r"S(?P<season>\d{1,3})E(?P<episode>[A-Za-z0-9]{1,6})", re.IGNORECASE)
-
-
-def _get_wallpapers_root() -> Path:
-	# Backward shim inside this module to minimize edits; prefer utils.wallpapers_root
-	return wallpapers_root()
-
-
 def index(request: HttpRequest) -> HttpResponse:
 	"""Home page: list media folders inside wallpapers root."""
-	root = wallpapers_root()
-	entries: list[dict] = []
-	if root.exists() and root.is_dir():
-		try:
-			with os.scandir(root) as it:
-				for e in it:
-					if not e.is_dir():
-						continue
-					# Skip hidden folders (dot-prefixed)
-					if e.name.startswith('.'):
-						continue
-					folder_name = e.name
-					title, year_int = parse_folder_name(folder_name)
-					year = str(year_int) if year_int is not None else ""
-
-					folder_path = root / folder_name
-					cover_file = find_cover_filename(folder_path)
-
-					cover_url = None
-					if cover_file:
-						cover_url = wallpaper_url(folder_name, cover_file, root=root)
-
-					# Folder mtime as secondary recency signal
-					try:
-						mtime = e.stat().st_mtime_ns
-					except Exception:
-						mtime = 0
-
-					entries.append({
-						'name': folder_name,
-						'title': title,
-						'year': year,
-						'year_sort': (year_int if year_int is not None else -1),
-						'mtime': mtime,
-						'url': reverse('choose:folder', kwargs={'folder': folder_name}),
-						'cover_url': cover_url,
-					})
-		except PermissionError:
-			entries = []
-	# Sort by year desc (missing year last), then by modification time desc, then by name
-	entries.sort(key=lambda x: (x['year_sort'], x['mtime'], x['name'].lower()), reverse=True)
+	entries, root = list_media_folders()
+	for entry in entries:
+		entry['gallery_url'] = reverse('choose:gallery', kwargs={'folder': entry['name']})
+		entry['choose_url'] = reverse('choose:folder', kwargs={'folder': entry['name']})
 	return render(request, 'choose/index.html', {"folders": entries, "root": str(root)})
+
+
+def gallery(request: HttpRequest, folder: str) -> HttpResponse:
+	"""Grid gallery for a media folder with lightweight fullscreen viewer."""
+	root = wallpapers_root()
+	safe_name = os.path.basename(folder)
+	if safe_name != folder:
+		raise Http404("Invalid folder name")
+	if safe_name.startswith('.'):
+		raise Http404("Folder not found")
+	target = root / safe_name
+	if not target.exists() or not target.is_dir():
+		raise Http404("Folder not found")
+
+	title, year_int = parse_folder_name(safe_name)
+	year_display = str(year_int) if year_int is not None else ""
+
+	try:
+		files = list_image_files(target)
+	except PermissionError:
+		files = []
+
+	cover_file = find_cover_filename(target, files)
+	cover_url = wallpaper_url(safe_name, cover_file, root=root) if cover_file else None
+	choose_url = reverse('choose:folder', kwargs={'folder': safe_name})
+
+	images = [
+		{
+			'name': name,
+			'url': wallpaper_url(safe_name, name, root=root),
+		}
+		for name in files
+	]
+
+	context = {
+		'folder': safe_name,
+		'title': title,
+		'year': year_display,
+		'year_raw': year_int,
+		'cover_url': cover_url,
+		'choose_url': choose_url,
+		'images': images,
+		'root': str(root),
+	}
+	return render(request, 'choose/gallery.html', context)
 
 
 def folder(request: HttpRequest, folder: str) -> HttpResponse:

@@ -23,7 +23,7 @@ from django.views.static import serve as static_serve
 from kwc import views as core_views
 
 urlpatterns = [
-    path('', TemplateView.as_view(template_name='home.html'), name='home'),
+    path('', core_views.HomeView.as_view(), name='home'),
     path('admin/', admin.site.urls),
     path('choose/', include(('choose.urls', 'choose'), namespace='choose')),
     path('extract/', include(('extract.urls', 'extract'), namespace='extract')),
