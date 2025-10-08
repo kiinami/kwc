@@ -1,9 +1,12 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>{% block title %}KWC{% endblock %}</title>
+    <link rel="icon" type="image/x-icon" href="{% static 'kwc/favicon.ico' %}" />
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'kwc/icon.png' %}" />
+    <title>{% block title %}KWC{% endblock %}</title>
     <style>
       :root {
         --bg: #0b1020;

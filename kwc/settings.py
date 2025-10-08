@@ -145,6 +145,9 @@ STATIC_URL = '/static/'
 # Allow overriding static root via env (useful in some container setups)
 STATIC_ROOT = Path(os.getenv('STATIC_ROOT', str(BASE_DIR / 'static')))
 
+# Include project-level static assets (e.g., favicons) collected by Django
+STATICFILES_DIRS = [BASE_DIR / 'kwc' / 'static']
+
 # WhiteNoise compressed manifest storage for long-lived caching and integrity
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
