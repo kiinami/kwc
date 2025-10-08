@@ -1,17 +1,18 @@
-import threading
-import time
-import uuid
-from dataclasses import dataclass, field
-from typing import Optional
-from pathlib import Path
-
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import redirect, render
-from django.urls import reverse
-from django.views.decorators.http import require_GET
-from django.views.decorators.http import require_POST
-import os
 import json
+import logging
+import os
+import threading
+import uuid
+from pathlib import Path
+from typing import Any
+
+from django.conf import settings
+from django.db import close_old_connections
+from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.http import require_GET, require_POST
 
 try:
 	# Optional import guard; will raise at runtime if missing
@@ -21,71 +22,103 @@ except Exception:  # pragma: no cover
 
 from .forms import ExtractStartForm
 from .extractor import ExtractParams, extract
-from django.conf import settings
+from .models import ExtractionJob
 from .utils import render_pattern
 
 
-@dataclass
-class ExtractJob:
-	id: str
-	params: dict
-	started_at: float = field(default_factory=time.time)
-	finished_at: Optional[float] = None
-	total_steps: int = 0
-	current_step: int = 0
-	status: str = "pending"  # pending|running|done|error
-	error: Optional[str] = None
-	total_frames: int = 0
+RUNNING_THREADS: dict[str, threading.Thread] = {}
+RUNNING_LOCK = threading.Lock()
+FINISHED_STATUSES = {ExtractionJob.Status.DONE, ExtractionJob.Status.ERROR}
 
 
-_JOBS: dict[str, ExtractJob] = {}
-_JOBS_LOCK = threading.Lock()
+def _job_summary(job: ExtractionJob) -> dict[str, Any]:
+	return {
+		"id": job.id,
+		"status": job.status,
+		"status_label": job.get_status_display(),
+		"status_class": job.status_css(),
+		"percent": job.percent,
+		"finished": job.status in FINISHED_STATUSES,
+		"done": job.status == ExtractionJob.Status.DONE,
+	}
 
 
-def _run_extract_job(job_id: str):
-	with _JOBS_LOCK:
-		job = _JOBS.get(job_id)
-		if not job:
-			return
-		job.status = "running"
+def _format_duration(job: ExtractionJob) -> str:
+	if job.started_at:
+		end = job.finished_at or timezone.now()
+		return f"{max(0.0, (end - job.started_at).total_seconds()):.1f}s"
+	return "—"
 
-	# Run real extraction while updating progress
+
+def _launch_job_thread(job_id: str) -> None:
+	thread = threading.Thread(target=_run_extract_job, args=(job_id,), daemon=True)
+	with RUNNING_LOCK:
+		RUNNING_THREADS[job_id] = thread
+	thread.start()
+
+
+def _run_extract_job(job_id: str) -> None:
+	close_old_connections()
 	try:
-		p = job.params
-		params = ExtractParams(
-			video=Path(p["video"]),
-			output_dir=Path(p["output_dir"]),
-			trim_intervals=list(p.get("trim_intervals") or []),
-			title=str(p.get("title") or ""),
-			image_pattern=str(p.get("image_pattern") or ""),
-			year=int(p.get("year")) if p.get("year") not in (None, "") else None,
-			season=int(p.get("season")) if p.get("season") not in (None, "") else None,
-			episode=p.get("episode") if p.get("episode") not in (None, "") else None,
+		job = ExtractionJob.objects.get(pk=job_id)
+	except ExtractionJob.DoesNotExist:
+		return
+
+	job.status = ExtractionJob.Status.RUNNING
+	job.started_at = timezone.now()
+	job.error = ""
+	job.current_step = 0
+	job.total_steps = 0
+	job.total_frames = 0
+	job.save(update_fields=["status", "started_at", "error", "current_step", "total_steps", "total_frames", "updated_at"])
+
+	params_data = job.params or {}
+	video_path = Path(params_data["video"])
+	output_dir = Path(params_data.get("output_dir") or job.output_dir)
+	trim_intervals = list(params_data.get("trim_intervals") or [])
+	image_pattern = str(params_data.get("image_pattern") or "")
+
+	extract_params = ExtractParams(
+		video=video_path,
+		output_dir=output_dir,
+		trim_intervals=trim_intervals,
+		title=str(params_data.get("title") or ""),
+		image_pattern=image_pattern,
+		year=int(params_data["year"]) if params_data.get("year") not in (None, "") else None,
+		season=int(params_data["season"]) if params_data.get("season") not in (None, "") else None,
+		episode=params_data.get("episode") if params_data.get("episode") not in (None, "") else None,
+	)
+
+	def on_progress(done: int, total: int) -> None:
+		ExtractionJob.objects.filter(pk=job_id).update(
+			total_steps=max(total, 1),
+			current_step=done,
+			total_frames=done,
+			updated_at=timezone.now(),
 		)
 
-		# First, we need to know total keyframes to set total_steps more accurately.
-		# We'll do a quick probe via extractor.get_iframe_timestamps lazily in callback
-		# by setting total on first progress callback, but we can also set a rough default.
-
-		def on_progress(done: int, total: int):
-			with _JOBS_LOCK:
-				job.total_steps = max(total, 1)
-				job.current_step = done
-				job.total_frames = done
-
-		count = extract(params=params, on_progress=on_progress)
-		with _JOBS_LOCK:
-			job.total_frames = count
-			job.current_step = job.total_steps
-			job.status = "done"
-			job.finished_at = time.time()
-	except Exception as e:  # pragma: no cover
-		import logging
+	try:
+		frame_count = extract(params=extract_params, on_progress=on_progress)
+		job.refresh_from_db()
+		job.total_frames = frame_count
+		if job.total_steps == 0:
+			job.total_steps = frame_count
+		job.current_step = job.total_steps
+		job.status = ExtractionJob.Status.DONE
+		job.finished_at = timezone.now()
+		job.save(update_fields=["status", "finished_at", "total_frames", "current_step", "total_steps", "updated_at"])
+	except Exception as exc:  # pragma: no cover
 		logging.getLogger(__name__).exception("extract job %s failed", job_id)
-		with _JOBS_LOCK:
-			job.status = "error"
-			job.error = str(e)
-			job.finished_at = time.time()
+		ExtractionJob.objects.filter(pk=job_id).update(
+			status=ExtractionJob.Status.ERROR,
+			error=str(exc),
+			finished_at=timezone.now(),
+			updated_at=timezone.now(),
+		)
+	finally:
+		with RUNNING_LOCK:
+			RUNNING_THREADS.pop(job_id, None)
+		close_old_connections()
 
 
 def start(request: HttpRequest) -> HttpResponse:
@@ -93,41 +126,45 @@ def start(request: HttpRequest) -> HttpResponse:
 		form = ExtractStartForm(request.POST)
 		if form.is_valid():
 			job_id = uuid.uuid4().hex
-			with _JOBS_LOCK:
-				params = form.cleaned_data.copy()
-				# Ensure trim_intervals is a list post-cleaning
-				params["trim_intervals"] = form.cleaned_data.get("trim_intervals", [])
-				# Compute output directory from settings and title
-				# Use unified wallpapers root
-				root = Path(getattr(settings, 'WALLPAPERS_FOLDER', settings.BASE_DIR / 'extracted'))
-				folder_pattern = settings.EXTRACT_FOLDER_PATTERN
-				folder_rel = render_pattern(
-					folder_pattern,
-					{
-						"title": params.get("title", ""),
-						"year": params.get("year", ""),
-						"season": params.get("season", ""),
-						"episode": params.get("episode", ""),
-					}
-				)
-				output_dir = root / folder_rel
-				params["output_dir"] = str(output_dir)
-				# Pass image filename pattern
-				params["image_pattern"] = settings.EXTRACT_IMAGE_PATTERN
-				_JOBS[job_id] = ExtractJob(id=job_id, params=params)
-			t = threading.Thread(target=_run_extract_job, args=(job_id,), daemon=True)
-			t.start()
-			# Track user's recent jobs in session for easy resume
+			params = form.cleaned_data.copy()
+			params["trim_intervals"] = form.cleaned_data.get("trim_intervals", [])
+
+			root = Path(getattr(settings, "WALLPAPERS_FOLDER", settings.BASE_DIR / "extracted"))
+			folder_pattern = settings.EXTRACT_FOLDER_PATTERN
+			folder_rel = render_pattern(
+				folder_pattern,
+				{
+					"title": params.get("title", ""),
+					"year": params.get("year", ""),
+					"season": params.get("season", ""),
+					"episode": params.get("episode", ""),
+				},
+			).strip()
+			if not folder_rel:
+				folder_rel = params.get("title") or job_id
+			output_dir = root / folder_rel
+			params["output_dir"] = str(output_dir)
+			params["image_pattern"] = settings.EXTRACT_IMAGE_PATTERN
+
+			ExtractionJob.objects.create(
+				id=job_id,
+				params=params,
+				output_dir=str(output_dir),
+			)
+
+			_launch_job_thread(job_id)
+
 			jobs = request.session.get("extract_jobs", [])
 			if job_id not in jobs:
 				jobs.append(job_id)
-				# Keep only the last 5
 				jobs = jobs[-5:]
 				request.session["extract_jobs"] = jobs
 				request.session.modified = True
+
 			return redirect("extract:job", job_id=job_id)
 	else:
 		form = ExtractStartForm()
+
 	return render(
 		request,
 		"extract/start.html",
@@ -140,81 +177,65 @@ def start(request: HttpRequest) -> HttpResponse:
 
 
 def job(request: HttpRequest, job_id: str) -> HttpResponse:
-	with _JOBS_LOCK:
-		job = _JOBS.get(job_id)
-	if not job:
-		return redirect("extract:start")
-	pct = int(job.current_step * 100 / max(1, job.total_steps))
-	elapsed = time.time() - job.started_at
+	job_obj = get_object_or_404(ExtractionJob, pk=job_id)
+	total_known = job_obj.total_steps > 0
 	context = {
-		"job_id": job_id,
-		"status": job.status,
-		"percent": pct,
-		"total": job.total_steps,
-		"current": job.current_step,
-		"elapsed": elapsed,
-		"is_done": job.status == "done",
+		"job_id": job_obj.id,
+		"status": job_obj.status,
+		"status_label": job_obj.get_status_display(),
+		"status_class": job_obj.status_css(),
+		"error_message": job_obj.error or "",
+		"percent": job_obj.percent,
+		"total": job_obj.total_steps if total_known else None,
+		"current": job_obj.current_step if total_known else None,
+		"elapsed": job_obj.elapsed_seconds,
+		"is_finished": job_obj.status in FINISHED_STATUSES,
+		"is_done": job_obj.status == ExtractionJob.Status.DONE,
+		"is_error": job_obj.status == ExtractionJob.Status.ERROR,
 		"results": {
-			"total_frames": job.total_frames,
-			"time_taken": f"{(job.finished_at or time.time()) - job.started_at:.1f}s",
-			"output_dir": job.params.get("output_dir"),
+			"total_frames": job_obj.total_frames,
+			"time_taken": _format_duration(job_obj),
+			"output_dir": job_obj.output_dir,
 		},
 	}
 	return render(request, "extract/job.html", context)
 
 
-# Index covers both running and completed jobs.
-
 def job_api(request: HttpRequest, job_id: str) -> JsonResponse:
-	with _JOBS_LOCK:
-		job = _JOBS.get(job_id)
-		if not job:
-			return JsonResponse({"error": "not_found"}, status=404)
-		total_known = job.total_steps > 0
-		pct = int(job.current_step * 100 / max(1, job.total_steps or 1)) if total_known else 0
-		payload = {
-			"status": job.status,
-			"current": job.current_step,
-			"total": job.total_steps if total_known else None,
-			"percent": pct,
-			"total_frames": job.total_frames,
-			"total_known": total_known,
-		}
-		if job.status == "done":
-			payload["done"] = True
+	job_obj = get_object_or_404(ExtractionJob, pk=job_id)
+	total_known = job_obj.total_steps > 0
+	payload = {
+		"status": job_obj.status,
+		"status_label": job_obj.get_status_display(),
+		"status_class": job_obj.status_css(),
+		"percent": job_obj.percent,
+		"current": job_obj.current_step if total_known else None,
+		"total": job_obj.total_steps if total_known else None,
+		"total_frames": job_obj.total_frames,
+		"elapsed_seconds": job_obj.elapsed_seconds,
+		"finished": job_obj.status in FINISHED_STATUSES,
+		"done": job_obj.status == ExtractionJob.Status.DONE,
+		"error": job_obj.error or "",
+		"time_taken": _format_duration(job_obj),
+		"output_dir": job_obj.output_dir,
+	}
 	return JsonResponse(payload)
 
 
-# Job view shows progress and final state
-
-
-def index(request):
-	# Dashboard view: show create button + all jobs (running and completed)
-	with _JOBS_LOCK:
-		jobs_list = list(_JOBS.values())
-	jobs_list.sort(key=lambda j: j.started_at, reverse=True)
-	rows = []
-	for j in jobs_list:
-		percent = int(j.current_step * 100 / max(1, j.total_steps))
-		rows.append(
-			{
-				"id": j.id,
-				"status": j.status,
-				"percent": percent,
-			}
-		)
-	return render(request, 'extract/index.html', {"jobs": rows})
+def index(request: HttpRequest) -> HttpResponse:
+	jobs = [
+		_job_summary(job)
+		for job in ExtractionJob.objects.all()[:50]
+	]
+	return render(request, "extract/index.html", {"jobs": jobs})
 
 
 def jobs_api(request: HttpRequest) -> JsonResponse:
-	with _JOBS_LOCK:
-		jobs_list = list(_JOBS.values())
-	jobs_list.sort(key=lambda j: j.started_at, reverse=True)
-	data = []
-	for j in jobs_list:
-		percent = int(j.current_step * 100 / max(1, j.total_steps))
-		data.append({"id": j.id, "status": j.status, "percent": percent})
-	return JsonResponse({"jobs": data})
+	jobs = [
+		_job_summary(job)
+		for job in ExtractionJob.objects.all()[:50]
+	]
+	return JsonResponse({"jobs": jobs})
 
 
 @require_GET
@@ -296,6 +317,3 @@ def browse_api(request: HttpRequest) -> JsonResponse:
 		return JsonResponse({"error": "permission_denied"}, status=403)
 	except OSError as e:
 		return JsonResponse({"error": str(e)}, status=500)
-
-
-	# browse_mkdir_api was removed as unused to simplify the API surface

@@ -13,7 +13,8 @@
           {% for j in jobs %}
             <div class="card">
               <div style="display:flex; align-items:center; gap:.5rem;">
-                <span class="status-icon {% if j.status == 'done' %}status--done{% elif j.status == 'running' %}status--running{% elif j.status == 'pending' %}status--pending{% else %}status--error{% endif %}" aria-hidden="true">
+                {% with sc='status--'|add:j.status_class %}
+                <span class="status-icon {{ sc }}" aria-hidden="true">
                   {% if j.status == 'done' %}
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
                   {% elif j.status == 'running' %}
@@ -24,10 +25,11 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                   {% endif %}
                 </span>
+                {% endwith %}
                 <a href="{% url 'extract:job' job_id=j.id %}">{{ j.id }}</a>
-                <span class="status {% if j.status == 'done' %}status--done{% elif j.status == 'running' %}status--running{% elif j.status == 'pending' %}status--pending{% else %}status--error{% endif %}" style="margin-left:auto">{{ j.status }}</span>
+                <span class="status status--{{ j.status_class }}" style="margin-left:auto">{{ j.status_label }}</span>
               </div>
-              <div class="bar-wrap" style="margin-top: .5rem; background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden; {% if j.status == 'done' %}display:none{% endif %}">
+              <div class="bar-wrap" style="margin-top: .5rem; background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden; {% if j.finished %}display:none{% endif %}">
                 <div class="bar" style="height: 8px; width: {{ j.percent }}%; background: linear-gradient(135deg, #4c8bf5, #7c4cf5);"></div>
               </div>
             </div>
@@ -55,17 +57,17 @@
           list.innerHTML = '<div class="muted">No jobs.</div>';
           return;
         }
-        const iconFor = s => (s === 'done' ? ICON_DONE : s === 'running' ? ICON_RUNNING : s === 'pending' ? ICON_PENDING : ICON_ERROR);
+        const iconFor = status => (status === 'done' ? ICON_DONE : status === 'running' ? ICON_RUNNING : status === 'pending' ? ICON_PENDING : ICON_ERROR);
         list.innerHTML = jobs.map(j => {
           const href = encodeURI(`{% url 'extract:job' job_id='__ID__' %}`.replace('__ID__', j.id));
-          const hideBar = (j.status === 'done');
-          const statusClass = j.status === 'done' ? 'status--done' : j.status === 'running' ? 'status--running' : j.status === 'pending' ? 'status--pending' : 'status--error';
+          const statusClass = 'status--' + (j.status_class || 'pending');
+          const hideBar = !!j.finished;
           return `
             <div class="card">
               <div style="display:flex; align-items:center; gap:.5rem;">
                 <span class="status-icon ${statusClass}" aria-hidden="true">${iconFor(j.status)}</span>
                 <a href="${href}">${j.id}</a>
-                <span class="status ${statusClass}" style="margin-left:auto">${j.status}</span>
+                <span class="status ${statusClass}" style="margin-left:auto">${j.status_label || j.status}</span>
               </div>
               <div class="bar-wrap" style="margin-top: .5rem; background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden; ${hideBar ? 'display:none' : ''}">
                 <div class="bar" style="height: 8px; width: ${j.percent}%; background: linear-gradient(135deg, #4c8bf5, #7c4cf5);"></div>

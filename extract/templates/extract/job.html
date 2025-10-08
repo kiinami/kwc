@@ -5,17 +5,21 @@
   <div class="card" style="max-width: 720px; width: 100%;">
     <h1 style="margin-top:0">Extraction</h1>
 
+    <div style="display:flex; align-items:center; gap:.5rem; margin-top:.75rem;">
+      <span id="statusBadge" class="status status--{{ status_class }}">{{ status_label }}</span>
+    </div>
+    <div id="errorMessage" style="margin-top:.75rem; color:#fca5a5; {% if not is_error %}display:none{% endif %}">{{ error_message }}</div>
+
     <div id="progress" style="margin-top: .75rem; {% if is_done %}display:none{% endif %}">
       <div style="background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden;">
         <div id="bar" style="height: 12px; width: {{ percent }}%; background: linear-gradient(135deg, #4c8bf5, #7c4cf5);"></div>
       </div>
       <div class="muted" style="margin-top: .5rem;">
         <span id="counts">
-          {% if total %}
-            <span id="current">{{ current }}</span> / <span id="total">{{ total }}</span>
-          {% else %}
-            Getting total frames…
-          {% endif %}
+          <span id="countsNumbers" {% if not total %}style="display:none"{% endif %}>
+            <span id="current">{{ current|default_if_none:0 }}</span> / <span id="total">{{ total|default_if_none:0 }}</span>
+          </span>
+          <span id="countsUnknown" {% if total %}style="display:none"{% endif %}>Getting total frames…</span>
         </span>
         (<span id="percent">{{ percent }}</span>%) — <span id="elapsed">{{ elapsed|floatformat:1 }}</span>s
       </div>
@@ -38,7 +42,7 @@
 </div>
 <script>
   const apiUrl = "{% url 'extract:job_api' job_id=job_id %}";
-  const statusEl = document.getElementById('status');
+  const statusBadge = document.getElementById('statusBadge');
   const bar = document.getElementById('bar');
   const percentEl = document.getElementById('percent');
   const currentEl = document.getElementById('current');
@@ -49,33 +53,60 @@
   const summary = document.getElementById('summary');
   const framesEl = document.getElementById('frames');
   const timeEl = document.getElementById('time');
+  const countsNumbers = document.getElementById('countsNumbers');
+  const countsUnknown = document.getElementById('countsUnknown');
+  const errorEl = document.getElementById('errorMessage');
 
   async function poll() {
     try {
       const res = await fetch(apiUrl, {cache: 'no-store'});
-      if (!res.ok) return;
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
       const data = await res.json();
-      statusEl.textContent = data.status || '';
-      const pct = data.percent ?? 0;
-      if (bar) bar.style.width = pct + '%';
-      if (percentEl) percentEl.textContent = pct;
-      if (data.total_known) {
-        if (currentEl) currentEl.textContent = data.current ?? 0;
-        if (totalEl) totalEl.textContent = data.total ?? 0;
-        // ensure counts area shows X / Y once we know
-        const counts = document.getElementById('counts');
-        if (counts && !document.getElementById('current')) {
-          counts.innerHTML = `<span id="current">${data.current ?? 0}</span> / <span id="total">${data.total ?? 0}</span>`;
+      if (statusBadge) {
+        statusBadge.textContent = data.status_label || data.status || '';
+        statusBadge.className = `status status--${data.status_class || 'pending'}`;
+      }
+      if (errorEl) {
+        if (data.error) {
+          errorEl.textContent = data.error;
+          errorEl.style.display = '';
+        } else {
+          errorEl.textContent = '';
+          errorEl.style.display = 'none';
         }
       }
-      if (elapsedEl) elapsedEl.textContent = (parseFloat(elapsedEl.textContent) + 1).toFixed(1);
-      if (data.total_frames != null && framesEl) framesEl.textContent = data.total_frames;
 
-      if (data.done) {
-        progress.style.display = 'none';
-        summary.style.display = '';
-        chooseBtn.style.display = '';
-        return; // stop polling
+      const pct = Number.isFinite(data.percent) ? Math.max(0, Math.min(100, data.percent)) : 0;
+      if (bar) bar.style.width = pct + '%';
+      if (percentEl) percentEl.textContent = Math.round(pct);
+
+      if (data.total != null && data.current != null) {
+        if (countsNumbers) countsNumbers.style.display = '';
+        if (countsUnknown) countsUnknown.style.display = 'none';
+        if (currentEl) currentEl.textContent = data.current;
+        if (totalEl) totalEl.textContent = data.total;
+      } else {
+        if (countsNumbers) countsNumbers.style.display = 'none';
+        if (countsUnknown) countsUnknown.style.display = '';
+      }
+
+      if (elapsedEl && data.elapsed_seconds != null) {
+        elapsedEl.textContent = Number(data.elapsed_seconds).toFixed(1);
+      }
+      if (framesEl && data.total_frames != null) framesEl.textContent = data.total_frames;
+      if (timeEl && data.time_taken) timeEl.textContent = data.time_taken;
+
+      const finished = !!data.finished;
+      const done = !!data.done;
+
+      if (progress) progress.style.display = finished ? 'none' : '';
+      if (summary) summary.style.display = done ? '' : 'none';
+      if (chooseBtn) chooseBtn.style.display = done ? '' : 'none';
+
+      if (finished) {
+        return;
       }
     } catch (e) { /* ignore */ }
     setTimeout(poll, 1000);
