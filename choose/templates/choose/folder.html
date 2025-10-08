@@ -177,6 +177,43 @@
       const swipeHint = document.querySelector('.mobile-swipe-hint');
       const mobileMedia = window.matchMedia('(max-width: 768px)');
       const decisionHistory = [];
+      const PREFETCH_AHEAD = 2;
+      const PRELOAD_MAX = 16;
+      const preloadCache = new Map();
+      const preloadQueue = [];
+
+      function registerPreload(url, image) {
+        if (!url) return;
+        if (preloadCache.has(url)) {
+          return;
+        }
+        preloadCache.set(url, image);
+        preloadQueue.push(url);
+        if (preloadQueue.length > PRELOAD_MAX) {
+          const oldest = preloadQueue.shift();
+          if (oldest && oldest !== url) {
+            preloadCache.delete(oldest);
+          }
+        }
+      }
+
+      function preloadImage(url) {
+        if (!url || preloadCache.has(url)) return;
+        const img = new Image();
+        img.decoding = 'async';
+        img.src = url;
+        registerPreload(url, img);
+      }
+
+      function preloadNeighbors(index) {
+        if (!Number.isFinite(index)) return;
+        for (let offset = 1; offset <= PREFETCH_AHEAD; offset += 1) {
+          const nextEl = thumbs[index + offset];
+          const prevEl = thumbs[index - offset];
+          if (nextEl) preloadImage(nextEl.dataset.url);
+          if (prevEl) preloadImage(prevEl.dataset.url);
+        }
+      }
 
       function updateUndoState() {
         const disabled = decisionHistory.length === 0;
@@ -190,13 +227,18 @@
         if (!el) return;
         const url = el.dataset.url;
         const filename = el.dataset.name || '';
+        const index = Number.parseInt(el.dataset.index || '0', 10) || 0;
+        const preloaded = url ? preloadCache.get(url) : undefined;
+        const alreadyLoaded = Boolean(preloaded && preloaded.complete);
         // Update active state
         document.querySelectorAll('.thumb.active').forEach(a => a.classList.remove('active'));
         el.classList.add('active');
         // Ensure selected is centered in sidebar
         el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
         if (main && url) {
-          main.classList.remove('loaded');
+          if (!alreadyLoaded) {
+            main.classList.remove('loaded');
+          }
           main.style.transition = '';
           main.style.transform = '';
           if (decisionBadge) {
@@ -205,11 +247,15 @@
           }
           // show spinner
           let sp = document.getElementById('mainSpinner');
-          if (!sp) {
-            sp = document.createElement('div');
-            sp.id = 'mainSpinner';
-            sp.className = 'spinner';
-            main.parentElement?.appendChild(sp);
+          if (!alreadyLoaded) {
+            if (!sp) {
+              sp = document.createElement('div');
+              sp.id = 'mainSpinner';
+              sp.className = 'spinner';
+              main.parentElement?.appendChild(sp);
+            }
+          } else {
+            sp?.remove();
           }
           const onLoad = () => {
             main.classList.add('loaded');
@@ -222,9 +268,20 @@
               decisionBadge.style.opacity = '0';
             }
           };
-          main.addEventListener('load', onLoad);
           main.src = url;
           main.alt = filename || 'image';
+          if (alreadyLoaded) {
+            if (typeof main.decode === 'function') {
+              main.decode().then(onLoad).catch(onLoad);
+            } else if (main.complete) {
+              onLoad();
+            } else {
+              main.addEventListener('load', onLoad, { once: true });
+            }
+          } else {
+            main.addEventListener('load', onLoad, { once: true });
+          }
+          preloadNeighbors(index);
         }
       }
 
@@ -232,6 +289,12 @@
       (function(){
         const current = document.querySelector('.thumb.active');
         if (current) current.scrollIntoView({ block: 'center', inline: 'nearest' });
+        if (current) {
+          const currentIndex = Number.parseInt(current.dataset.index || '0', 10);
+          if (Number.isFinite(currentIndex)) {
+            preloadNeighbors(currentIndex);
+          }
+        }
       })();
 
       // Mouse selection
