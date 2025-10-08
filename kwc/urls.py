@@ -15,10 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.views.generic import TemplateView
 from django.conf import settings
-from django.conf.urls.static import static
+from django.views.static import serve as static_serve
 
 urlpatterns = [
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
@@ -27,5 +27,9 @@ urlpatterns = [
     path('extract/', include(('extract.urls', 'extract'), namespace='extract')),
 ]
 
-# Serve wallpaper images directly from disk (internal-only deployment)
-urlpatterns += static('/wallpapers/', document_root=getattr(settings, 'WALLPAPERS_FOLDER', None))
+# Serve wallpaper images directly from disk. This is intended for internal/self-hosted use.
+_wall_root = getattr(settings, 'WALLPAPERS_FOLDER', None)
+if _wall_root:
+    urlpatterns += [
+        re_path(r'^wallpapers/(?P<path>.+)$', static_serve, { 'document_root': _wall_root }),
+    ]

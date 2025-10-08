@@ -17,8 +17,15 @@ run_migrations() {
 case "$cmd" in
   prod)
     run_migrations
-    echo "[entrypoint] Collecting static files..."
-    python manage.py collectstatic --noinput
+    # Collect static only when requested or when manifest is missing (first run / bind mount)
+    STATIC_ROOT_DIR="${STATIC_ROOT:-/app/static}"
+    MANIFEST_FILE="${STATIC_ROOT_DIR%/}/staticfiles.json"
+    if [ "${COLLECTSTATIC_ON_START:-auto}" = "1" ] || { [ "${COLLECTSTATIC_ON_START:-auto}" = "auto" ] && [ ! -f "$MANIFEST_FILE" ]; }; then
+      echo "[entrypoint] Collecting static files..."
+      python manage.py collectstatic --noinput
+    else
+      echo "[entrypoint] Skipping collectstatic (manifest present or disabled)"
+    fi
     echo "[entrypoint] Launching Gunicorn on ${HOST}:${PORT} with ${WEB_CONCURRENCY} workers"
     # Use the WSGI app; preload app for lower memory/latency and faster worker spawn
     exec gunicorn \
