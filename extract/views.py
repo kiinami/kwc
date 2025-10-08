@@ -298,38 +298,4 @@ def browse_api(request: HttpRequest) -> JsonResponse:
 		return JsonResponse({"error": str(e)}, status=500)
 
 
-@require_POST
-def browse_mkdir_api(request: HttpRequest) -> JsonResponse:
-	"""Create a new directory under a given absolute parent path.
-
-	JSON body:
-	- path: absolute parent directory
-	- name: new directory name (no path separators)
-	"""
-	try:
-		data = json.loads(request.body.decode("utf-8")) if request.body else {}
-	except Exception:
-		return JsonResponse({"error": "invalid_json"}, status=400)
-
-	parent = data.get("path") or ""
-	name = data.get("name") or ""
-
-	if not parent or not os.path.isabs(parent):
-		return JsonResponse({"error": "path_must_be_absolute"}, status=400)
-	if not name or any(ch in name for ch in ("/", "\\")):
-		return JsonResponse({"error": "invalid_name"}, status=400)
-	if not os.path.exists(parent):
-		return JsonResponse({"error": "parent_not_found"}, status=404)
-	if not os.path.isdir(parent):
-		return JsonResponse({"error": "parent_not_dir"}, status=400)
-
-	new_path = os.path.join(parent, name)
-	if os.path.exists(new_path):
-		return JsonResponse({"error": "already_exists"}, status=400)
-	try:
-		os.makedirs(new_path, exist_ok=False)
-		return JsonResponse({"ok": True, "path": new_path})
-	except PermissionError:
-		return JsonResponse({"error": "permission_denied"}, status=403)
-	except OSError as e:
-		return JsonResponse({"error": str(e)}, status=500)
+	# browse_mkdir_api was removed as unused to simplify the API surface
