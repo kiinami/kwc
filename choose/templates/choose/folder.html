@@ -50,7 +50,8 @@
     .viewport-img.loaded { opacity: 1; }
   .mobile-swipe-hint,
   .mobile-decision-badge,
-  .mobile-save { display: none; }
+  .mobile-save,
+  .mobile-undo { display: none; }
     @media (max-width: 900px) {
       .chooser-layout { grid-template-columns: 1fr; height: auto; }
       .chooser-sidebar { order: 2; max-height: 40vh; }
@@ -64,7 +65,8 @@
       .chooser-viewport { height: calc(100vh - 72px); }
       .viewport-inner { height: 100%; padding: 0; }
       .desktop-controls { display: none !important; }
-      .mobile-save { display: inline-flex; position: absolute; top: 1rem; right: 1rem; z-index: 5; }
+  .mobile-save { display: inline-flex; position: absolute; top: 1rem; right: 1rem; z-index: 5; }
+  .mobile-undo { display: inline-flex; position: absolute; top: 1rem; left: 1rem; z-index: 5; }
       .mobile-swipe-hint { display: flex; position: absolute; bottom: 1.4rem; left: 50%; transform: translateX(-50%); gap: .75rem; background: rgba(10,10,10,0.65); border-radius: 999px; padding: .55rem 1.2rem; font-size: .9rem; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: .05em; transition: opacity .3s ease; z-index: 4; }
       .mobile-swipe-hint span { white-space: nowrap; }
       .mobile-swipe-hint.dismissed { opacity: 0; pointer-events: none; }
@@ -120,6 +122,7 @@
         {% endif %}
       </div>
       {% if images %}
+      <button id="btnUndoMobile" class="btn btn-ghost mobile-undo" type="button" aria-label="Undo last decision">Undo</button>
       <button id="btnOpenSaveMobile" class="btn btn-primary mobile-save" type="button" aria-label="Apply decisions and rename">Save…</button>
       <div id="mobileDecisionBadge" class="mobile-decision-badge" aria-hidden="true"></div>
       <div class="mobile-swipe-hint" aria-hidden="true">
@@ -127,6 +130,7 @@
         <span>Swipe right to keep</span>
       </div>
       <div class="desktop-controls" style="position:absolute; bottom:.75rem; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:.5rem;">
+        <button id="btnUndo" class="btn btn-ghost" type="button" title="Undo last decision">Undo</button>
         <button id="btnDelete" class="btn btn-ghost" type="button" title="Delete (D)" style="border-color: rgba(239,68,68,.6); color:#fff;">Delete</button>
         <button id="btnKeep" class="btn btn-primary" type="button" title="Keep (K)">Keep</button>
       </div>
@@ -161,6 +165,8 @@
       const btnDelete = document.getElementById('btnDelete');
       const btnOpenSave = document.getElementById('btnOpenSave');
       const btnOpenSaveMobile = document.getElementById('btnOpenSaveMobile');
+      const btnUndo = document.getElementById('btnUndo');
+      const btnUndoMobile = document.getElementById('btnUndoMobile');
       const saveModal = document.getElementById('saveModal');
       const btnCancelSave = document.getElementById('btnCancelSave');
       const btnConfirmSave = document.getElementById('btnConfirmSave');
@@ -170,6 +176,15 @@
       const decisionBadge = document.getElementById('mobileDecisionBadge');
       const swipeHint = document.querySelector('.mobile-swipe-hint');
       const mobileMedia = window.matchMedia('(max-width: 768px)');
+      const decisionHistory = [];
+
+      function updateUndoState() {
+        const disabled = decisionHistory.length === 0;
+        if (btnUndo) btnUndo.disabled = disabled;
+        if (btnUndoMobile) btnUndoMobile.disabled = disabled;
+      }
+
+      updateUndoState();
 
       function activateThumb(el) {
         if (!el) return;
@@ -243,22 +258,8 @@
         return cookie ? decodeURIComponent(cookie.substring(name.length)) : '';
       }
 
-      async function decide(decision){
-        const active = document.querySelector('.thumb.active');
-        if (!active) return;
-        const filename = active.dataset.name || '';
-
-        // Optimistically mark decision on current thumb
-        active.classList.remove('keep','delete');
-        active.classList.add(decision);
-
-        // Compute next and advance immediately for fast workflow
-        let idx = parseInt(active.getAttribute('data-index') || '0', 10);
-        if (Number.isNaN(idx)) idx = 0;
-        const next = thumbs[idx + 1];
-        if (next) activateThumb(next);
-
-        // Persist in background
+      async function persistDecision(filename, decision) {
+        if (!filename) return;
         try {
           const res = await fetch(`${window.location.pathname}decide`, {
             method: 'POST',
@@ -271,13 +272,51 @@
         }
       }
 
+      function undoDecision(){
+        const entry = decisionHistory.pop();
+        if (!entry) { updateUndoState(); return; }
+        const thumb = entry.thumb || entry;
+        if (!thumb) { updateUndoState(); return; }
+        thumb.classList.remove('keep', 'delete');
+        thumb.dataset.decision = '';
+        activateThumb(thumb);
+        persistDecision(thumb.dataset.name || '', '');
+        updateUndoState();
+      }
+
+      async function decide(decision){
+        const active = document.querySelector('.thumb.active');
+        if (!active) return;
+        const filename = active.dataset.name || '';
+
+        decisionHistory.push({ thumb: active });
+        updateUndoState();
+
+        // Optimistically mark decision on current thumb
+        active.classList.remove('keep','delete');
+        active.classList.add(decision);
+        active.dataset.decision = decision;
+
+        // Compute next and advance immediately for fast workflow
+        let idx = parseInt(active.getAttribute('data-index') || '0', 10);
+        if (Number.isNaN(idx)) idx = 0;
+        const next = thumbs[idx + 1];
+        if (next) activateThumb(next);
+
+        // Persist in background
+        persistDecision(filename, decision);
+      }
+
       btnKeep?.addEventListener('click', () => decide('keep'));
       btnDelete?.addEventListener('click', () => decide('delete'));
       window.addEventListener('keydown', (e) => {
         if (e.key === 'k' || e.key === 'K') { e.preventDefault(); decide('keep'); }
         if (e.key === 'd' || e.key === 'D') { e.preventDefault(); decide('delete'); }
+        if (e.key === 'u' || e.key === 'U') { e.preventDefault(); undoDecision(); }
       });
       btnOpenSaveMobile?.addEventListener('click', openSaveModal);
+      btnUndo?.addEventListener('click', undoDecision);
+      btnUndoMobile?.addEventListener('click', undoDecision);
 
       function openSaveModal(){
         // Compute counts from current DOM state

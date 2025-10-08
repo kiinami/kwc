@@ -142,8 +142,11 @@ def decide_api(request: HttpRequest, folder: str) -> JsonResponse:
 	decision = (data.get('decision') or '').strip()
 	if not filename:
 		return JsonResponse({"error": "missing_filename"}, status=400)
-	if decision not in (ImageDecision.DECISION_KEEP, ImageDecision.DECISION_DELETE):
+	if decision not in (ImageDecision.DECISION_KEEP, ImageDecision.DECISION_DELETE, ""):
 		return JsonResponse({"error": "invalid_decision"}, status=400)
+	if decision == "":
+		ImageDecision.objects.filter(folder=safe_name, filename=filename).delete()
+		return JsonResponse({"ok": True, "folder": safe_name, "filename": filename, "decision": ""})
 	obj, _created = ImageDecision.objects.update_or_create(
 		folder=safe_name, filename=filename,
 		defaults={"decision": decision}
