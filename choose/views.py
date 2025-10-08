@@ -6,7 +6,7 @@ from pathlib import Path
 import os
 import re
 import json
-from .models import ImageDecision
+from .models import ImageDecision, FolderProgress
 from django.views.decorators.http import require_POST
 from extract.utils import render_pattern
 from .utils import (
@@ -102,14 +102,32 @@ def folder(request: HttpRequest, folder: str) -> HttpResponse:
 	except PermissionError:
 		images = []
 
-	# Initial selection: first UNDECIDED image; if all decided, fall back to first
+	# Initial selection prioritises resumed progress, then first undecided from that point forward
 	selected_index = -1
-	for i, img in enumerate(images):
-		if not img.get('decision'):
-			selected_index = i
-			break
-	if selected_index == -1:
-		selected_index = 0 if images else -1
+	progress = FolderProgress.objects.filter(folder=safe_name).first()
+	start_index = 0
+	if progress and images:
+		anchor_idx = -1
+		if progress.last_classified_name:
+			for i, img in enumerate(images):
+				if img['name'] == progress.last_classified_name:
+					anchor_idx = i
+					break
+		if anchor_idx != -1:
+			start_index = anchor_idx + 1
+		elif progress.keep_count:
+			start_index = progress.keep_count
+	if images:
+		if start_index >= len(images):
+			start_index = len(images) - 1
+		if start_index < 0:
+			start_index = 0
+		for idx in range(start_index, len(images)):
+			if not images[idx].get('decision'):
+				selected_index = idx
+				break
+		if selected_index == -1:
+			selected_index = start_index if images else -1
 
 	context = {
 		'folder': safe_name,
@@ -177,9 +195,13 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 					files.append(e.name)
 	files.sort(key=lambda n: n.lower())
 
-	# Decisions map
+	# Decisions map and existing progress
 	decisions_qs = ImageDecision.objects.filter(folder=safe_name)
-	dmap = {d.filename: d.decision for d in decisions_qs}
+	decisions = list(decisions_qs.order_by('decided_at', 'filename'))
+	dmap = {d.filename: d.decision for d in decisions}
+	indices_by_name = {name: idx for idx, name in enumerate(files)}
+	previous_progress = FolderProgress.objects.filter(folder=safe_name).first()
+	prev_keep_count = previous_progress.keep_count if previous_progress else 0
 
 	to_delete = [name for name in files if dmap.get(name) == ImageDecision.DECISION_DELETE]
 	to_keep = [name for name in files if name not in to_delete]
@@ -214,6 +236,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 
 	# First, move all kept files to temporary names to avoid collisions
 	tmp_map: dict[Path, Path] = {}
+	ordered_originals: list[Path] = []
 	for idx, name in enumerate(to_keep, start=1):
 		src = target / name
 		tmp = target / f".{idx:04d}.renametmp.{os.getpid()}_{idx}{src.suffix.lower()}"
@@ -221,6 +244,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 			if src.exists():
 				os.rename(src, tmp)
 				tmp_map[src] = tmp
+				ordered_originals.append(src)
 		except Exception as e:
 			# If temp rename fails, abort and report
 			return JsonResponse({"error": "temp_rename_failed", "file": name, "detail": str(e)}, status=500)
@@ -229,8 +253,12 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 	# Counter resets per (season, episode). If not present, single group.
 	rename_errors: list[str] = []
 	counters: dict[tuple[str, str], int] = {}
+	final_keep_names: list[str] = []
 
-	for original_src, tmp in tmp_map.items():
+	for original_src in ordered_originals:
+		tmp = tmp_map.get(original_src)
+		if tmp is None:
+			continue
 		# Parse season/episode from original filename
 		m = SEASON_EPISODE_RE.search(original_src.stem)
 		season = m.group('season') if m else ''
@@ -258,13 +286,14 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 					suffix = f" S{season}E{episode} #{current}".strip()
 					dest = target / f"{stem}{suffix}{ext}"
 			os.rename(tmp, dest)
+			final_keep_names.append(dest.name)
 		except Exception as e:
 			rename_errors.append(f"{original_src.name} -> {dest.name}: {e}")
 
 	# Clean up any leftover temps on error
 	if rename_errors:
 		# Attempt to move back any remaining temps
-		for _, tmp in tmp_map.items():
+		for tmp in tmp_map.values():
 			if tmp.exists():
 				try:
 					# best-effort cleanup
@@ -272,6 +301,30 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 				except Exception:
 					pass
 		return JsonResponse({"error": "rename_failed", "details": rename_errors, "delete_errors": delete_errors}, status=500)
+
+	# Compute new progress statistics before clearing decisions
+	remaining_prev_keep_count = sum(1 for name in files[:prev_keep_count] if name not in to_delete)
+	keep_names_beyond_prev = {
+		name for name, decision in dmap.items()
+		if decision == ImageDecision.DECISION_KEEP and indices_by_name.get(name, len(files)) >= prev_keep_count
+	}
+	new_processed_count = remaining_prev_keep_count + len(keep_names_beyond_prev)
+	if new_processed_count > len(final_keep_names):
+		new_processed_count = len(final_keep_names)
+	anchor_name = ''
+	if new_processed_count > 0 and final_keep_names:
+		anchor_index = min(new_processed_count - 1, len(final_keep_names) - 1)
+		anchor_name = final_keep_names[anchor_index]
+	last_original_name = decisions[-1].filename if decisions else (previous_progress.last_classified_original if previous_progress else '')
+
+	FolderProgress.objects.update_or_create(
+		folder=safe_name,
+		defaults={
+			'last_classified_name': anchor_name,
+			'last_classified_original': last_original_name,
+			'keep_count': new_processed_count,
+		},
+	)
 
 	# Decisions are now applied; clear them for this folder
 	ImageDecision.objects.filter(folder=safe_name).delete()
