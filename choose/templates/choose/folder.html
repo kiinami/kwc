@@ -29,7 +29,7 @@
   .sidebar-title { font-weight: 700; line-height: 1.25; white-space: normal; overflow: visible; text-overflow: initial; word-break: break-word; }
   .sidebar-count { color: var(--muted); font-size: .9rem; }
   .sidebar-list { overflow-y: auto; padding: .5rem; flex: 1 1 auto; }
-  .chooser-viewport { position: relative; overflow: hidden; }
+  .chooser-viewport { position: relative; overflow: hidden; touch-action: pan-y; }
   .thumb { position: relative; border-radius: .5rem; overflow: hidden; margin-bottom: .75rem; background: rgba(255,255,255,0.06); cursor: pointer; }
   /* Hover hint only for undecided and not active */
   .thumb:hover:not(.active):not(.keep):not(.delete) { outline: 3px solid rgba(124,76,245,0.35); }
@@ -48,7 +48,32 @@
   .viewport-inner { width: 100%; height: calc(100% - 46px); display: grid; place-items: center; box-sizing: border-box; padding: .75rem; }
   .viewport-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .25s ease; border-radius: .6rem; }
     .viewport-img.loaded { opacity: 1; }
-    @media (max-width: 800px) { .chooser-layout { grid-template-columns: 1fr; height: auto; } .chooser-sidebar { order: 2; max-height: 40vh; } .chooser-viewport { order: 1; min-height: 50vh; } }
+  .mobile-swipe-hint,
+  .mobile-decision-badge,
+  .mobile-save { display: none; }
+    @media (max-width: 900px) {
+      .chooser-layout { grid-template-columns: 1fr; height: auto; }
+      .chooser-sidebar { order: 2; max-height: 40vh; }
+      .chooser-viewport { order: 1; min-height: 50vh; }
+    }
+    @media (max-width: 768px) {
+      body { overflow-y: auto; }
+      .fullbleed { padding-left: 0; padding-right: 0; }
+      .chooser-layout { grid-template-columns: 1fr; height: calc(100vh - 72px); }
+      .chooser-sidebar { display: none; }
+      .chooser-viewport { height: calc(100vh - 72px); }
+      .viewport-inner { height: 100%; padding: 0; }
+      .desktop-controls { display: none !important; }
+      .mobile-save { display: inline-flex; position: absolute; top: 1rem; right: 1rem; z-index: 5; }
+      .mobile-swipe-hint { display: flex; position: absolute; bottom: 1.4rem; left: 50%; transform: translateX(-50%); gap: .75rem; background: rgba(10,10,10,0.65); border-radius: 999px; padding: .55rem 1.2rem; font-size: .9rem; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: .05em; transition: opacity .3s ease; z-index: 4; }
+      .mobile-swipe-hint span { white-space: nowrap; }
+      .mobile-swipe-hint.dismissed { opacity: 0; pointer-events: none; }
+      .mobile-decision-badge { display: block; position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%); padding: .75rem 1.35rem; border-radius: 999px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; background: rgba(0,0,0,0.75); color: #fff; box-shadow: 0 10px 25px rgba(0,0,0,0.35); opacity: 0; transition: opacity .2s ease; pointer-events: none; z-index: 6; }
+      .mobile-decision-badge.active { opacity: .95; }
+      .mobile-decision-badge.keep { background: rgba(34,197,94,0.9); }
+      .mobile-decision-badge.delete { background: rgba(239,68,68,0.9); }
+      .chooser-viewport { touch-action: pan-y; }
+    }
 
   /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 50; }
@@ -95,7 +120,13 @@
         {% endif %}
       </div>
       {% if images %}
-      <div style="position:absolute; bottom:.75rem; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:.5rem;">
+      <button id="btnOpenSaveMobile" class="btn btn-primary mobile-save" type="button" aria-label="Apply decisions and rename">Save…</button>
+      <div id="mobileDecisionBadge" class="mobile-decision-badge" aria-hidden="true"></div>
+      <div class="mobile-swipe-hint" aria-hidden="true">
+        <span>Swipe left to delete</span>
+        <span>Swipe right to keep</span>
+      </div>
+      <div class="desktop-controls" style="position:absolute; bottom:.75rem; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:.5rem;">
         <button id="btnDelete" class="btn btn-ghost" type="button" title="Delete (D)" style="border-color: rgba(239,68,68,.6); color:#fff;">Delete</button>
         <button id="btnKeep" class="btn btn-primary" type="button" title="Keep (K)">Keep</button>
       </div>
@@ -125,16 +156,20 @@
     (function(){
       const thumbs = Array.from(document.querySelectorAll('.thumb'));
       const main = document.getElementById('mainImage');
-  const sidebar = document.querySelector('.sidebar-list');
-  const btnKeep = document.getElementById('btnKeep');
-  const btnDelete = document.getElementById('btnDelete');
-  const btnOpenSave = document.getElementById('btnOpenSave');
-  const saveModal = document.getElementById('saveModal');
-  const btnCancelSave = document.getElementById('btnCancelSave');
-  const btnConfirmSave = document.getElementById('btnConfirmSave');
-  const keepCountEl = document.getElementById('saveKeepCount');
-  const deleteCountEl = document.getElementById('saveDeleteCount');
-  const undecidedWarnEl = document.getElementById('saveUndecidedWarn');
+      const sidebar = document.querySelector('.sidebar-list');
+      const btnKeep = document.getElementById('btnKeep');
+      const btnDelete = document.getElementById('btnDelete');
+      const btnOpenSave = document.getElementById('btnOpenSave');
+      const btnOpenSaveMobile = document.getElementById('btnOpenSaveMobile');
+      const saveModal = document.getElementById('saveModal');
+      const btnCancelSave = document.getElementById('btnCancelSave');
+      const btnConfirmSave = document.getElementById('btnConfirmSave');
+      const keepCountEl = document.getElementById('saveKeepCount');
+      const deleteCountEl = document.getElementById('saveDeleteCount');
+      const undecidedWarnEl = document.getElementById('saveUndecidedWarn');
+      const decisionBadge = document.getElementById('mobileDecisionBadge');
+      const swipeHint = document.querySelector('.mobile-swipe-hint');
+      const mobileMedia = window.matchMedia('(max-width: 768px)');
 
       function activateThumb(el) {
         if (!el) return;
@@ -147,6 +182,12 @@
         el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
         if (main && url) {
           main.classList.remove('loaded');
+          main.style.transition = '';
+          main.style.transform = '';
+          if (decisionBadge) {
+            decisionBadge.classList.remove('active', 'keep', 'delete');
+            decisionBadge.style.opacity = '0';
+          }
           // show spinner
           let sp = document.getElementById('mainSpinner');
           if (!sp) {
@@ -155,7 +196,17 @@
             sp.className = 'spinner';
             main.parentElement?.appendChild(sp);
           }
-          const onLoad = () => { main.classList.add('loaded'); sp?.remove(); main.removeEventListener('load', onLoad); };
+          const onLoad = () => {
+            main.classList.add('loaded');
+            sp?.remove();
+            main.removeEventListener('load', onLoad);
+            main.style.transition = '';
+            main.style.transform = '';
+            if (decisionBadge) {
+              decisionBadge.classList.remove('active', 'keep', 'delete');
+              decisionBadge.style.opacity = '0';
+            }
+          };
           main.addEventListener('load', onLoad);
           main.src = url;
           main.alt = filename || 'image';
@@ -226,6 +277,7 @@
         if (e.key === 'k' || e.key === 'K') { e.preventDefault(); decide('keep'); }
         if (e.key === 'd' || e.key === 'D') { e.preventDefault(); decide('delete'); }
       });
+      btnOpenSaveMobile?.addEventListener('click', openSaveModal);
 
       function openSaveModal(){
         // Compute counts from current DOM state
@@ -264,6 +316,131 @@
           btnConfirmSave.textContent = 'Continue';
         }
       });
+
+      if (main) {
+        let pointerId = null;
+        let startX = 0;
+        let startY = 0;
+        let startTime = 0;
+        let dragging = false;
+        const SWIPE_THRESHOLD = 80;
+
+        function resetSwipeState(withTransition = true) {
+          if (!main) return;
+          if (withTransition) {
+            main.style.transition = 'transform .2s ease';
+          } else {
+            main.style.transition = '';
+          }
+          main.style.transform = '';
+          if (decisionBadge) {
+            decisionBadge.classList.remove('active', 'keep', 'delete');
+            decisionBadge.style.opacity = '0';
+          }
+          if (withTransition) {
+            window.setTimeout(() => { if (main) main.style.transition = ''; }, 200);
+          }
+        }
+
+        function handleMobileChange(event) {
+          if (!event.matches) {
+            resetSwipeState(false);
+            swipeHint?.classList.remove('dismissed');
+          }
+        }
+
+        if (typeof mobileMedia.addEventListener === 'function') {
+          mobileMedia.addEventListener('change', handleMobileChange);
+        } else if (typeof mobileMedia.addListener === 'function') {
+          mobileMedia.addListener(handleMobileChange);
+        }
+
+        main.addEventListener('pointerdown', (event) => {
+          if (!mobileMedia.matches) return;
+          if (event.pointerType === 'mouse' && event.button !== 0) return;
+          dragging = true;
+          pointerId = event.pointerId;
+          startX = event.clientX;
+          startY = event.clientY;
+          startTime = performance.now();
+          swipeHint?.classList.add('dismissed');
+          main.style.transition = '';
+          try { main.setPointerCapture(pointerId); } catch (err) {}
+        });
+
+        main.addEventListener('pointermove', (event) => {
+          if (!dragging || event.pointerId !== pointerId) return;
+          const dx = event.clientX - startX;
+          const dy = event.clientY - startY;
+
+          if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+
+          const rotate = Math.max(-25, Math.min(25, dx / 12));
+          main.style.transform = `translateX(${dx}px) rotate(${rotate}deg)`;
+
+          if (decisionBadge) {
+            if (dx > 0) {
+              decisionBadge.textContent = 'Keep';
+              decisionBadge.classList.add('keep');
+              decisionBadge.classList.remove('delete');
+            } else if (dx < 0) {
+              decisionBadge.textContent = 'Delete';
+              decisionBadge.classList.add('delete');
+              decisionBadge.classList.remove('keep');
+            } else {
+              decisionBadge.classList.remove('keep', 'delete');
+            }
+            const intensity = Math.min(1, Math.abs(dx) / SWIPE_THRESHOLD);
+            if (Math.abs(dx) > 10) {
+              decisionBadge.classList.add('active');
+              decisionBadge.style.opacity = String(Math.min(0.95, 0.2 + intensity * 0.8));
+            } else {
+              decisionBadge.classList.remove('active');
+              decisionBadge.style.opacity = '0';
+            }
+          }
+        });
+
+        function completeSwipe(event, cancelled = false) {
+          if (!dragging || event.pointerId !== pointerId) return;
+          dragging = false;
+          try { main.releasePointerCapture(pointerId); } catch (err) {}
+
+          const dx = event.clientX - startX;
+          const dy = event.clientY - startY;
+          const elapsed = performance.now() - startTime;
+          const absDx = Math.abs(dx);
+          const absDy = Math.abs(dy);
+
+          let decision = null;
+          if (!cancelled && absDx > absDy && (absDx > SWIPE_THRESHOLD || (absDx > 45 && elapsed < 180))) {
+            decision = dx > 0 ? 'keep' : 'delete';
+          }
+
+          if (decision) {
+            const direction = dx > 0 ? 1 : -1;
+            main.style.transition = 'transform .25s ease';
+            main.style.transform = `translateX(${direction * window.innerWidth}px) rotate(${direction * 30}deg)`;
+            if (decisionBadge) {
+              decisionBadge.textContent = decision === 'keep' ? 'Keep' : 'Delete';
+              decisionBadge.classList.add('active');
+              decisionBadge.classList.toggle('keep', decision === 'keep');
+              decisionBadge.classList.toggle('delete', decision === 'delete');
+              decisionBadge.style.opacity = '0.95';
+            }
+            window.setTimeout(() => {
+              resetSwipeState(false);
+              decide(decision);
+            }, 220);
+          } else {
+            resetSwipeState(true);
+          }
+        }
+
+        main.addEventListener('pointerup', (event) => completeSwipe(event, false));
+        main.addEventListener('pointercancel', (event) => completeSwipe(event, true));
+        main.addEventListener('pointerleave', (event) => completeSwipe(event, true));
+      }
     })();
   </script>
 {% endblock %}
