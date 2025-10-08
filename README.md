@@ -1,25 +1,38 @@
-# kwc
+# KWC
 
-Small utility to manage my wallpapers and get new ones.
+KWC is a tiny Django app to extract keyframes from videos and curate them into a clean wallpaper set.
 
-## Deployment
+Apps:
+- Extract: cut/trim and extract I-frame images using FFmpeg
+- Choose: review images and quickly mark keep/delete, then apply and rename
 
-This app is production-ready with:
+## Configuration
 
-- Gunicorn WSGI server (`kwc.wsgi:application`)
-- WhiteNoise for efficient static file serving
+Copy `.env.example` to `.env` and tweak as needed. Key variables:
+- DJANGO_SECRET_KEY, DJANGO_DEBUG, DJANGO_ALLOWED_HOSTS
+- KWC_WALLPAPERS_FOLDER: where extracted images are stored (and served at /wallpapers/)
+- KWC_FOLDER_PATTERN: folder naming template (Django template syntax)
+- KWC_IMAGE_PATTERN: image filename template (supports the `pad` filter)
 
-Environment variables:
+Defaults place a SQLite database in `/data` (bind mount recommended) and serve static files with WhiteNoise.
 
-- PORT: listen port (default 8000)
-- HOST: bind interface (default 0.0.0.0)
-- WEB_CONCURRENCY: Gunicorn workers (default 2)
-- TIMEOUT: Gunicorn worker timeout (default 60)
-- DJANGO_ALLOWED_HOSTS: comma-separated hostnames for Django
-- STATIC_ROOT: static files directory (pre-collected at build time in Docker)
+## Run (Docker)
 
-Local dev server (insecure):
+Build and run the container exposing port 8080. Volumes mount the DB, static files, and wallpapers root.
 
-Use the entrypoint script with `serve`.
+- Image builds use uv and install only prod dependencies.
+- Entrypoint `deploy/run` migrates the DB and starts Gunicorn (`prod`) or Django dev server (`serve`).
 
-Container image runs `prod` by default which executes migrations and starts Gunicorn.
+## Development
+
+Install Python 3.13 and dependencies with your preferred manager. Example using uv:
+
+1) Create a virtualenv and sync deps
+2) Run the dev server
+
+The navigation offers Home, Extract, and Choose. Wallpapers are also available under `/wallpapers/<folder>/<file>` for convenience.
+
+## Notes
+
+- No tests are provided by design for this refactor.
+- Backwards-compatibility shims were intentionally removed. Templates use Django syntax only.

@@ -89,19 +89,17 @@
   const folderPattern = "{{ folder_pattern|escapejs }}";
   const imagePattern = "{{ image_pattern|escapejs }}";
   function renderWith(values, pattern) {
-    // Support a minimal subset of Django template syntax for preview:
-    // - {% if season %}...{% endif %} and {% if episode %}...{% endif %}
-    // - {{ title }}, {{ year }}, {{ season }}, {{ episode }}
-    // - {{ episode|pad:2 }} and {{ season|pad:2 }}
+    // Minimal client-side preview for Django-like patterns.
+    // Replace simple conditionals {% if X %}...{% endif %}
     pattern = pattern.replace(/\{\%\s*if\s+season\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.season ? inner : ''));
     pattern = pattern.replace(/\{\%\s*if\s+episode\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.episode ? inner : ''));
     pattern = pattern.replace(/\{\%\s*if\s+year\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.year ? inner : ''));
-    // Simple variable replacements
+    // Variables
     pattern = pattern.replace(/\{\{\s*title\s*\}\}/g, values.title);
     pattern = pattern.replace(/\{\{\s*year\s*\}\}/g, values.year);
-  // counter pad filter and plain counter
-  pattern = pattern.replace(/\{\{\s*counter\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => String(1).padStart(parseInt(w, 10) || 0, '0'));
-  pattern = pattern.replace(/\{\{\s*counter\s*\}\}/g, '1');
+    // counter (preview as 1)
+    pattern = pattern.replace(/\{\{\s*counter\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => String(1).padStart(parseInt(w, 10) || 0, '0'));
+    pattern = pattern.replace(/\{\{\s*counter\s*\}\}/g, '1');
     // pad filter for season/episode
     pattern = pattern.replace(/\{\{\s*season\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => {
       const num = parseInt(values.season, 10);
@@ -113,26 +111,7 @@
     });
     pattern = pattern.replace(/\{\{\s*season\s*\}\}/g, values.season);
     pattern = pattern.replace(/\{\{\s*episode\s*\}\}/g, values.episode);
-  // After handling Django-like parts, also support brace placeholders for backwards compatibility
-  // replace {title}
-    let s = pattern.replaceAll('{title}', values.title);
-    // year/season/episode (no padding preview here except episode and counter padding)
-    s = s.replaceAll('{year}', values.year);
-    // Optional leading space for season/episode: replace " {season[:N]}" only when present
-    s = s.replace(/( )?\{season:(\d+)\}/g, (_m, space, w) => {
-      const num = parseInt(values.season, 10);
-      if (!Number.isNaN(num)) return (space || '') + String(num).padStart(parseInt(w, 10) || 0, '0');
-      return values.season ? (space || '') + values.season : '';
-    });
-    s = s.replace(/( )?\{season\}/g, (_m, space) => (values.season ? (space || '') + values.season : ''));
-    // episode zero padding like {episode:02} with optional leading space
-    s = s.replace(/( )?\{episode:(\d+)\}/g, (_m, space, w) => {
-      const num = parseInt(values.episode, 10);
-      if (!Number.isNaN(num)) return (space || '') + String(num).padStart(parseInt(w, 10) || 0, '0');
-      return values.episode ? (space || '') + values.episode : '';
-    });
-    s = s.replace(/( )?\{episode\}/g, (_m, space) => (values.episode ? (space || '') + values.episode : ''));
-    return s;
+    return pattern;
   }
 
   function formatPreview() {
@@ -142,9 +121,6 @@
     const episode = (episodeEl?.value || '').trim();
     let folder = renderWith({ title, year, season, episode }, folderPattern);
     let file = renderWith({ title, year, season, episode }, imagePattern);
-    // Replace counter with optional zero padding syntax {counter:NN}
-    file = file.replace(/\{counter:(\d+)\}/g, (_m, w) => String(1).padStart(parseInt(w, 10) || 0, '0'));
-    file = file.replace(/\{counter\}/g, '1');
     const text = `Files will be named: ${folder}/${file}`;
     if (namingPreview) namingPreview.textContent = text;
   }

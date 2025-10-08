@@ -3,10 +3,9 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-import re
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
-from ffmpeg import FFmpeg, Progress as FFmpegProgress
+from ffmpeg import FFmpeg
 from django.template import Engine, Context
 
 logger = logging.getLogger(__name__)
@@ -162,70 +161,12 @@ def get_iframe_timestamps(video: Path) -> list[float]:
     return timestamps
 
 
-_PLACEHOLDER_RE = re.compile(r"\{([a-zA-Z_][a-zA-Z0-9_]*)(?::(\d+))?\}")
-
-# Optional leading-space handling for season/episode placeholders
-_OPT_SPACE_SEASON_EP = re.compile(r"( )?\{(season|episode)(?::(\d+))?\}")
-
-
 def render_pattern(pattern: str, values: dict[str, object]) -> str:
-    """Render a naming pattern with support for zero-padding.
+    """Render a naming pattern using Django template engine.
 
-    Supports placeholders like {title}, {counter}, {year}, {season}, {episode}.
-    For {counter:N} and {episode:N} where N is digits, applies zero padding if the value is numeric;
-    otherwise uses the value as-is.
-    Unknown placeholders are replaced with an empty string.
+    The pattern can use template variables like {{ title }}, {{ counter }}, {{ year }}, {{ season }}, {{ episode }}
+    and the custom filter "pad" from extract.templatetags.naming, for example: {{ counter|pad:4 }}.
     """
-
-    # If pattern uses Django template syntax, render via template engine for maximum flexibility.
-    if ("{{" in pattern) or ("{%" in pattern):
-        engine = Engine(builtins=["extract.templatetags.naming"])  # includes the 'pad' filter
-        tpl = engine.from_string(pattern)
-        return tpl.render(Context(values))
-
-    # First, handle optional leading space for season/episode so we can drop the space when empty.
-    def repl_opt(match: re.Match) -> str:  # type: ignore[name-defined]
-        space = match.group(1) or ""
-        name = match.group(2)
-        width = match.group(3)
-        raw = values.get(name, "")
-        is_empty = raw is None or str(raw) == ""
-        if is_empty:
-            return ""
-        if width:
-            try:
-                w = int(width)
-            except Exception:
-                w = 0
-            try:
-                num = int(raw)
-                return (space if space else "") + str(num).zfill(w)
-            except Exception:
-                return (space if space else "") + str(raw)
-        return (space if space else "") + str(raw)
-
-    s = _OPT_SPACE_SEASON_EP.sub(repl_opt, pattern)
-
-    def repl(match: re.Match) -> str:  # type: ignore[name-defined]
-        name = match.group(1)
-        width = match.group(2)
-        raw = values.get(name, "")
-        if raw is None:
-            return ""
-        # Zero padding only applies for numeric values and when width specified
-        if width and name in {"counter", "episode", "season", "year"}:
-            try:
-                w = int(width)
-            except Exception:
-                w = 0
-            # Accept int or numeric string
-            try:
-                num = int(raw)
-                return str(num).zfill(w)
-            except Exception:
-                # Non-numeric, ignore padding
-                return str(raw)
-        return str(raw)
-
-    # Replace remaining placeholders
-    return _PLACEHOLDER_RE.sub(repl, s)
+    engine = Engine(builtins=["extract.templatetags.naming"])  # includes the 'pad' filter
+    tpl = engine.from_string(pattern)
+    return tpl.render(Context(values))

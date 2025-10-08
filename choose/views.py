@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.urls import reverse
 from django.conf import settings
@@ -10,15 +10,17 @@ import json
 from .models import ImageDecision
 from django.views.decorators.http import require_POST
 from extract.utils import render_pattern
+from .utils import wallpapers_root, parse_folder_name, list_image_files, find_cover_filename
 
 
 def _get_wallpapers_root() -> Path:
-	return Path(getattr(settings, 'WALLPAPERS_FOLDER', settings.BASE_DIR / 'extracted'))
+	# Backward shim inside this module to minimize edits; prefer utils.wallpapers_root
+	return wallpapers_root()
 
 
 def index(request: HttpRequest) -> HttpResponse:
 	"""Home page: list media folders inside wallpapers root."""
-	root = _get_wallpapers_root()
+	root = wallpapers_root()
 	entries: list[dict] = []
 	if root.exists() and root.is_dir():
 		try:
@@ -30,45 +32,11 @@ def index(request: HttpRequest) -> HttpResponse:
 					if e.name.startswith('.'):
 						continue
 					folder_name = e.name
-					# Parse title and year from pattern: {title} ({year})
-					title = folder_name
-					year = ""
-					if folder_name.endswith(')'):
-						try:
-							left = folder_name.rfind(' (')
-							if left != -1 and folder_name.endswith(')'):
-								maybe_year = folder_name[left + 2:-1]
-								if maybe_year.isdigit():
-									title = folder_name[:left]
-									year = maybe_year
-						except Exception:
-							title = folder_name
-							year = ""
-					year_int = int(year) if year.isdigit() else None
+					title, year_int = parse_folder_name(folder_name)
+					year = str(year_int) if year_int is not None else ""
 
-					# Determine cover image (prefer .cover.jpg/.cover.png, else first image)
 					folder_path = root / folder_name
-					cover_file = None
-					for cand in ('.cover.jpg', '.cover.jpeg', '.cover.png', '.cover.webp'):
-						p = folder_path / cand
-						if p.exists() and p.is_file():
-							cover_file = p.name
-							break
-					if cover_file is None:
-						exts = {'.jpg', '.jpeg', '.png', '.webp'}
-						try:
-							files = []
-							with os.scandir(folder_path) as fit:
-								for fe in fit:
-									if fe.is_file() and not fe.name.startswith('.'):
-										_, ext = os.path.splitext(fe.name)
-										if ext.lower() in exts:
-											files.append(fe.name)
-							files.sort(key=lambda n: n.lower())
-							if files:
-								cover_file = files[0]
-						except PermissionError:
-							pass
+					cover_file = find_cover_filename(folder_path)
 
 					cover_url = None
 					if cover_file:
@@ -99,7 +67,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
 def folder(request: HttpRequest, folder: str) -> HttpResponse:
 	"""Detail page for a media folder: show a two-pane chooser UI with sidebar and viewport."""
-	root = _get_wallpapers_root()
+	root = wallpapers_root()
 	# Prevent path traversal; only allow direct child folders under the root
 	safe_name = os.path.basename(folder)
 	if safe_name != folder:
@@ -112,17 +80,9 @@ def folder(request: HttpRequest, folder: str) -> HttpResponse:
 		raise Http404("Folder not found")
 
 	# Collect image files (jpg/jpeg/png/webp), ordered by filename
-	exts = {'.jpg', '.jpeg', '.png', '.webp'}
 	images: list[dict] = []
 	try:
-		files: list[str] = []
-		with os.scandir(target) as it:
-			for e in it:
-				if e.is_file() and not e.name.startswith('.'):
-					_, ext = os.path.splitext(e.name)
-					if ext.lower() in exts:
-						files.append(e.name)
-		files.sort(key=lambda n: n.lower())
+		files = list_image_files(target)
 		# Fetch existing decisions in bulk
 		decisions_qs = ImageDecision.objects.filter(folder=safe_name, filename__in=files)
 		decision_map = {d.filename: d.decision for d in decisions_qs}
@@ -191,7 +151,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 	safe_name = os.path.basename(folder)
 	if safe_name != folder or safe_name.startswith('.'):
 		return JsonResponse({"error": "invalid_folder"}, status=400)
-	root = _get_wallpapers_root()
+	root = wallpapers_root()
 	target = root / safe_name
 	if not target.exists() or not target.is_dir():
 		return JsonResponse({"error": "not_found"}, status=404)

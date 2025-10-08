@@ -11,8 +11,7 @@ services:
     volumes:
       # Use host bind mounts so permissions match your user
       - "${HOME}/.local/share/kwc/db:/data"
-      - "${HOME}/.local/share/kwc/media:/app/media"
       - "${HOME}/.local/share/kwc/static:/app/static"
+      # Wallpapers root (matches KWC_WALLPAPERS_FOLDER)
       - "${HOME}/media/wallpapers:/media/wallpapers"
-      - "${HOME}/code/kwc:/media/tv"
     restart: unless-stopped
