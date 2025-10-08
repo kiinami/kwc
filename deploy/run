@@ -1,29 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# If running as root inside the container, drop privileges to the provided host UID/GID
-# so files created on bind mounts are owned by the host user (not root).
-if [ "${EUID:-$(id -u)}" -eq 0 ]; then
-  KWC_UID_ENV="${KWC_UID:-}"
-  KWC_GID_ENV="${KWC_GID:-}"
-  if [ -n "$KWC_UID_ENV" ] && [ -n "$KWC_GID_ENV" ]; then
-    # Ensure group exists with the requested GID
-    if ! getent group kwc >/dev/null 2>&1; then
-      groupadd -g "$KWC_GID_ENV" kwc 2>/dev/null || true
-    fi
-    # Ensure user exists with the requested UID
-    if ! id -u kwc >/dev/null 2>&1; then
-      useradd -m -u "$KWC_UID_ENV" -g "$KWC_GID_ENV" -s /bin/bash kwc 2>/dev/null || true
-    fi
-    # Fix ownership of mutable dirs commonly written to
-    for d in /data /app/media /media /tmp; do
-      [ -e "$d" ] && chown -R "$KWC_UID_ENV:$KWC_GID_ENV" "$d" 2>/dev/null || true
-    done
-    # Re-exec this script as the non-root user (preserving args)
-    exec gosu "$KWC_UID_ENV:$KWC_GID_ENV" "$0" "$@"
-  fi
-fi
-
 cmd="${1:-serve}"
 
 : "${DJANGO_SETTINGS_MODULE:=kwc.settings}"

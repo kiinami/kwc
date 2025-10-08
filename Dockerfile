@@ -80,8 +80,6 @@ apt-get install -y --no-install-recommends \
     bash \
     ffmpeg \
     ca-certificates \
-    gosu \
-    shadow \
     && apt-get autoremove -y && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
