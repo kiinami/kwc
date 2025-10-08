@@ -13,6 +13,10 @@ from extract.utils import render_pattern
 from .utils import wallpapers_root, parse_folder_name, list_image_files, find_cover_filename
 
 
+# Parse S01E02-like tokens from filenames
+SEASON_EPISODE_RE = re.compile(r"S(?P<season>\d{1,3})E(?P<episode>[A-Za-z0-9]{1,6})", re.IGNORECASE)
+
+
 def _get_wallpapers_root() -> Path:
 	# Backward shim inside this module to minimize edits; prefer utils.wallpapers_root
 	return wallpapers_root()
@@ -218,12 +222,11 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 	# Then, rename temps to final names with updated counters
 	# Counter resets per (season, episode). If not present, single group.
 	rename_errors: list[str] = []
-	se_re = re.compile(r"S(?P<season>\d{1,3})E(?P<episode>[A-Za-z0-9]{1,6})", re.IGNORECASE)
 	counters: dict[tuple[str, str], int] = {}
 
 	for original_src, tmp in tmp_map.items():
 		# Parse season/episode from original filename
-		m = se_re.search(original_src.stem)
+		m = SEASON_EPISODE_RE.search(original_src.stem)
 		season = m.group('season') if m else ''
 		episode = m.group('episode') if m else ''
 		key = (season, episode)
