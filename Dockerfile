@@ -87,7 +87,6 @@ COPY --link --from=builder /app/kwc /app/kwc
 COPY --link --from=builder /app/choose /app/choose
 COPY --link --from=builder /app/extract /app/extract
 COPY --link --from=builder /app/templates /app/templates
-COPY --link --from=builder /app/static /app/static
 COPY --link --from=builder /app/manage.py /app/manage.py
 
 # Add runtime scripts
