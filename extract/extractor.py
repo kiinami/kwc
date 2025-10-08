@@ -61,7 +61,7 @@ def extract(
     logger.debug("Found %d keyframes", len(timestamps))
 
     # Build filename pattern
-    pattern = params.image_pattern or "output_{counter:04}.jpg"
+    pattern = params.image_pattern or "output {{ counter|pad:4 }}.jpg"
     frame_args: list[tuple[Path, float, Path]] = []
     for idx, ts in enumerate(timestamps, 1):
         try:
