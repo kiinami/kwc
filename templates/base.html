@@ -36,9 +36,18 @@
         backdrop-filter: blur(10px);
         background-color: rgba(10, 15, 32, 0.6);
         border-bottom: 1px solid rgba(255,255,255,0.06);
+        padding: 0 1rem;
       }
       .nav-inner { display: flex; align-items: center; gap: 1rem; padding: .75rem 0; }
-      .brand { font-weight: 700; letter-spacing: .2px; }
+      .brand { display: inline-flex; align-items: center; gap: .6rem; font-weight: 700; letter-spacing: .2px; }
+      .brand-logo {
+        width: 28px;
+        height: 28px;
+        border-radius: .6rem;
+        border: 1px solid rgba(255,255,255,0.12);
+        box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+        object-fit: cover;
+      }
       .spacer { flex: 1; }
       a { color: var(--text); text-decoration: none; }
       .nav a { color: var(--muted); padding: .5rem .75rem; border-radius: .5rem; }
@@ -113,12 +122,23 @@
   .form-actions { display: flex; justify-content: center; gap: .5rem; margin-top: .75rem; }
   /* Disabled inputs */
   .input[disabled] { opacity: .6; cursor: not-allowed; }
+
+      @media (max-width: 640px) {
+        .navbar { padding: 0 .75rem; }
+        .nav-inner { gap: .75rem; padding: .65rem 0; }
+        .nav { display: flex; gap: .35rem; }
+        .nav a { padding: .45rem .6rem; font-size: .95rem; }
+        .brand-logo { width: 24px; height: 24px; border-radius: .5rem; }
+      }
     </style>
   </head>
   <body>
     <div class="navbar">
       <div class="container nav-inner">
-  <a class="brand" href="{% url 'home' %}" title="KWC">KWC</a>
+        <a class="brand" href="{% url 'home' %}" title="KWC">
+          <img class="brand-logo" src="{% static 'kwc/icon.png' %}" alt="KWC logo" />
+          <span>KWC</span>
+        </a>
         <div class="spacer"></div>
         <nav class="nav">
           <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
