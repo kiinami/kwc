@@ -75,7 +75,7 @@
       <div class="sidebar-list">
         {% if images %}
           {% for img in images %}
-            <div class="thumb loading{% if forloop.counter0 == selected_index %} active{% endif %}{% if img.decision %} {{ img.decision }}{% endif %}" data-index="{{ forloop.counter0 }}" data-url="{{ img.url }}" data-decision="{{ img.decision }}" title="{{ img.name }}">
+            <div class="thumb loading{% if forloop.counter0 == selected_index %} active{% endif %}{% if img.decision %} {{ img.decision }}{% endif %}" data-index="{{ forloop.counter0 }}" data-url="{{ img.url }}" data-name="{{ img.name|escape }}" data-decision="{{ img.decision }}" title="{{ img.name }}">
               <div class="spinner"></div>
               <img class="thumb-img" src="{{ img.url }}" alt="{{ img.name }}" loading="lazy" onload="this.closest('.thumb').classList.remove('loading')" />
             </div>
@@ -138,7 +138,8 @@
 
       function activateThumb(el) {
         if (!el) return;
-        const url = el.getAttribute('data-url');
+        const url = el.dataset.url;
+        const filename = el.dataset.name || '';
         // Update active state
         document.querySelectorAll('.thumb.active').forEach(a => a.classList.remove('active'));
         el.classList.add('active');
@@ -157,9 +158,7 @@
           const onLoad = () => { main.classList.add('loaded'); sp?.remove(); main.removeEventListener('load', onLoad); };
           main.addEventListener('load', onLoad);
           main.src = url;
-          // alt text from last segment
-          const parts = url.split('/');
-          main.alt = decodeURIComponent(parts[parts.length - 1] || 'image');
+          main.alt = filename || 'image';
         }
       }
 
@@ -196,9 +195,7 @@
       async function decide(decision){
         const active = document.querySelector('.thumb.active');
         if (!active) return;
-        const url = active.getAttribute('data-url') || '';
-        const parts = url.split('/');
-        const filename = decodeURIComponent(parts[parts.length - 1] || '');
+        const filename = active.dataset.name || '';
 
         // Optimistically mark decision on current thumb
         active.classList.remove('keep','delete');

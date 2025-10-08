@@ -5,12 +5,17 @@ from django.conf import settings
 from pathlib import Path
 import os
 import re
-from urllib.parse import quote
 import json
 from .models import ImageDecision
 from django.views.decorators.http import require_POST
 from extract.utils import render_pattern
-from .utils import wallpapers_root, parse_folder_name, list_image_files, find_cover_filename
+from .utils import (
+	wallpapers_root,
+	parse_folder_name,
+	list_image_files,
+	find_cover_filename,
+	wallpaper_url,
+)
 
 
 # Parse S01E02-like tokens from filenames
@@ -44,8 +49,7 @@ def index(request: HttpRequest) -> HttpResponse:
 
 					cover_url = None
 					if cover_file:
-						# Serve via dev static mount at /wallpapers/
-						cover_url = f"/wallpapers/{quote(folder_name)}/{quote(cover_file)}"
+						cover_url = wallpaper_url(folder_name, cover_file, root=root)
 
 					# Folder mtime as secondary recency signal
 					try:
@@ -91,9 +95,10 @@ def folder(request: HttpRequest, folder: str) -> HttpResponse:
 		decisions_qs = ImageDecision.objects.filter(folder=safe_name, filename__in=files)
 		decision_map = {d.filename: d.decision for d in decisions_qs}
 		for name in files:
+			img_url = wallpaper_url(safe_name, name, root=root)
 			images.append({
 				'name': name,
-				'url': f"/wallpapers/{quote(safe_name)}/{quote(name)}",
+				'url': img_url,
 				'decision': decision_map.get(name, ''),
 			})
 	except PermissionError:

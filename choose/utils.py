@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, Tuple
 import os
+import time
+from urllib.parse import quote
 
 from django.conf import settings
 
@@ -66,3 +68,20 @@ def find_cover_filename(folder: Path, files: Iterable[str] | None = None) -> str
     for name in files:
         return name
     return None
+
+
+def _cache_token(path: Path) -> str:
+    try:
+        stat = path.stat()
+    except OSError:
+        return f"{int(time.time() * 1_000_000):x}"
+    ino = getattr(stat, "st_ino", 0)
+    return f"{stat.st_mtime_ns:x}-{stat.st_size:x}-{ino:x}"
+
+
+def wallpaper_url(folder: str, filename: str, *, root: Path | None = None) -> str:
+    """Return a cache-busted URL for a wallpaper image."""
+    base = f"/wallpapers/{quote(folder)}/{quote(filename)}"
+    actual_root = root or wallpapers_root()
+    path = actual_root / folder / filename
+    return f"{base}?v={_cache_token(path)}"
