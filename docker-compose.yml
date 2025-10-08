@@ -15,8 +15,3 @@ services:
       - "${HOME}/media/wallpapers:/media/wallpapers"
       - "${HOME}/code/kwc:/media/tv"
     restart: unless-stopped
-
-volumes:
-  # No named volumes needed when using host bind mounts above; kept for backward compatibility
-  db-data:
-  media:

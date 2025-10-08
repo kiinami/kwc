@@ -49,9 +49,6 @@ COPY extract /app/extract
 COPY templates /app/templates
 COPY manage.py /app/
 
-# Collect static during build for optimal runtime image
-RUN DEBUG=False ./manage.py collectstatic --noinput
-
 
 ### FINAL IMAGE ###
 FROM python:3.13-slim
