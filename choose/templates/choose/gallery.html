@@ -15,19 +15,28 @@
     .gallery-details { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; color: var(--muted); }
     .gallery-count { font-size: .95rem; padding: .25rem .6rem; border-radius: 999px; background: rgba(124,76,245,0.18); color: #d1c5ff; font-weight: 600; }
   .gallery-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .5rem; }
-    .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.1rem; }
-    .gallery-thumb { position: relative; border: 1px solid rgba(255,255,255,0.08); border-radius: .9rem; overflow: hidden; padding: 0; cursor: zoom-in; background: rgba(255,255,255,0.04); transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease; }
-    .gallery-thumb:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.18); box-shadow: 0 12px 30px rgba(0,0,0,0.25); }
-    .gallery-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
-    .gallery-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-    .gallery-empty { margin-top: 2rem; color: var(--muted); font-size: 1.05rem; }
+  .gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.1rem; }
+  .gallery-thumb { position: relative; border: 1px solid rgba(255,255,255,0.08); border-radius: .9rem; overflow: hidden; padding: 0; cursor: zoom-in; background: rgba(255,255,255,0.04); transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease; aspect-ratio: 16 / 9; display: grid; }
+  .gallery-thumb:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.18); box-shadow: 0 12px 30px rgba(0,0,0,0.25); }
+  .gallery-thumb-img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .25s ease; }
+  .gallery-thumb.loading .gallery-thumb-img { opacity: 0; }
+  .gallery-thumb-img.loaded { opacity: 1; }
+  .gallery-thumb:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+  .gallery-empty { margin-top: 2rem; color: var(--muted); font-size: 1.05rem; }
+  .gallery-thumb .spinner { position: absolute; inset: 0; display: grid; place-items: center; }
+  .gallery-thumb:not(.loading) .spinner { display: none; }
+  .spinner::before { content: ""; width: 22px; height: 22px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; animation: spin .9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
     .lightbox { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(6, 9, 20, 0.92); z-index: 2000; padding: 2.5rem 2rem; }
     .lightbox.is-open { display: flex; }
     .lightbox::backdrop { background: rgba(6, 9, 20, 0.92); }
     .lightbox-inner { position: relative; display: grid; gap: 1rem; max-width: min(96vw, 1600px); width: 100%; }
-    .lightbox-media { display: grid; place-items: center; max-height: calc(90vh - 140px); }
-    .lightbox-media img { width: 100%; height: 100%; object-fit: contain; border-radius: 1rem; box-shadow: 0 18px 40px rgba(0,0,0,0.45); background: rgba(0,0,0,0.4); }
+  .lightbox-media { position: relative; display: grid; place-items: center; max-height: calc(90vh - 140px); }
+  .lightbox-media img { width: 100%; height: 100%; object-fit: contain; border-radius: 1rem; box-shadow: 0 18px 40px rgba(0,0,0,0.45); background: rgba(0,0,0,0.4); opacity: 0; transition: opacity .25s ease; }
+  .lightbox-media img.loaded { opacity: 1; }
+  .lightbox-spinner { position: absolute; inset: 0; display: grid; place-items: center; }
+  .lightbox-media:not(.is-loading) .lightbox-spinner { display: none; }
     .lightbox-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; }
     .lightbox-caption { font-weight: 600; word-break: break-word; }
     .lightbox-buttons { display: inline-flex; gap: .5rem; }
@@ -80,8 +89,9 @@
     {% if images %}
       <div class="gallery-grid">
         {% for image in images %}
-          <button class="gallery-thumb" type="button" data-gallery-thumb data-src="{{ image.url }}" data-name="{{ image.name }}" aria-label="View {{ image.name }} full screen">
-            <img src="{{ image.url }}" alt="{{ title }} – {{ image.name }}" loading="lazy" />
+          <button class="gallery-thumb loading" type="button" data-gallery-thumb data-src="{{ image.url }}" data-name="{{ image.name }}" aria-label="View {{ image.name }} full screen">
+            <div class="spinner" aria-hidden="true"></div>
+            <img class="gallery-thumb-img" src="{{ image.url }}" alt="{{ title }} – {{ image.name }}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.closest('.gallery-thumb')?.classList.remove('loading');" onerror="this.closest('.gallery-thumb')?.classList.remove('loading'); this.classList.add('loaded'); this.style.opacity='0.35';" />
           </button>
         {% endfor %}
       </div>
@@ -93,8 +103,9 @@
   {% if images %}
     <div class="lightbox" id="gallery-lightbox" aria-hidden="true" role="dialog">
       <div class="lightbox-inner">
-        <div class="lightbox-media">
-          <img id="lightbox-image" src="" alt="" />
+        <div class="lightbox-media is-loading">
+          <div class="lightbox-spinner spinner" aria-hidden="true"></div>
+          <img id="lightbox-image" src="" alt="" decoding="async" />
         </div>
         <div class="lightbox-footer">
           <div class="lightbox-caption">
@@ -118,14 +129,15 @@
           return;
         }
 
-        const lightbox = document.getElementById('gallery-lightbox');
-        const image = document.getElementById('lightbox-image');
+  const lightbox = document.getElementById('gallery-lightbox');
+  const image = document.getElementById('lightbox-image');
         const nameEl = document.getElementById('lightbox-name');
         const indexEl = document.getElementById('lightbox-index');
         const downloadLink = document.getElementById('lightbox-download');
         const closeBtn = lightbox.querySelector('.lightbox-close');
         const prevBtn = lightbox.querySelector('.lightbox-prev');
         const nextBtn = lightbox.querySelector('.lightbox-next');
+  const lightboxMedia = lightbox.querySelector('.lightbox-media');
 
   let current = -1;
   let lastTrigger = null;
@@ -146,6 +158,19 @@
           const src = target.getAttribute('data-src');
           const filename = target.getAttribute('data-name') || '';
 
+          const handleLoad = () => {
+            image.classList.add('loaded');
+            lightboxMedia?.classList.remove('is-loading');
+          };
+          const handleError = () => {
+            lightboxMedia?.classList.remove('is-loading');
+          };
+
+          image.classList.remove('loaded');
+          lightboxMedia?.classList.add('is-loading');
+          image.onload = handleLoad;
+          image.onerror = handleError;
+
           image.src = src;
           image.alt = filename ? `${filename} preview` : 'Wallpaper preview';
           nameEl.textContent = filename;
@@ -161,13 +186,21 @@
           lightbox.setAttribute('aria-hidden', 'false');
           document.body.style.overflow = 'hidden';
           closeBtn.focus({ preventScroll: true });
+
+          if (image.complete && image.naturalWidth > 0) {
+            handleLoad();
+          }
         }
 
         function close() {
           current = -1;
           lightbox.classList.remove('is-open');
           lightbox.setAttribute('aria-hidden', 'true');
+          image.onload = null;
+          image.onerror = null;
+          image.classList.remove('loaded');
           image.src = '';
+          lightboxMedia?.classList.remove('is-loading');
           document.body.style.overflow = '';
           if (lastTrigger) {
             lastTrigger.focus({ preventScroll: true });

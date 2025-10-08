@@ -50,6 +50,13 @@ class MediaLibraryViewsTests(TestCase):
 		self.assertIn('choose_url', sample)
 		self.assertTrue(sample['gallery_url'])
 
+	def test_choose_index_redirects_to_home(self) -> None:
+		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+			response = self.client.get(reverse('choose:index'))
+
+		self.assertEqual(response.status_code, 302)
+		self.assertEqual(response.url, reverse('home'))
+
 	def test_gallery_view_renders_images_and_metadata(self) -> None:
 		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
 			response = self.client.get(reverse('choose:gallery', kwargs={'folder': self.folder_name}))

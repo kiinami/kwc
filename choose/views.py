@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
 from django.urls import reverse
 from django.conf import settings
@@ -22,12 +22,8 @@ from .utils import (
 # Parse S01E02-like tokens from filenames
 SEASON_EPISODE_RE = re.compile(r"S(?P<season>\d{1,3})E(?P<episode>[A-Za-z0-9]{1,6})", re.IGNORECASE)
 def index(request: HttpRequest) -> HttpResponse:
-	"""Home page: list media folders inside wallpapers root."""
-	entries, root = list_media_folders()
-	for entry in entries:
-		entry['gallery_url'] = reverse('choose:gallery', kwargs={'folder': entry['name']})
-		entry['choose_url'] = reverse('choose:folder', kwargs={'folder': entry['name']})
-	return render(request, 'choose/index.html', {"folders": entries, "root": str(root)})
+	"""Legacy entry point: redirect to the media library home page."""
+	return redirect('home')
 
 
 def gallery(request: HttpRequest, folder: str) -> HttpResponse:
