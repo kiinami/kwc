@@ -57,6 +57,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Serve static files efficiently in production without a separate CDN/proxy
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -138,9 +140,21 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+# Always include a leading slash for STATIC_URL so absolute URLs are generated
+STATIC_URL = '/static/'
 # Allow overriding static root via env (useful in some container setups)
 STATIC_ROOT = Path(os.getenv('STATIC_ROOT', str(BASE_DIR / 'static')))
+
+# WhiteNoise compressed manifest storage for long-lived caching and integrity
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Optional: configure cache max age for WhiteNoise via env (seconds)
+_whitenoise_max_age = os.getenv('WHITENOISE_MAX_AGE')
+if _whitenoise_max_age is not None:
+    try:
+        WHITENOISE_MAX_AGE = int(_whitenoise_max_age)
+    except ValueError:
+        WHITENOISE_MAX_AGE = 60 * 60 * 24 * 30  # 30 days fallback
 
 # When running behind a reverse proxy (common in containers)
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

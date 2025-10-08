@@ -1,18 +1,41 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cmd="${1:-serve}"
+cmd="${1:-prod}"
 
 : "${DJANGO_SETTINGS_MODULE:=kwc.settings}"
 : "${PORT:=8000}"
+: "${HOST:=0.0.0.0}"
+: "${WEB_CONCURRENCY:=2}"
+: "${TIMEOUT:=60}"
+
+run_migrations() {
+  echo "[entrypoint] Applying migrations..."
+  python manage.py migrate --noinput
+}
 
 case "$cmd" in
-  serve|prod)
-    echo "[entrypoint] Applying migrations..."
-    python manage.py migrate --noinput
+  prod)
+    run_migrations
+    echo "[entrypoint] Collecting static files..."
+    python manage.py collectstatic --noinput
+    echo "[entrypoint] Launching Gunicorn on ${HOST}:${PORT} with ${WEB_CONCURRENCY} workers"
+    # Use the WSGI app; preload app for lower memory/latency and faster worker spawn
+    exec gunicorn \
+      --bind "${HOST}:${PORT}" \
+      --workers "${WEB_CONCURRENCY}" \
+      --timeout "${TIMEOUT}" \
+      --access-logfile '-' \
+      --error-logfile '-' \
+      --log-level info \
+      --preload \
+      kwc.wsgi:application
+    ;;
 
-    echo "[entrypoint] Starting Django development server on 0.0.0.0:${PORT} (insecure, internal use only)"
-    exec python manage.py runserver 0.0.0.0:"${PORT}"
+  serve|dev)
+    run_migrations
+    echo "[entrypoint] Starting Django development server on ${HOST}:${PORT} (insecure, for local/dev only)"
+    exec python manage.py runserver ${HOST}:"${PORT}"
     ;;
 
   migrate)

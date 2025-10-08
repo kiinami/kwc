@@ -36,12 +36,15 @@ EOT
 WORKDIR /app
 
 # Install prod deps into a venv based on lockfile
+# Install production dependency group, resolving from pyproject/lock as available
 ARG BUILD_GROUPS="--group prod"
 RUN --mount=type=cache,target=/app/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=uv.lock,target=uv.lock,readonly=false \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv venv $VIRTUAL_ENV && \
-    uv sync --no-install-project --no-editable $BUILD_GROUPS
+    # Ensure lock includes all groups being installed (e.g., WhiteNoise in prod)
+    uv lock $BUILD_GROUPS && \
+    uv sync --frozen --no-install-project --no-editable $BUILD_GROUPS
 
 # Copy only what's needed for Django management/collectstatic
 COPY kwc /app/kwc
