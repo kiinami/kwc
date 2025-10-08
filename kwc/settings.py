@@ -78,6 +78,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'kwc.context_processors.pwa',
             ],
         },
     },
@@ -204,3 +205,19 @@ EXTRACT_IMAGE_PATTERN = os.getenv(
     'KWC_IMAGE_PATTERN',
     '{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}{% if episode %}E{{ episode|pad:2 }}{% endif %} 〜 {{ counter|pad:4 }}.jpg'
 )
+
+
+# Progressive Web App configuration (tweak via env vars if desired)
+PWA_APP_NAME = os.getenv('KWC_PWA_APP_NAME', 'KWC Wallpapers')
+PWA_APP_SHORT_NAME = os.getenv('KWC_PWA_SHORT_NAME', 'KWC')
+PWA_APP_DESCRIPTION = os.getenv(
+    'KWC_PWA_DESCRIPTION',
+    'Extract video frames and curate wallpapers wherever you are.'
+)
+PWA_THEME_COLOR = os.getenv('KWC_PWA_THEME_COLOR', '#0b1020')
+PWA_BACKGROUND_COLOR = os.getenv('KWC_PWA_BACKGROUND_COLOR', '#0b1020')
+PWA_START_URL = os.getenv('KWC_PWA_START_URL', '/')
+PWA_SCOPE = os.getenv('KWC_PWA_SCOPE', '/')
+PWA_DISPLAY = os.getenv('KWC_PWA_DISPLAY', 'standalone')
+PWA_ORIENTATION = os.getenv('KWC_PWA_ORIENTATION', 'portrait')
+PWA_CACHE_ID = os.getenv('KWC_PWA_CACHE_ID', 'kwc-pwa-v1')

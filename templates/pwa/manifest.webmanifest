@@ -1,0 +1,33 @@
+{
+  "name": "{{ name }}",
+  "short_name": "{{ short_name }}",
+  "description": "{{ description }}",
+  "id": "{{ start_url }}",
+  "start_url": "{{ start_url }}",
+  "scope": "{{ scope }}",
+  "display": "{{ display }}",
+  "orientation": "{{ orientation }}",
+  "theme_color": "{{ theme_color }}",
+  "background_color": "{{ background_color }}",
+  "lang": "{{ lang }}",
+  "icons": [
+    {% for icon in icon_sources %}
+    {
+      "src": "{{ icon.src }}",
+      "sizes": "{{ icon.sizes }}",
+      "type": "{{ icon.type }}",
+      "purpose": "{{ icon.purpose }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ],
+  "shortcuts": [
+    {% for shortcut in shortcuts %}
+    {
+      "name": "{{ shortcut.name }}",
+      "short_name": "{{ shortcut.short_name }}",
+      "description": "{{ shortcut.description }}",
+      "url": "{{ shortcut.url }}"
+    }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+}

@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/x-icon" href="{% static 'kwc/favicon.ico' %}" />
     <link rel="apple-touch-icon" sizes="180x180" href="{% static 'kwc/icon.png' %}" />
+    <link rel="manifest" href="{% url 'pwa-manifest' %}" crossorigin="use-credentials" />
+    <meta name="theme-color" content="{{ PWA.theme_color }}" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="{{ PWA.short_name }}" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>{% block title %}KWC{% endblock %}</title>
     <style>
       :root {
@@ -50,8 +55,13 @@
       }
       .spacer { flex: 1; }
       a { color: var(--text); text-decoration: none; }
+      .nav { display: flex; gap: .35rem; align-items: center; }
       .nav a { color: var(--muted); padding: .5rem .75rem; border-radius: .5rem; }
       .nav a.active, .nav a:hover { color: var(--text); background: rgba(255,255,255,0.06); }
+      .nav-controls { display: flex; align-items: center; gap: .5rem; }
+      .install-btn { padding: .48rem .85rem; border-radius: .6rem; border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.04); color: var(--text); font-weight: 600; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+      .install-btn:hover { background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.26); }
+      .install-btn[hidden] { display: none !important; }
       .content { padding: 2rem 0; }
       footer { border-top: 1px solid rgba(255,255,255,0.06); color: var(--muted); padding: 2rem 0; }
       .pill { display: inline-block; padding: .25rem .5rem; border-radius: 999px; background: rgba(124,76,245,0.15); color: #c9b5ff; font-size: .8rem; }
@@ -126,8 +136,10 @@
       @media (max-width: 640px) {
         .navbar { padding: 0 .75rem; }
         .nav-inner { gap: .75rem; padding: .65rem 0; }
-        .nav { display: flex; gap: .35rem; }
+        .nav { gap: .2rem; }
         .nav a { padding: .45rem .6rem; font-size: .95rem; }
+        .nav-controls { width: 100%; justify-content: flex-end; gap: .35rem; }
+        .install-btn { font-size: .9rem; padding: .4rem .75rem; }
         .brand-logo { width: 24px; height: 24px; border-radius: .5rem; }
       }
     </style>
@@ -140,16 +152,70 @@
           <span>KWC</span>
         </a>
         <div class="spacer"></div>
-        <nav class="nav">
-          <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
-          <a href="{% url 'extract:index' %}" class="{% if request.resolver_match.namespace == 'extract' %}active{% endif %}">Extract</a>
-          <a href="{% url 'choose:index' %}" class="{% if request.resolver_match.namespace == 'choose' %}active{% endif %}">Choose</a>
-        </nav>
+        <div class="nav-controls">
+          <nav class="nav">
+            <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Home</a>
+            <a href="{% url 'extract:index' %}" class="{% if request.resolver_match.namespace == 'extract' %}active{% endif %}">Extract</a>
+            <a href="{% url 'choose:index' %}" class="{% if request.resolver_match.namespace == 'choose' %}active{% endif %}">Choose</a>
+          </nav>
+          <button class="install-btn" id="kwc-install" hidden>Install app</button>
+        </div>
       </div>
     </div>
 
     <main class="container content">
       {% block content %}{% endblock %}
     </main>
+    <script>
+      (function () {
+        const installButton = document.getElementById('kwc-install');
+        let deferredPrompt;
+
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function () {
+            navigator.serviceWorker
+              .register('{% url 'service-worker' %}')
+              .catch(function (error) {
+                console.warn('[kwc] Service worker registration failed:', error);
+              });
+          });
+        }
+
+        window.addEventListener('beforeinstallprompt', function (event) {
+          event.preventDefault();
+          deferredPrompt = event;
+          if (installButton) {
+            installButton.hidden = false;
+          }
+        });
+
+        if (installButton) {
+          installButton.addEventListener('click', function () {
+            if (!deferredPrompt) {
+              return;
+            }
+
+            deferredPrompt.prompt();
+
+            deferredPrompt.userChoice
+              .then(function () {
+                deferredPrompt = null;
+                installButton.hidden = true;
+              })
+              .catch(function () {
+                deferredPrompt = null;
+                installButton.hidden = true;
+              });
+          });
+        }
+
+        window.addEventListener('appinstalled', function () {
+          deferredPrompt = null;
+          if (installButton) {
+            installButton.hidden = true;
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

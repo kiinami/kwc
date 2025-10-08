@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+{% block title %}Offline · KWC{% endblock %}
+{% block content %}
+  <section class="card" style="max-width: 520px; margin: 4rem auto; text-align: center;">
+    <h1>You're offline</h1>
+    <p class="muted" style="margin-top: .75rem;">
+      You can still browse anything that's cached. When you're back online, refresh to sync the latest extraction jobs and selections.
+    </p>
+    <div style="margin-top: 1.5rem; display: flex; justify-content: center; gap: .75rem; flex-wrap: wrap;">
+      <a class="btn btn-primary" href="{% url 'home' %}">Back to home</a>
+      <button class="btn btn-ghost" type="button" onclick="window.location.reload()">Retry connection</button>
+    </div>
+  </section>
+{% endblock %}

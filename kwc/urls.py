@@ -14,17 +14,22 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include, re_path
-from django.views.generic import TemplateView
 from django.conf import settings
+from django.contrib import admin
+from django.urls import include, path, re_path
+from django.views.generic import TemplateView
 from django.views.static import serve as static_serve
+
+from kwc import views as core_views
 
 urlpatterns = [
     path('', TemplateView.as_view(template_name='home.html'), name='home'),
     path('admin/', admin.site.urls),
     path('choose/', include(('choose.urls', 'choose'), namespace='choose')),
     path('extract/', include(('extract.urls', 'extract'), namespace='extract')),
+    path('offline/', TemplateView.as_view(template_name='offline.html'), name='offline'),
+    path('manifest.webmanifest', core_views.ManifestView.as_view(), name='pwa-manifest'),
+    path('service-worker.js', core_views.ServiceWorkerView.as_view(), name='service-worker'),
 ]
 
 # Serve wallpaper images directly from disk. This is intended for internal/self-hosted use.
