@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from io import BytesIO
 from pathlib import Path
 
 from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
+from PIL import Image
 
 from .models import FolderProgress, ImageDecision
 
@@ -21,20 +23,25 @@ class MediaLibraryViewsTests(TestCase):
 		folder_path = self.temp_dir / self.folder_name
 		folder_path.mkdir(parents=True, exist_ok=True)
 
-		# Create a cover and a couple of fake frames.
-		(folder_path / '.cover.jpg').write_bytes(b'cover')
-		(folder_path / 'frame01.jpg').write_bytes(b'a')
-		(folder_path / 'frame02.jpg').write_bytes(b'b')
+		# Create a cover and a couple of sample frames.
+		self._write_image(folder_path / '.cover.jpg', size=(900, 1350), color=(40, 60, 120))
+		self._write_image(folder_path / 'frame01.jpg', size=(1920, 1080), color=(90, 120, 180))
+		self._write_image(folder_path / 'frame02.jpg', size=(2560, 1440), color=(120, 90, 150))
 
 		# Secondary folder used to ensure list endpoints behave with multiple entries.
 		extra_folder = self.temp_dir / 'Another Title (2023)'
 		extra_folder.mkdir(parents=True, exist_ok=True)
-		(extra_folder / 'still01.jpg').write_bytes(b'c')
+		self._write_image(extra_folder / 'still01.jpg', size=(1280, 720), color=(60, 80, 60))
 
 		self._middleware = [
 			mw for mw in settings.MIDDLEWARE
 			if mw != 'whitenoise.middleware.WhiteNoiseMiddleware'
 		]
+
+	def _write_image(self, path: Path, size: tuple[int, int] = (640, 360), color: tuple[int, int, int] = (80, 80, 80)) -> None:
+		path.parent.mkdir(parents=True, exist_ok=True)
+		img = Image.new('RGB', size, color)
+		img.save(path, format='JPEG', quality=90)
 
 	def test_home_view_lists_media_folders(self) -> None:
 		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
@@ -68,12 +75,27 @@ class MediaLibraryViewsTests(TestCase):
 		self.assertEqual(len(context_images), 2)
 		first = context_images[0]
 		self.assertIn('url', first)
+		self.assertIn('thumb_url', first)
 		self.assertIn('name', first)
 
 		self.assertEqual(response.context['title'], 'Movie')
 		self.assertEqual(response.context['year'], '2024')
 		self.assertTrue(response.context['cover_url'])
+		self.assertTrue(response.context['cover_thumb_url'])
 		self.assertEqual(response.context['choose_url'], reverse('choose:folder', kwargs={'folder': self.folder_name}))
+
+	def test_thumbnail_view_generates_resized_images(self) -> None:
+		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+			url = reverse('wallpaper-thumbnail', kwargs={'folder': self.folder_name, 'filename': 'frame01.jpg'})
+			response = self.client.get(url, {'w': 300})
+
+		self.assertEqual(response.status_code, 200)
+		self.assertIn(response['Content-Type'], {'image/jpeg', 'image/png'})
+		self.assertIn('Cache-Control', response)
+
+		# Ensure the image dimensions are respected
+		with Image.open(BytesIO(response.content)) as image:
+			self.assertLessEqual(image.width, 300)
 
 	def test_save_updates_progress_and_resumes_from_next_image(self) -> None:
 		folder_path = self.temp_dir / self.folder_name

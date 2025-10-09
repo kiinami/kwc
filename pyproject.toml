@@ -9,6 +9,7 @@ dependencies = [
     "guessit>=3.8.0",
     "python-ffmpeg>=2.0.12",
     "python-dotenv>=1.0.1",
+    "pillow>=11.3.0",
 ]
 
 [dependency-groups]

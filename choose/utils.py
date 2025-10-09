@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Iterable, Tuple, TypedDict
 import os
 import time
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 from django.conf import settings
 
@@ -24,6 +24,7 @@ class MediaFolder(TypedDict, total=False):
     mtime: int
     cover_filename: str | None
     cover_url: str | None
+    cover_thumb_url: str | None
 
 
 def wallpapers_root() -> Path:
@@ -100,6 +101,37 @@ def wallpaper_url(folder: str, filename: str, *, root: Path | None = None) -> st
     return f"{base}?v={_cache_token(path)}"
 
 
+def thumbnail_url(
+    folder: str,
+    filename: str | None,
+    *,
+    width: int | None = None,
+    height: int | None = None,
+    root: Path | None = None,
+) -> str | None:
+    """Return a cache-busted URL for a resized wallpaper thumbnail.
+
+    Thumbnails are generated on-demand and are not persisted alongside wallpapers.
+    """
+
+    if not filename:
+        return None
+
+    base = f"/wall-thumbs/{quote(folder)}/{quote(filename)}"
+    actual_root = root or wallpapers_root()
+    path = actual_root / folder / filename
+
+    params: dict[str, str] = {}
+    if width and width > 0:
+        params['w'] = str(width)
+    if height and height > 0:
+        params['h'] = str(height)
+    params['v'] = _cache_token(path)
+
+    query = urlencode(params)
+    return f"{base}?{query}" if query else base
+
+
 def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Path]:
     """Scan the wallpapers root for folders containing wallpapers.
 
@@ -127,6 +159,11 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
                         if cover_filename
                         else None
                     )
+                    cover_thumb_url = (
+                        thumbnail_url(folder_name, cover_filename, width=360, root=root_path)
+                        if cover_filename
+                        else None
+                    )
 
                     try:
                         mtime = entry.stat().st_mtime_ns
@@ -143,6 +180,7 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
                             'mtime': mtime,
                             'cover_filename': cover_filename,
                             'cover_url': cover_url,
+                            'cover_thumb_url': cover_thumb_url,
                         }
                     )
         except PermissionError:

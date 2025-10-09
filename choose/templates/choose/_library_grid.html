@@ -29,7 +29,7 @@
           <div class="poster-card">
             <div class="poster-media">
               {% if f.cover_url %}
-                <img src="{{ f.cover_url }}" alt="{{ f.title }} poster" loading="lazy" onload="this.classList.add('loaded')" />
+                <img src="{{ f.cover_thumb_url|default:f.cover_url }}" alt="{{ f.title }} poster" loading="lazy" onload="this.classList.add('loaded')" />
               {% else %}
                 <div style="position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);">No image</div>
               {% endif %}

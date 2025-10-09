@@ -69,7 +69,7 @@
     <div class="gallery-header">
       <div class="gallery-cover">
         {% if cover_url %}
-          <img src="{{ cover_url }}" alt="{{ title }} cover" />
+         <img src="{{ cover_thumb_url|default:cover_url }}" alt="{{ title }} cover" />
         {% else %}
           <div class="gallery-cover-empty">No cover</div>
         {% endif %}
@@ -91,7 +91,7 @@
         {% for image in images %}
           <button class="gallery-thumb loading" type="button" data-gallery-thumb data-src="{{ image.url }}" data-name="{{ image.name }}" aria-label="View {{ image.name }} full screen">
             <div class="spinner" aria-hidden="true"></div>
-            <img class="gallery-thumb-img" src="{{ image.url }}" alt="{{ title }} – {{ image.name }}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.closest('.gallery-thumb')?.classList.remove('loading');" onerror="this.closest('.gallery-thumb')?.classList.remove('loading'); this.classList.add('loaded'); this.style.opacity='0.35';" />
+              <img class="gallery-thumb-img" src="{{ image.thumb_url|default:image.url }}" alt="{{ title }} – {{ image.name }}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.closest('.gallery-thumb')?.classList.remove('loading');" onerror="this.closest('.gallery-thumb')?.classList.remove('loading'); this.classList.add('loaded'); this.style.opacity='0.35';" />
           </button>
         {% endfor %}
       </div>

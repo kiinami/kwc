@@ -1,13 +1,23 @@
 from django.shortcuts import render, redirect
-from django.http import Http404, HttpRequest, HttpResponse, JsonResponse
+from django.http import (
+	Http404,
+	HttpRequest,
+	HttpResponse,
+	HttpResponseNotModified,
+	JsonResponse,
+)
 from django.urls import reverse
 from django.conf import settings
+from django.utils.http import http_date, parse_http_date
+from django.views.decorators.http import require_GET, require_POST
+from functools import lru_cache
+from io import BytesIO
 from pathlib import Path
+from typing import NamedTuple
 import os
 import re
 import json
 from .models import ImageDecision, FolderProgress
-from django.views.decorators.http import require_POST
 from extract.utils import render_pattern
 from .utils import (
 	wallpapers_root,
@@ -15,8 +25,10 @@ from .utils import (
 	list_image_files,
 	find_cover_filename,
 	wallpaper_url,
+	thumbnail_url,
 	list_media_folders,
 )
+from PIL import Image, ImageOps
 
 
 # Parse S01E02-like tokens from filenames
@@ -48,12 +60,14 @@ def gallery(request: HttpRequest, folder: str) -> HttpResponse:
 
 	cover_file = find_cover_filename(target, files)
 	cover_url = wallpaper_url(safe_name, cover_file, root=root) if cover_file else None
+	cover_thumb_url = thumbnail_url(safe_name, cover_file, width=420, root=root) if cover_file else None
 	choose_url = reverse('choose:folder', kwargs={'folder': safe_name})
 
 	images = [
 		{
 			'name': name,
 			'url': wallpaper_url(safe_name, name, root=root),
+			'thumb_url': thumbnail_url(safe_name, name, width=512, root=root),
 		}
 		for name in files
 	]
@@ -64,6 +78,7 @@ def gallery(request: HttpRequest, folder: str) -> HttpResponse:
 		'year': year_display,
 		'year_raw': year_int,
 		'cover_url': cover_url,
+		'cover_thumb_url': cover_thumb_url,
 		'choose_url': choose_url,
 		'images': images,
 		'root': str(root),
@@ -97,6 +112,7 @@ def folder(request: HttpRequest, folder: str) -> HttpResponse:
 			images.append({
 				'name': name,
 				'url': img_url,
+				'thumb_url': thumbnail_url(safe_name, name, width=320, root=root),
 				'decision': decision_map.get(name, ''),
 			})
 	except PermissionError:
@@ -139,6 +155,104 @@ def folder(request: HttpRequest, folder: str) -> HttpResponse:
 		'path': str(target),
 	}
 	return render(request, 'choose/folder.html', context)
+
+
+THUMB_MAX_DIMENSION = 4096
+THUMB_CACHE_SIZE = 256
+
+
+class _ThumbResult(NamedTuple):
+	data: bytes
+	content_type: str
+
+
+def _sanitize_dimension(value: str | None) -> int:
+	try:
+		if value is None:
+			return 0
+		dim = int(value)
+	except (TypeError, ValueError):
+		return 0
+	if dim <= 0:
+		return 0
+	return max(16, min(dim, THUMB_MAX_DIMENSION))
+
+
+@lru_cache(maxsize=THUMB_CACHE_SIZE)
+def _render_thumbnail_cached(path_str: str, width: int, height: int, mtime_ns: int) -> _ThumbResult:
+	path = Path(path_str)
+	with Image.open(path) as img:
+		img = ImageOps.exif_transpose(img)
+		max_w = width if width > 0 else THUMB_MAX_DIMENSION
+		max_h = height if height > 0 else THUMB_MAX_DIMENSION
+		img.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
+
+		has_alpha = img.mode in ("LA", "RGBA") or (img.mode == "P" and "transparency" in img.info)
+		buffer = BytesIO()
+		if has_alpha:
+			if img.mode not in ("LA", "RGBA"):
+				img = img.convert("RGBA")
+			img.save(buffer, "PNG", optimize=True)
+			content_type = "image/png"
+		else:
+			if img.mode not in ("RGB", "L"):
+				img = img.convert("RGB")
+			elif img.mode == "L":
+				img = img.convert("RGB")
+			img.save(buffer, "JPEG", quality=82, optimize=True, progressive=True)
+			content_type = "image/jpeg"
+
+	return _ThumbResult(buffer.getvalue(), content_type)
+
+
+@require_GET
+def thumbnail(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
+	"""Serve a resized thumbnail for a wallpaper without storing it on disk."""
+
+	root = wallpapers_root()
+	safe_folder = os.path.basename(folder)
+	if safe_folder != folder or safe_folder.startswith('.'):  # guard traversal & hidden dirs
+		raise Http404("Invalid folder")
+	safe_filename = os.path.basename(filename)
+	if safe_filename != filename:
+		raise Http404("Invalid filename")
+
+	source = root / safe_folder / safe_filename
+	if not source.exists() or not source.is_file():
+		raise Http404("Image not found")
+
+	stat = source.stat()
+	width = _sanitize_dimension(request.GET.get('w'))
+	height = _sanitize_dimension(request.GET.get('h'))
+	if width <= 0 and height <= 0:
+		width = 512
+
+	try:
+		result = _render_thumbnail_cached(str(source), width, height, stat.st_mtime_ns)
+	except OSError:
+		raise Http404("Unable to generate thumbnail")
+
+	etag = f'W/"thumb-{stat.st_mtime_ns:x}-{width}-{height}"'
+	if request.headers.get('If-None-Match') == etag:
+		return HttpResponseNotModified()
+	ims = request.headers.get('If-Modified-Since')
+	if ims:
+		try:
+			if parse_http_date(ims) >= int(stat.st_mtime):
+				return HttpResponseNotModified()
+		except (ValueError, OverflowError):
+			pass
+
+	content_length = len(result.data)
+	response = HttpResponse(result.data, content_type=result.content_type)
+	if request.method == 'HEAD':
+		response.content = b''
+
+	response['Cache-Control'] = 'public, max-age=31536000, immutable'
+	response['Content-Length'] = str(content_length)
+	response['ETag'] = etag
+	response['Last-Modified'] = http_date(stat.st_mtime)
+	return response
 
 
 @require_POST

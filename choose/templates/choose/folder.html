@@ -104,7 +104,7 @@
           {% for img in images %}
             <div class="thumb loading{% if forloop.counter0 == selected_index %} active{% endif %}{% if img.decision %} {{ img.decision }}{% endif %}" data-index="{{ forloop.counter0 }}" data-url="{{ img.url }}" data-name="{{ img.name|escape }}" data-decision="{{ img.decision }}" title="{{ img.name }}">
               <div class="spinner"></div>
-              <img class="thumb-img" src="{{ img.url }}" alt="{{ img.name }}" loading="lazy" onload="this.closest('.thumb').classList.remove('loading')" />
+              <img class="thumb-img" src="{{ img.thumb_url|default:img.url }}" alt="{{ img.name }}" loading="lazy" onload="this.closest('.thumb').classList.remove('loading')" />
             </div>
           {% endfor %}
         {% else %}
