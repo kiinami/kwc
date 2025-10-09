@@ -2,8 +2,9 @@
 {% block title %}{{ folder }} · Choose · KWC{% endblock %}
 {% block content %}
   <style>
-    /* Page-local: disable body vertical scroll so only sidebar can scroll */
-    body { overflow-y: hidden; overscroll-behavior: contain; }
+  /* Page-local: disable body vertical scroll so only sidebar can scroll */
+  html { height: 100%; overflow: hidden; overscroll-behavior: none; }
+  body { overflow: hidden; overscroll-behavior: none; }
     /* Remove extra vertical padding added by base .content on this page */
     .content { padding-top: 0 !important; padding-bottom: 0 !important; }
     /* Full-bleed wrapper that escapes the base .container width without touching other pages */
@@ -23,13 +24,13 @@
     @media (min-width: 1024px) {
       .fullbleed { padding-left: 1rem; padding-right: 1rem; }
     }
-  .chooser-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; height: calc(100vh - 72px); overflow: hidden; }
+  .chooser-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; height: calc(100vh - var(--nav-height, 72px)); min-height: calc(100vh - var(--nav-height, 72px)); overflow: hidden; }
   .chooser-sidebar { border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; overflow: hidden; }
   .sidebar-header { display: grid; gap: .25rem; padding: .6rem .6rem; border-bottom: 1px solid rgba(255,255,255,0.08); flex: 0 0 auto; }
   .sidebar-title { font-weight: 700; line-height: 1.25; white-space: normal; overflow: visible; text-overflow: initial; word-break: break-word; }
   .sidebar-count { color: var(--muted); font-size: .9rem; }
   .sidebar-list { overflow-y: auto; padding: .5rem; flex: 1 1 auto; }
-  .chooser-viewport { position: relative; overflow: hidden; touch-action: pan-y; }
+  .chooser-viewport { position: relative; overflow: hidden; touch-action: none; overscroll-behavior: none; }
   .thumb { position: relative; border-radius: .5rem; overflow: hidden; margin-bottom: .75rem; background: rgba(255,255,255,0.06); cursor: pointer; }
   /* Hover hint only for undecided and not active */
   .thumb:hover:not(.active):not(.keep):not(.delete) { outline: 3px solid rgba(124,76,245,0.35); }
@@ -53,16 +54,15 @@
   .mobile-save,
   .mobile-undo { display: none; }
     @media (max-width: 900px) {
-      .chooser-layout { grid-template-columns: 1fr; height: auto; }
+      .chooser-layout { grid-template-columns: 1fr; height: calc(100vh - var(--nav-height, 72px)); min-height: calc(100vh - var(--nav-height, 72px)); }
       .chooser-sidebar { order: 2; max-height: 40vh; }
       .chooser-viewport { order: 1; min-height: 50vh; }
     }
     @media (max-width: 768px) {
-      body { overflow-y: auto; }
       .fullbleed { padding-left: 0; padding-right: 0; }
-      .chooser-layout { grid-template-columns: 1fr; height: calc(100vh - 72px); }
+      .chooser-layout { grid-template-columns: 1fr; height: calc(100vh - var(--nav-height, 72px)); min-height: calc(100vh - var(--nav-height, 72px)); }
       .chooser-sidebar { display: none; }
-      .chooser-viewport { height: calc(100vh - 72px); }
+      .chooser-viewport { height: calc(100vh - var(--nav-height, 72px)); }
       .viewport-inner { height: 100%; padding: 0; }
       .desktop-controls { display: none !important; }
   .mobile-save { display: inline-flex; position: absolute; top: 1rem; right: 1rem; z-index: 5; }
@@ -74,7 +74,11 @@
       .mobile-decision-badge.active { opacity: .95; }
       .mobile-decision-badge.keep { background: rgba(34,197,94,0.9); }
       .mobile-decision-badge.delete { background: rgba(239,68,68,0.9); }
-      .chooser-viewport { touch-action: pan-y; }
+    }
+
+    @supports (height: 100dvh) {
+      .chooser-layout { height: calc(100dvh - var(--nav-height, 72px)); min-height: calc(100dvh - var(--nav-height, 72px)); }
+      .chooser-viewport { height: calc(100dvh - var(--nav-height, 72px)); }
     }
 
   /* Modal */
