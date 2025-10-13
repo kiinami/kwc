@@ -1,0 +1,3 @@
+- [ ] Separate frames in series in seasons, episodes, intros/outros and specials
+  - [ ] Let user choose only from an specific section
+- [ ] 
