@@ -207,6 +207,20 @@ EXTRACT_IMAGE_PATTERN = os.getenv(
 )
 
 
+def _positive_int_or_none(value: str | None) -> int | None:
+    if value is None:
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+# Optional override for the number of workers used during frame extraction
+EXTRACT_MAX_WORKERS = _positive_int_or_none(os.getenv('KWC_EXTRACT_WORKERS'))
+
+
 # Progressive Web App configuration (tweak via env vars if desired)
 PWA_APP_NAME = os.getenv('KWC_PWA_APP_NAME', 'KWC Wallpapers')
 PWA_APP_SHORT_NAME = os.getenv('KWC_PWA_SHORT_NAME', 'KWC')

@@ -5,8 +5,9 @@ import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable, Iterable
+from typing import Callable
 
+from django.conf import settings
 from ffmpeg import FFmpeg
 
 from .utils import cut_video, get_iframe_timestamps, render_pattern
@@ -87,7 +88,13 @@ def extract(
 
     # Use processes to parallelize decoding
     if total:
-        with concurrent.futures.ProcessPoolExecutor(max_workers=os.cpu_count()) as executor:
+        max_workers = getattr(settings, "EXTRACT_MAX_WORKERS", None)
+        if max_workers is None:
+            max_workers = os.cpu_count() or 1
+            logger.debug("Using default max workers: %d", max_workers)
+        else:
+            logger.debug("Using configured max workers: %d", max_workers)
+        with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(_extract_frame, arg): arg for arg in frame_args}
             for f in concurrent.futures.as_completed(futures):
                 # Retrieve result to surface exceptions immediately
