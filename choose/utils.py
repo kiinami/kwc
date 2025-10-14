@@ -103,7 +103,7 @@ def parse_folder_name(folder_name: str) -> Tuple[str, int | None]:
                 title = folder_name[:left]
                 try:
                     year = int(maybe_year)
-                except Exception:
+                except (ValueError, OverflowError):
                     year = None
     return title, year
 
