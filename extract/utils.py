@@ -39,9 +39,6 @@ def trim_video(video: Path, output: Path, start: str | None = None, end: str | N
     logger.info('Trimmed "%s" to "%s"', video.absolute(), output.absolute())
 
 
-# Transcode functionality removed
-
-
 def cut_video(video: Path, intervals: list[tuple[str, ...]]) -> Path:
     with NamedTemporaryFile(suffix=".mp4", delete=False) as output:
         output_path = Path(output.name)

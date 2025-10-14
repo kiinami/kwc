@@ -85,7 +85,7 @@ def wallpapers_root() -> Path:
 
     Configured via settings.WALLPAPERS_FOLDER and defaults to BASE_DIR / 'extracted'.
     """
-    return Path(getattr(settings, "WALLPAPERS_FOLDER", settings.BASE_DIR / "extracted"))
+    return Path(settings.WALLPAPERS_FOLDER)
 
 
 def parse_folder_name(folder_name: str) -> Tuple[str, int | None]:

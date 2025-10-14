@@ -262,7 +262,7 @@ def decide_api(request: HttpRequest, folder: str) -> JsonResponse:
 		return JsonResponse({"error": "invalid_folder"}, status=400)
 	try:
 		data = json.loads(request.body.decode('utf-8')) if request.body else {}
-	except Exception:
+	except (json.JSONDecodeError, UnicodeDecodeError):
 		return JsonResponse({"error": "invalid_json"}, status=400)
 	filename = (data.get('filename') or '').strip()
 	decision = (data.get('decision') or '').strip()
@@ -320,14 +320,14 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 		try:
 			if p.exists() and p.is_file():
 				os.remove(p)
-		except Exception as e:
+		except OSError as e:
 			delete_errors.append(f"{name}: {e}")
 
 	# Prepare renames for kept files to close gaps
 	# Parse title/year from folder name using utility function
 	title, year = parse_title_year_from_folder(safe_name)
 
-	pattern = getattr(settings, 'EXTRACT_IMAGE_PATTERN', '{{ title }} 〜 {{ counter|pad:4 }}.jpg')
+	pattern = settings.EXTRACT_IMAGE_PATTERN
 
 	# First, move all kept files to temporary names to avoid collisions
 	tmp_map: dict[Path, Path] = {}
@@ -340,7 +340,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 				os.rename(src, tmp)
 				tmp_map[src] = tmp
 				ordered_originals.append(src)
-		except Exception as e:
+		except OSError as e:
 			# If temp rename fails, abort and report
 			return JsonResponse({"error": "temp_rename_failed", "file": name, "detail": str(e)}, status=500)
 
@@ -375,14 +375,14 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 			if dest.exists():
 				try:
 					os.remove(dest)
-				except Exception:
+				except OSError:
 					# Fallback: append suffix using combined key and counter
 					stem, ext = os.path.splitext(new_name)
 					suffix = f" S{season}E{episode} #{current}".strip()
 					dest = target / f"{stem}{suffix}{ext}"
 			os.rename(tmp, dest)
 			final_keep_names.append(dest.name)
-		except Exception as e:
+		except OSError as e:
 			rename_errors.append(f"{original_src.name} -> {dest.name}: {e}")
 
 	# Clean up any leftover temps on error
@@ -393,7 +393,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 				try:
 					# best-effort cleanup
 					os.remove(tmp)
-				except Exception:
+				except OSError:
 					pass
 		return JsonResponse({"error": "rename_failed", "details": rename_errors, "delete_errors": delete_errors}, status=500)
 
