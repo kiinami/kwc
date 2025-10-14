@@ -8,12 +8,65 @@ from urllib.parse import quote, urlencode
 
 from django.conf import settings
 
-
-# Supported image extensions (lowercase)
-IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
+from .constants import IMAGE_EXTS
 
 
-class MediaFolder(TypedDict, total=False):
+def validate_folder_name(folder: str) -> str:
+    """Validate and sanitize a folder name to prevent path traversal.
+    
+    Args:
+        folder: The folder name to validate
+        
+    Returns:
+        The sanitized folder name
+        
+    Raises:
+        ValueError: If the folder name is invalid (contains path separators or is hidden)
+    """
+    safe_name = os.path.basename(folder)
+    if safe_name != folder:
+        raise ValueError("Invalid folder name: contains path separators")
+    if safe_name.startswith('.'):
+        raise ValueError("Invalid folder name: hidden folders not allowed")
+    return safe_name
+
+
+def get_folder_path(folder: str, root: Path | None = None) -> Path:
+    """Get and validate the full path to a folder under the wallpapers root.
+    
+    Args:
+        folder: The folder name to validate and locate
+        root: Optional wallpapers root path (defaults to settings value)
+        
+    Returns:
+        The full Path to the validated folder
+        
+    Raises:
+        ValueError: If the folder name is invalid
+        FileNotFoundError: If the folder doesn't exist or isn't a directory
+    """
+    safe_name = validate_folder_name(folder)
+    root_path = root or wallpapers_root()
+    target = root_path / safe_name
+    if not target.exists() or not target.is_dir():
+        raise FileNotFoundError(f"Folder not found: {safe_name}")
+    return target
+
+
+def parse_title_year_from_folder(folder_name: str) -> tuple[str, str | int | None]:
+    """Parse title and year from a folder name like 'Title (Year)'.
+    
+    This is a wrapper around parse_folder_name that returns the year as-is
+    (can be string or int or None) for compatibility with rename logic.
+    
+    Args:
+        folder_name: The folder name to parse
+        
+    Returns:
+        A tuple of (title, year) where year may be an int, empty string, or None
+    """
+    title, year_int = parse_folder_name(folder_name)
+    return title, year_int
     """Typed representation of a media folder discovered under the wallpapers root."""
 
     name: str
