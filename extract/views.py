@@ -1,13 +1,11 @@
 import json
 import logging
 import os
-import threading
 import uuid
 from pathlib import Path
 from typing import Any
 
 from django.conf import settings
-from django.db import close_old_connections
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -21,14 +19,12 @@ except Exception:  # pragma: no cover
 	_guessit = None
 
 from .forms import ExtractStartForm
-from .extractor import ExtractParams, extract
 from .models import ExtractionJob
 from .utils import render_pattern
+from .job_runner import JobRunner, job_runner
 
 
-RUNNING_THREADS: dict[str, threading.Thread] = {}
-RUNNING_LOCK = threading.Lock()
-FINISHED_STATUSES = {ExtractionJob.Status.DONE, ExtractionJob.Status.ERROR}
+FINISHED_STATUSES = JobRunner.FINISHED_STATUSES
 
 
 def _job_summary(job: ExtractionJob) -> dict[str, Any]:
@@ -49,76 +45,6 @@ def _format_duration(job: ExtractionJob) -> str:
 		return f"{max(0.0, (end - job.started_at).total_seconds()):.1f}s"
 	return "—"
 
-
-def _launch_job_thread(job_id: str) -> None:
-	thread = threading.Thread(target=_run_extract_job, args=(job_id,), daemon=True)
-	with RUNNING_LOCK:
-		RUNNING_THREADS[job_id] = thread
-	thread.start()
-
-
-def _run_extract_job(job_id: str) -> None:
-	close_old_connections()
-	try:
-		job = ExtractionJob.objects.get(pk=job_id)
-	except ExtractionJob.DoesNotExist:
-		return
-
-	job.status = ExtractionJob.Status.RUNNING
-	job.started_at = timezone.now()
-	job.error = ""
-	job.current_step = 0
-	job.total_steps = 0
-	job.total_frames = 0
-	job.save(update_fields=["status", "started_at", "error", "current_step", "total_steps", "total_frames", "updated_at"])
-
-	params_data = job.params or {}
-	video_path = Path(params_data["video"])
-	output_dir = Path(params_data.get("output_dir") or job.output_dir)
-	trim_intervals = list(params_data.get("trim_intervals") or [])
-	image_pattern = str(params_data.get("image_pattern") or "")
-
-	extract_params = ExtractParams(
-		video=video_path,
-		output_dir=output_dir,
-		trim_intervals=trim_intervals,
-		title=str(params_data.get("title") or ""),
-		image_pattern=image_pattern,
-		year=int(params_data["year"]) if params_data.get("year") not in (None, "") else None,
-		season=int(params_data["season"]) if params_data.get("season") not in (None, "") else None,
-		episode=params_data.get("episode") if params_data.get("episode") not in (None, "") else None,
-	)
-
-	def on_progress(done: int, total: int) -> None:
-		ExtractionJob.objects.filter(pk=job_id).update(
-			total_steps=max(total, 1),
-			current_step=done,
-			total_frames=done,
-			updated_at=timezone.now(),
-		)
-
-	try:
-		frame_count = extract(params=extract_params, on_progress=on_progress)
-		job.refresh_from_db()
-		job.total_frames = frame_count
-		if job.total_steps == 0:
-			job.total_steps = frame_count
-		job.current_step = job.total_steps
-		job.status = ExtractionJob.Status.DONE
-		job.finished_at = timezone.now()
-		job.save(update_fields=["status", "finished_at", "total_frames", "current_step", "total_steps", "updated_at"])
-	except Exception as exc:  # pragma: no cover
-		logging.getLogger(__name__).exception("extract job %s failed", job_id)
-		ExtractionJob.objects.filter(pk=job_id).update(
-			status=ExtractionJob.Status.ERROR,
-			error=str(exc),
-			finished_at=timezone.now(),
-			updated_at=timezone.now(),
-		)
-	finally:
-		with RUNNING_LOCK:
-			RUNNING_THREADS.pop(job_id, None)
-		close_old_connections()
 
 
 def start(request: HttpRequest) -> HttpResponse:
@@ -152,7 +78,7 @@ def start(request: HttpRequest) -> HttpResponse:
 				output_dir=str(output_dir),
 			)
 
-			_launch_job_thread(job_id)
+			job_runner.start_job(job_id)
 
 			jobs = request.session.get("extract_jobs", [])
 			if job_id not in jobs:
