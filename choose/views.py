@@ -47,8 +47,9 @@ def gallery(request: HttpRequest, folder: str) -> HttpResponse:
 def folder(request: HttpRequest, folder: str) -> HttpResponse:
 	"""Detail page for a media folder: show a two-pane chooser UI with sidebar and viewport."""
 	# Get optional section filters from query params
-	season = request.GET.get('season')
-	episode = request.GET.get('episode')
+	# Empty strings are valid (for General section), None means no filter
+	season = request.GET.get('season') if 'season' in request.GET else None
+	episode = request.GET.get('episode') if 'episode' in request.GET else None
 	
 	try:
 		context = load_folder_context(folder, season=season, episode=episode)

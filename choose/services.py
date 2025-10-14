@@ -197,16 +197,14 @@ def list_gallery_images(folder: str) -> GalleryContext:
     sections: list[GallerySection] = []
     for (season, episode), group_images in sorted_groups:
         # Build section-specific choose URL with query params for filtering
+        # Always add query params to ensure proper filtering by section
+        from urllib.parse import urlencode
+        params = {
+            'season': season,
+            'episode': episode,
+        }
         section_choose_url = reverse("choose:folder", kwargs={"folder": safe_name})
-        if season or episode:
-            # Add query params to filter by section
-            from urllib.parse import urlencode
-            params = {}
-            if season:
-                params['season'] = season
-            if episode:
-                params['episode'] = episode
-            section_choose_url = f"{section_choose_url}?{urlencode(params)}"
+        section_choose_url = f"{section_choose_url}?{urlencode(params)}"
         
         sections.append({
             "title": format_section_title(season, episode),
@@ -253,11 +251,12 @@ def load_folder_context(folder: str, season: str | None = None, episode: str | N
         files = []
     
     # Filter files by season/episode if specified
+    # Note: Empty strings mean we want to filter for the General section (no season/episode)
     if season is not None or episode is not None:
         filtered_files = []
         for name in files:
             file_season, file_episode = parse_season_episode(name)
-            # Match if both season and episode match (or are unspecified)
+            # Match if both season and episode match exactly (including empty strings)
             season_matches = season is None or file_season == season
             episode_matches = episode is None or file_episode == episode
             if season_matches and episode_matches:
