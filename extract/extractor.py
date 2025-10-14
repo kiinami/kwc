@@ -3,6 +3,7 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 import os
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -13,17 +14,57 @@ from ffmpeg import FFmpeg
 from .utils import cut_video, get_iframe_timestamps, render_pattern
 
 logger = logging.getLogger(__name__)
+_sleep = time.sleep
+
+
+def _get_retry_config() -> tuple[int, float]:
+    retries = getattr(settings, "EXTRACT_FFMPEG_RETRIES", 2)
+    backoff = getattr(settings, "EXTRACT_FFMPEG_RETRY_BACKOFF", 0.5)
+    try:
+        retries = int(retries)
+    except (TypeError, ValueError):
+        retries = 2
+    try:
+        backoff = float(backoff)
+    except (TypeError, ValueError):
+        backoff = 0.5
+    if retries < 0:
+        retries = 0
+    if backoff < 0:
+        backoff = 0.0
+    return retries, backoff
 
 
 def _extract_frame(args: tuple[Path, float, Path]) -> Path:
     video, ts, output_file = args
-    try:
-        ffmpeg = FFmpeg().option("y").input(str(video), ss=ts).output(str(output_file), frames="1", q="2")
-        ffmpeg.execute()
-        return output_file
-    except Exception as e:  # propagate so parent marks job as error
-        logger.exception("ffmpeg failed extracting frame at %s from %s -> %s", ts, video, output_file)
-        raise
+    retries, backoff = _get_retry_config()
+    attempt = 0
+    while True:
+        try:
+            ffmpeg = FFmpeg().option("y").input(str(video), ss=ts).output(str(output_file), frames="1", q="2")
+            ffmpeg.execute()
+            return output_file
+        except Exception as exc:  # propagate so parent marks job as error
+            if attempt >= retries:
+                logger.exception(
+                    "ffmpeg failed extracting frame at %s from %s -> %s after %d attempts",
+                    ts,
+                    video,
+                    output_file,
+                    attempt + 1,
+                )
+                raise
+            attempt += 1
+            logger.warning(
+                "ffmpeg extract retry %d/%d for %s (%s)",
+                attempt,
+                retries,
+                video,
+                exc,
+            )
+            delay = backoff * attempt
+            if delay > 0:
+                _sleep(delay)
 
 
 @dataclass
@@ -36,6 +77,7 @@ class ExtractParams:
     year: int | None = None
     season: int | None = None
     episode: str | int | None = None
+    max_workers: int | None = None
 
 
 def extract(
@@ -88,7 +130,25 @@ def extract(
 
     # Use processes to parallelize decoding
     if total:
-        max_workers = getattr(settings, "EXTRACT_MAX_WORKERS", None)
+        max_workers = params.max_workers
+        if max_workers is not None:
+            try:
+                max_workers = int(max_workers)
+            except (TypeError, ValueError):
+                max_workers = None
+            else:
+                if max_workers <= 0:
+                    max_workers = None
+        if max_workers is None:
+            max_workers = getattr(settings, "EXTRACT_MAX_WORKERS", None)
+            if max_workers is not None:
+                try:
+                    max_workers = int(max_workers)
+                except (TypeError, ValueError):
+                    max_workers = None
+                else:
+                    if max_workers <= 0:
+                        max_workers = None
         if max_workers is None:
             max_workers = os.cpu_count() or 1
             logger.debug("Using default max workers: %d", max_workers)

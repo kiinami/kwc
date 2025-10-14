@@ -84,8 +84,8 @@ def get_iframe_timestamps(video: Path) -> list[float]:
     )
     try:
         output = ffprobe.execute()
-    except Exception:
-        logger.exception("ffprobe failed listing iframe timestamps for %s", video)
+    except Exception as exc:
+        logger.exception("ffprobe failed listing iframe timestamps for %s: %s", video, exc)
         return []
     data = json.loads(output)
     timestamps = [

@@ -11,7 +11,14 @@ from .extractor import ExtractParams, extract
 
 
 class ExtractorWorkerSelectionTests(SimpleTestCase):
-	def _run_extract_with_patched_executor(self, *, override: int | None, cpu_count_value: int, expected_workers: int) -> None:
+	def _run_extract_with_patched_executor(
+		self,
+		*,
+		override: int | None,
+		cpu_count_value: int,
+		expected_workers: int,
+		params_override: int | None = None,
+	) -> None:
 		class FakeFuture:
 			def result(self) -> None:
 				return None
@@ -47,7 +54,7 @@ class ExtractorWorkerSelectionTests(SimpleTestCase):
 			output = temp_path / "output"
 			output.mkdir()
 
-			params = ExtractParams(video=video, output_dir=output)
+			params = ExtractParams(video=video, output_dir=output, max_workers=params_override)
 			with override_settings(EXTRACT_MAX_WORKERS=override):
 				with patch("extract.extractor.get_iframe_timestamps", return_value=[0.0]):
 					with patch("extract.extractor.render_pattern", side_effect=lambda pattern, values: "frame.jpg"):
@@ -64,3 +71,11 @@ class ExtractorWorkerSelectionTests(SimpleTestCase):
 
 	def test_uses_override_when_present(self) -> None:
 		self._run_extract_with_patched_executor(override=2, cpu_count_value=6, expected_workers=2)
+
+	def test_params_max_workers_override(self) -> None:
+		self._run_extract_with_patched_executor(
+			override=5,
+			cpu_count_value=6,
+			expected_workers=3,
+			params_override=3,
+		)

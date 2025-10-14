@@ -96,6 +96,14 @@ class JobRunner:
 		output_dir = Path(params_data.get("output_dir") or job.output_dir)
 		trim_intervals = list(params_data.get("trim_intervals") or [])
 		image_pattern = str(params_data.get("image_pattern") or "")
+		max_workers_value = params_data.get("max_workers")
+		if max_workers_value in (None, ""):
+			max_workers_value = None
+		else:
+			try:
+				max_workers_value = int(max_workers_value)
+			except (TypeError, ValueError):
+				max_workers_value = None
 
 		extract_params = ExtractParams(
 			video=video_path,
@@ -106,6 +114,7 @@ class JobRunner:
 			year=int(params_data["year"]) if params_data.get("year") not in (None, "") else None,
 			season=int(params_data["season"]) if params_data.get("season") not in (None, "") else None,
 			episode=params_data.get("episode") if params_data.get("episode") not in (None, "") else None,
+			max_workers=max_workers_value,
 		)
 
 		def on_progress(done: int, total: int) -> None:
