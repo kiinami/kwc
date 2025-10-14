@@ -116,3 +116,49 @@ def test_load_folder_context_empty_folder(wallpapers_dir: Path) -> None:
 	assert context.selected_image_name == ""
 	assert context.selected_image_url == ""
 	assert context.root == str(wallpapers_root())
+
+
+def test_list_gallery_images_groups_series_by_season_episode(wallpapers_dir: Path) -> None:
+	folder = wallpapers_dir / "Series (2024)"
+	folder.mkdir()
+	(folder / "Series S01E01.jpg").write_bytes(b"a")
+	(folder / "Series S01E02.jpg").write_bytes(b"b")
+	(folder / "Series S01EIN.jpg").write_bytes(b"c")
+	(folder / "Series S02E01.jpg").write_bytes(b"d")
+	(folder / "General.jpg").write_bytes(b"e")
+
+	context = list_gallery_images("Series (2024)")
+
+	# Check we have sections
+	assert len(context.sections) == 5
+	
+	# Check section ordering and titles
+	assert context.sections[0]["title"] == "General"
+	assert len(context.sections[0]["images"]) == 1
+	
+	assert context.sections[1]["title"] == "Season 1 Intro"
+	assert len(context.sections[1]["images"]) == 1
+	
+	assert context.sections[2]["title"] == "Season 1 Episode 1"
+	assert len(context.sections[2]["images"]) == 1
+	
+	assert context.sections[3]["title"] == "Season 1 Episode 2"
+	assert len(context.sections[3]["images"]) == 1
+
+	assert context.sections[4]["title"] == "Season 2 Episode 1"
+	assert len(context.sections[4]["images"]) == 1
+
+
+def test_list_gallery_images_single_section_for_movies(wallpapers_dir: Path) -> None:
+	folder = wallpapers_dir / "Movie (2024)"
+	folder.mkdir()
+	(folder / "frame01.jpg").write_bytes(b"a")
+	(folder / "frame02.jpg").write_bytes(b"b")
+
+	context = list_gallery_images("Movie (2024)")
+
+	# All images should be in the "General" section
+	assert len(context.sections) == 1
+	assert context.sections[0]["title"] == "General"
+	assert len(context.sections[0]["images"]) == 2
+

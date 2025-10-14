@@ -8,9 +8,11 @@ from choose.utils import (
 	MediaFolder,
 	list_media_folders,
 	parse_folder_name,
+	parse_season_episode,
 	parse_title_year_from_folder,
 	validate_folder_name,
 )
+from choose.services import format_section_title
 from kwc.utils.files import cache_token
 
 
@@ -96,3 +98,58 @@ def test_cache_token_is_stable(temp_wallpapers_dir: Path) -> None:
 	first = cache_token(file_path)
 	second = cache_token(file_path)
 	assert first == second
+
+
+def test_parse_season_episode_with_numeric_episode() -> None:
+	season, episode = parse_season_episode("Show Title S01E03.jpg")
+	assert season == "01"
+	assert episode == "03"
+
+
+def test_parse_season_episode_with_intro() -> None:
+	season, episode = parse_season_episode("Show S02EIN.jpg")
+	assert season == "02"
+	assert episode == "IN"
+
+
+def test_parse_season_episode_with_outro() -> None:
+	season, episode = parse_season_episode("Show S01EOU.png")
+	assert season == "01"
+	assert episode == "OU"
+
+
+def test_parse_season_episode_no_match() -> None:
+	season, episode = parse_season_episode("Movie.jpg")
+	assert season == ""
+	assert episode == ""
+
+
+def test_parse_season_episode_case_insensitive() -> None:
+	season, episode = parse_season_episode("Show s03e12.jpg")
+	assert season == "03"
+	assert episode == "12"
+
+
+def test_format_section_title_general() -> None:
+	assert format_section_title("", "") == "General"
+
+
+def test_format_section_title_season_only() -> None:
+	assert format_section_title("01", "") == "Season 1"
+
+
+def test_format_section_title_season_and_episode() -> None:
+	assert format_section_title("01", "03") == "Season 1 Episode 3"
+
+
+def test_format_section_title_intro() -> None:
+	assert format_section_title("02", "IN") == "Season 2 Intro"
+
+
+def test_format_section_title_outro() -> None:
+	assert format_section_title("01", "OU") == "Season 1 Outro"
+
+
+def test_format_section_title_non_numeric() -> None:
+	assert format_section_title("01", "special") == "Season 1 Episode special"
+
