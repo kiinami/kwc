@@ -231,7 +231,15 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
                         safe_remove(dest)
                     except (OSError, IsADirectoryError):
                         stem, ext = os.path.splitext(new_name)
-                        suffix = f" S{season}E{episode} #{current}".strip()
+                        # Build fallback suffix based on what info we have
+                        if season and episode:
+                            suffix = f" S{season}E{episode} #{current}"
+                        elif season:
+                            suffix = f" S{season} #{current}"
+                        elif episode:
+                            suffix = f" E{episode} #{current}"
+                        else:
+                            suffix = f" #{current}"
                         dest = target / f"{stem}{suffix}{ext}"
                 safe_rename(tmp_path, dest)
                 tmp_map.pop(original_src, None)

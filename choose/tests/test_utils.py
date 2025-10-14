@@ -136,6 +136,24 @@ def test_parse_season_episode_season_only() -> None:
 	assert episode == ""
 
 
+def test_parse_season_episode_episode_only() -> None:
+	season, episode = parse_season_episode("Show E03 ~ 0001.jpg")
+	assert season == ""
+	assert episode == "03"
+
+
+def test_parse_season_episode_episode_only_intro() -> None:
+	season, episode = parse_season_episode("Show EIN ~ 0001.jpg")
+	assert season == ""
+	assert episode == "IN"
+
+
+def test_parse_season_episode_episode_only_outro() -> None:
+	season, episode = parse_season_episode("Show EOU ~ 0001.jpg")
+	assert season == ""
+	assert episode == "OU"
+
+
 def test_format_section_title_general() -> None:
 	assert format_section_title("", "") == "General"
 
@@ -158,4 +176,16 @@ def test_format_section_title_outro() -> None:
 
 def test_format_section_title_non_numeric() -> None:
 	assert format_section_title("01", "special") == "Season 1 Episode special"
+
+
+def test_format_section_title_episode_only() -> None:
+	assert format_section_title("", "03") == "Episode 3"
+
+
+def test_format_section_title_episode_only_intro() -> None:
+	assert format_section_title("", "IN") == "Intro"
+
+
+def test_format_section_title_episode_only_outro() -> None:
+	assert format_section_title("", "OU") == "Outro"
 

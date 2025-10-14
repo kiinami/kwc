@@ -159,7 +159,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
         grouped[key].append(image)
     
     # Convert grouped dict to sorted list of sections
-    # Sort order: General, Season X, Season X Intro, Season X Outro, Season X Episode Y
+    # Sort order: General, Season X (or episode-only), Season X Intro, Season X Episodes, Season X Outro
     def sort_key(item: tuple[tuple[str, str], list[GalleryImage]]) -> tuple:
         season, episode = item[0]
         # Empty season/episode comes first (General section)
@@ -167,8 +167,9 @@ def list_gallery_images(folder: str) -> GalleryContext:
             return (0, 0, 0, "")
         
         # Parse season as int if possible
+        # For episode-only patterns (no season), treat as season 1
         try:
-            season_int = int(season) if season else 999999
+            season_int = int(season) if season else 1
         except ValueError:
             season_int = 999999
         
