@@ -169,7 +169,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
         current = preview_counters.get(key, 0) + 1
         preview_counters[key] = current
         values = {
-            "title": safe_name,
+            "title": base_title,
             "base_title": base_title,
             "year": parsed_year or "",
             "season": int(season) if season.isdigit() else season,
@@ -214,7 +214,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
             counters[key] = current
 
             values = {
-                "title": safe_name,
+                "title": base_title,
                 "base_title": base_title,
                 "year": parsed_year or "",
                 "season": int(season) if season.isdigit() else season,
