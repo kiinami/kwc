@@ -270,4 +270,4 @@ media
 #.idea/
 
 *.sqlite3
-data/extracted/
+data/
