@@ -29,7 +29,10 @@ class GalleryImage(TypedDict):
 class GallerySection(TypedDict):
     """A group of images for the same season/episode combination."""
     title: str
+    season: str
+    episode: str
     images: list[GalleryImage]
+    choose_url: str
 
 
 class FolderImage(TypedDict):
@@ -191,13 +194,27 @@ def list_gallery_images(folder: str) -> GalleryContext:
     
     sorted_groups = sorted(grouped.items(), key=sort_key)
     
-    sections: list[GallerySection] = [
-        {
+    sections: list[GallerySection] = []
+    for (season, episode), group_images in sorted_groups:
+        # Build section-specific choose URL with query params for filtering
+        section_choose_url = reverse("choose:folder", kwargs={"folder": safe_name})
+        if season or episode:
+            # Add query params to filter by section
+            from urllib.parse import urlencode
+            params = {}
+            if season:
+                params['season'] = season
+            if episode:
+                params['episode'] = episode
+            section_choose_url = f"{section_choose_url}?{urlencode(params)}"
+        
+        sections.append({
             "title": format_section_title(season, episode),
+            "season": season,
+            "episode": episode,
             "images": group_images,
-        }
-        for (season, episode), group_images in sorted_groups
-    ]
+            "choose_url": section_choose_url,
+        })
 
     choose_url = reverse("choose:folder", kwargs={"folder": safe_name})
 
@@ -215,7 +232,17 @@ def list_gallery_images(folder: str) -> GalleryContext:
     )
 
 
-def load_folder_context(folder: str) -> FolderContext:
+def load_folder_context(folder: str, season: str | None = None, episode: str | None = None) -> FolderContext:
+    """Load folder context for the chooser UI.
+    
+    Args:
+        folder: The folder name to load
+        season: Optional season filter (e.g., "01")
+        episode: Optional episode filter (e.g., "03", "IN", "OU")
+        
+    Returns:
+        FolderContext with images (optionally filtered by section)
+    """
     safe_name = validate_folder_name(folder)
     root_path = wallpapers_root()
     target = get_folder_path(safe_name, root_path)
@@ -224,6 +251,18 @@ def load_folder_context(folder: str) -> FolderContext:
         files = list_image_files(target)
     except PermissionError:
         files = []
+    
+    # Filter files by season/episode if specified
+    if season is not None or episode is not None:
+        filtered_files = []
+        for name in files:
+            file_season, file_episode = parse_season_episode(name)
+            # Match if both season and episode match (or are unspecified)
+            season_matches = season is None or file_season == season
+            episode_matches = episode is None or file_episode == episode
+            if season_matches and episode_matches:
+                filtered_files.append(name)
+        files = filtered_files
 
     decisions_qs = ImageDecision.objects.filter(folder=safe_name)
     decisions = list(decisions_qs.order_by("decided_at", "filename"))
