@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load naming %}
+{% load static naming %}
 {% block title %}Extract · KWC{% endblock %}
 {% block content %}
 <div style="min-height: 60vh; display: grid; place-items: center;">
@@ -69,6 +69,7 @@
     </form>
   </div>
 </div>
+<script src="{% static 'kwc/pattern-renderer.js' %}"></script>
 <script>
   // Enhance default Django widgets with .input class
   for (const el of document.querySelectorAll('input[type="text"], input[type="number"], input[type="url"], input[type="email"], textarea')) {
@@ -88,39 +89,14 @@
   const namingPreview = document.getElementById('namingPreview');
   const folderPattern = "{{ folder_pattern|escapejs }}";
   const imagePattern = "{{ image_pattern|escapejs }}";
-  function renderWith(values, pattern) {
-    // Minimal client-side preview for Django-like patterns.
-    // Replace simple conditionals {% if X %}...{% endif %}
-    pattern = pattern.replace(/\{\%\s*if\s+season\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.season ? inner : ''));
-    pattern = pattern.replace(/\{\%\s*if\s+episode\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.episode ? inner : ''));
-    pattern = pattern.replace(/\{\%\s*if\s+year\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => (values.year ? inner : ''));
-    // Variables
-    pattern = pattern.replace(/\{\{\s*title\s*\}\}/g, values.title);
-    pattern = pattern.replace(/\{\{\s*year\s*\}\}/g, values.year);
-    // counter (preview as 1)
-    pattern = pattern.replace(/\{\{\s*counter\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => String(1).padStart(parseInt(w, 10) || 0, '0'));
-    pattern = pattern.replace(/\{\{\s*counter\s*\}\}/g, '1');
-    // pad filter for season/episode
-    pattern = pattern.replace(/\{\{\s*season\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => {
-      const num = parseInt(values.season, 10);
-      return Number.isNaN(num) ? (values.season || '') : String(num).padStart(parseInt(w, 10) || 0, '0');
-    });
-    pattern = pattern.replace(/\{\{\s*episode\s*\|\s*pad:(\d+)\s*\}\}/g, (_m, w) => {
-      const num = parseInt(values.episode, 10);
-      return Number.isNaN(num) ? (values.episode || '') : String(num).padStart(parseInt(w, 10) || 0, '0');
-    });
-    pattern = pattern.replace(/\{\{\s*season\s*\}\}/g, values.season);
-    pattern = pattern.replace(/\{\{\s*episode\s*\}\}/g, values.episode);
-    return pattern;
-  }
 
   function formatPreview() {
     const title = (titleEl?.value || '').trim() || 'Sample title';
     const year = (yearEl?.value || '').trim();
     const season = (seasonEl?.value || '').trim();
     const episode = (episodeEl?.value || '').trim();
-    let folder = renderWith({ title, year, season, episode }, folderPattern);
-    let file = renderWith({ title, year, season, episode }, imagePattern);
+    let folder = renderPattern({ title, year, season, episode }, folderPattern);
+    let file = renderPattern({ title, year, season, episode }, imagePattern);
     const text = `Files will be named: ${folder}/${file}`;
     if (namingPreview) namingPreview.textContent = text;
   }
