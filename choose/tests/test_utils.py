@@ -130,6 +130,12 @@ def test_parse_season_episode_case_insensitive() -> None:
 	assert episode == "12"
 
 
+def test_parse_season_episode_season_only() -> None:
+	season, episode = parse_season_episode("Show S01 ~ 0001.jpg")
+	assert season == "01"
+	assert episode == ""
+
+
 def test_format_section_title_general() -> None:
 	assert format_section_title("", "") == "General"
 

@@ -184,17 +184,17 @@ def parse_season_episode(filename: str) -> tuple[str, str]:
     """Parse season and episode from a filename.
     
     Args:
-        filename: The filename to parse (e.g., "Title S01E02.jpg" or "Title S01EIN.jpg")
+        filename: The filename to parse (e.g., "Title S01E02.jpg", "Title S01.jpg", or "Title S01EIN.jpg")
         
     Returns:
         A tuple of (season, episode) where both are strings. Returns ("", "") if no match.
-        Season is numeric (e.g., "01"), episode can be numeric or special like "IN", "OU".
+        Season is numeric (e.g., "01"), episode can be numeric, special like "IN"/"OU", or empty string.
     """
     pattern = re.compile(SEASON_EPISODE_PATTERN, re.IGNORECASE)
     match = pattern.search(filename)
     if match:
         season = match.group("season")
-        episode = match.group("episode")
+        episode = match.group("episode") or ""  # Episode is optional, may be None
         return season, episode
     return "", ""
 
