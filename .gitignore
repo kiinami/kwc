@@ -270,3 +270,4 @@ media
 #.idea/
 
 *.sqlite3
+data/

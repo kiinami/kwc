@@ -5,12 +5,16 @@ import tempfile
 from io import BytesIO
 from pathlib import Path
 
+import pytest
 from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from PIL import Image
 
 from ..models import FolderProgress, ImageDecision
+
+
+pytestmark = pytest.mark.django_db(transaction=True)
 
 
 class MediaLibraryViewsTests(TestCase):

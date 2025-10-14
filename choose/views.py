@@ -21,13 +21,10 @@ from .models import ImageDecision, FolderProgress
 from .constants import SEASON_EPISODE_PATTERN, THUMB_MAX_DIMENSION, THUMB_CACHE_SIZE
 from extract.utils import render_pattern
 from kwc.utils.files import safe_remove, safe_rename
+from .services import load_folder_context, list_gallery_images
 from .utils import (
 	wallpapers_root,
-	parse_folder_name,
 	list_image_files,
-	find_cover_filename,
-	wallpaper_url,
-	thumbnail_url,
 	list_media_folders,
 	validate_folder_name,
 	get_folder_path,
@@ -46,114 +43,21 @@ def index(request: HttpRequest) -> HttpResponse:
 def gallery(request: HttpRequest, folder: str) -> HttpResponse:
 	"""Grid gallery for a media folder with lightweight fullscreen viewer."""
 	try:
-		target = get_folder_path(folder)
-		safe_name = validate_folder_name(folder)
+		context = list_gallery_images(folder)
 	except (ValueError, FileNotFoundError):
 		raise Http404("Folder not found")
-	
-	root = wallpapers_root()
-	title, year_int = parse_folder_name(safe_name)
-	year_display = str(year_int) if year_int is not None else ""
 
-	try:
-		files = list_image_files(target)
-	except PermissionError:
-		files = []
-
-	root = wallpapers_root()
-	cover_file = find_cover_filename(target, files)
-	cover_url = wallpaper_url(safe_name, cover_file, root=root) if cover_file else None
-	cover_thumb_url = thumbnail_url(safe_name, cover_file, width=420, root=root) if cover_file else None
-	choose_url = reverse('choose:folder', kwargs={'folder': safe_name})
-
-	images = [
-		{
-			'name': name,
-			'url': wallpaper_url(safe_name, name, root=root),
-			'thumb_url': thumbnail_url(safe_name, name, width=512, root=root),
-		}
-		for name in files
-	]
-
-	context = {
-		'folder': safe_name,
-		'title': title,
-		'year': year_display,
-		'year_raw': year_int,
-		'cover_url': cover_url,
-		'cover_thumb_url': cover_thumb_url,
-		'choose_url': choose_url,
-		'images': images,
-		'root': str(root),
-	}
-	return render(request, 'choose/gallery.html', context)
+	return render(request, 'choose/gallery.html', context.to_dict())
 
 
 def folder(request: HttpRequest, folder: str) -> HttpResponse:
 	"""Detail page for a media folder: show a two-pane chooser UI with sidebar and viewport."""
 	try:
-		target = get_folder_path(folder)
-		safe_name = validate_folder_name(folder)
+		context = load_folder_context(folder)
 	except (ValueError, FileNotFoundError):
 		raise Http404("Folder not found")
-	
-	root = wallpapers_root()
 
-	# Collect image files (jpg/jpeg/png/webp), ordered by filename
-	images: list[dict] = []
-	try:
-		files = list_image_files(target)
-		# Fetch existing decisions in bulk
-		decisions_qs = ImageDecision.objects.filter(folder=safe_name, filename__in=files)
-		decision_map = {d.filename: d.decision for d in decisions_qs}
-		for name in files:
-			img_url = wallpaper_url(safe_name, name, root=root)
-			images.append({
-				'name': name,
-				'url': img_url,
-				'thumb_url': thumbnail_url(safe_name, name, width=320, root=root),
-				'decision': decision_map.get(name, ''),
-			})
-	except PermissionError:
-		images = []
-
-	# Initial selection prioritises resumed progress, then first undecided from that point forward
-	selected_index = -1
-	progress = FolderProgress.objects.filter(folder=safe_name).first()
-	start_index = 0
-	if progress and images:
-		anchor_idx = -1
-		if progress.last_classified_name:
-			for i, img in enumerate(images):
-				if img['name'] == progress.last_classified_name:
-					anchor_idx = i
-					break
-		if anchor_idx != -1:
-			start_index = anchor_idx + 1
-		elif progress.keep_count:
-			start_index = progress.keep_count
-	if images:
-		if start_index >= len(images):
-			start_index = len(images) - 1
-		if start_index < 0:
-			start_index = 0
-		for idx in range(start_index, len(images)):
-			if not images[idx].get('decision'):
-				selected_index = idx
-				break
-		if selected_index == -1:
-			selected_index = start_index if images else -1
-
-	context = {
-		'folder': safe_name,
-		'images': images,
-		'selected_index': selected_index,
-		'selected_image_url': images[selected_index]['url'] if images and selected_index >= 0 else '',
-		'selected_image_name': images[selected_index]['name'] if images and selected_index >= 0 else '',
-		'root': str(root),
-		'path': str(target),
-	}
-	return render(request, 'choose/folder.html', context)
+	return render(request, 'choose/folder.html', context.to_dict())
 
 
 class _ThumbResult(NamedTuple):

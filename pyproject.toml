@@ -16,8 +16,13 @@ dependencies = [
 dev = [
     "django-debug-toolbar>=6.0.0",
     "pytest>=8.3.3",
+    "pytest-django>=4.9.0",
 ]
 prod = [
     "gunicorn>=23.0.0",
     "whitenoise>=6.6.0",
 ]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "kwc.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
