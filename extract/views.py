@@ -129,7 +129,7 @@ def start(request: HttpRequest) -> HttpResponse:
 			params = form.cleaned_data.copy()
 			params["trim_intervals"] = form.cleaned_data.get("trim_intervals", [])
 
-			root = Path(getattr(settings, "WALLPAPERS_FOLDER", settings.BASE_DIR / "extracted"))
+			root = Path(settings.WALLPAPERS_FOLDER)
 			folder_pattern = settings.EXTRACT_FOLDER_PATTERN
 			folder_rel = render_pattern(
 				folder_pattern,
@@ -170,8 +170,8 @@ def start(request: HttpRequest) -> HttpResponse:
 		"extract/start.html",
 		{
 			"form": form,
-			"folder_pattern": getattr(settings, "EXTRACT_FOLDER_PATTERN", "{title}"),
-			"image_pattern": getattr(settings, "EXTRACT_IMAGE_PATTERN", "{title}_{counter:04}.jpg"),
+			"folder_pattern": settings.EXTRACT_FOLDER_PATTERN,
+			"image_pattern": settings.EXTRACT_IMAGE_PATTERN,
 		},
 	)
 
