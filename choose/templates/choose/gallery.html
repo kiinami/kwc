@@ -15,7 +15,8 @@
     .gallery-details { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; color: var(--muted); }
     .gallery-count { font-size: .95rem; padding: .25rem .6rem; border-radius: 999px; background: rgba(124,76,245,0.18); color: #d1c5ff; font-weight: 600; }
   .gallery-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .5rem; }
-  .gallery-section { margin-bottom: 2.5rem; }
+  .gallery-section { margin-bottom: 1.75rem; transition: margin-bottom 0.2s ease; }
+  .gallery-section.is-collapsed { margin-bottom: 0.85rem; }
   .gallery-section:last-child { margin-bottom: 0; }
   .gallery-section-header { width: 100%; display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 0.75rem; cursor: pointer; transition: all 0.15s ease; margin-bottom: 1rem; color: var(--text); }
   .gallery-section-header:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); }
@@ -305,11 +306,25 @@
       // Section collapse/expand functionality
       (function () {
         const toggleButtons = document.querySelectorAll('[data-section-toggle]');
-        
+
         toggleButtons.forEach(function (button) {
+          const section = button.closest('.gallery-section');
+          if (!section) {
+            return;
+          }
+
+          function syncSectionState(isExpanded) {
+            section.classList.toggle('is-collapsed', !isExpanded);
+          }
+
+          const initialExpanded = button.getAttribute('aria-expanded') !== 'false';
+          syncSectionState(initialExpanded);
+
           button.addEventListener('click', function () {
             const isExpanded = button.getAttribute('aria-expanded') === 'true';
-            button.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+            const nextExpanded = !isExpanded;
+            button.setAttribute('aria-expanded', nextExpanded ? 'true' : 'false');
+            syncSectionState(nextExpanded);
           });
         });
       })();
