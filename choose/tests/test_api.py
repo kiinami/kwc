@@ -104,7 +104,7 @@ def test_save_api_rename_collision_fallback(client, wallpapers_dir: Path, monkey
 
 	(folder / 'frame01.jpg').write_bytes(b'a')
 	(folder / 'frame02.jpg').write_bytes(b'b')
-	collision_target = folder / 'Movie (2024) 〜 0001.jpg'
+	collision_target = folder / 'Movie 〜 0001.jpg'
 	collision_target.write_bytes(b'original')
 
 	ImageDecision.objects.create(folder=folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP)

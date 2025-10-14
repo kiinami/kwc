@@ -162,3 +162,77 @@ def test_list_gallery_images_single_section_for_movies(wallpapers_dir: Path) -> 
 	assert context.sections[0]["title"] == "General"
 	assert len(context.sections[0]["images"]) == 2
 
+
+def test_list_gallery_images_sections_have_season_episode_and_choose_url(wallpapers_dir: Path) -> None:
+	folder = wallpapers_dir / "Series (2024)"
+	folder.mkdir()
+	(folder / "Series S01E01.jpg").write_bytes(b"a")
+	(folder / "Series S02EIN.jpg").write_bytes(b"b")
+	(folder / "General.jpg").write_bytes(b"c")
+
+	context = list_gallery_images("Series (2024)")
+
+	# Check General section
+	general_section = context.sections[0]
+	assert general_section["season"] == ""
+	assert general_section["episode"] == ""
+	assert "/Series%20(2024)/" in general_section["choose_url"]
+	
+	# Check Season 1 Episode 1 section
+	s1e1_section = context.sections[1]
+	assert s1e1_section["season"] == "01"
+	assert s1e1_section["episode"] == "01"
+	assert "season=01" in s1e1_section["choose_url"]
+	assert "episode=01" in s1e1_section["choose_url"]
+	
+	# Check Season 2 Intro section
+	intro_section = context.sections[2]
+	assert intro_section["season"] == "02"
+	assert intro_section["episode"] == "IN"
+	assert "season=02" in intro_section["choose_url"]
+	assert "episode=IN" in intro_section["choose_url"]
+
+
+def test_load_folder_context_filters_by_season(wallpapers_dir: Path) -> None:
+	folder = wallpapers_dir / "Series"
+	folder.mkdir()
+	(folder / "Series S01E01.jpg").write_bytes(b"a")
+	(folder / "Series S01E02.jpg").write_bytes(b"b")
+	(folder / "Series S02E01.jpg").write_bytes(b"c")
+	(folder / "General.jpg").write_bytes(b"d")
+
+	context = load_folder_context("Series", season="01")
+
+	# Should only have season 1 episodes
+	assert len(context.images) == 2
+	assert context.images[0]["name"] == "Series S01E01.jpg"
+	assert context.images[1]["name"] == "Series S01E02.jpg"
+
+
+def test_load_folder_context_filters_by_season_and_episode(wallpapers_dir: Path) -> None:
+	folder = wallpapers_dir / "Series"
+	folder.mkdir()
+	(folder / "Series S01E01.jpg").write_bytes(b"a")
+	(folder / "Series S01E02.jpg").write_bytes(b"b")
+	(folder / "Series S02E01.jpg").write_bytes(b"c")
+
+	context = load_folder_context("Series", season="01", episode="02")
+
+	# Should only have S01E02
+	assert len(context.images) == 1
+	assert context.images[0]["name"] == "Series S01E02.jpg"
+
+
+def test_load_folder_context_filters_general_section(wallpapers_dir: Path) -> None:
+	folder = wallpapers_dir / "Series"
+	folder.mkdir()
+	(folder / "Series S01E01.jpg").write_bytes(b"a")
+	(folder / "General.jpg").write_bytes(b"b")
+
+	# Filter for General section (no season, no episode)
+	context = load_folder_context("Series", season="", episode="")
+
+	# Should only have General.jpg
+	assert len(context.images) == 1
+	assert context.images[0]["name"] == "General.jpg"
+

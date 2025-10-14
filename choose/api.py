@@ -164,16 +164,16 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
     for original_src, _tmp in plans_decided:
         match = SEASON_EPISODE_RE.search(original_src.stem)
         season = match.group("season") if match else ""
-        episode = match.group("episode") if match else ""
+        episode = (match.group("episode") or "") if match else ""  # Episode can be None
         key = (season, episode)
         current = preview_counters.get(key, 0) + 1
         preview_counters[key] = current
         values = {
-            "title": safe_name,
+            "title": base_title,
             "base_title": base_title,
             "year": parsed_year or "",
-            "season": int(season) if season.isdigit() else season,
-            "episode": int(episode) if episode.isdigit() else episode,
+            "season": int(season) if season and season.isdigit() else season,
+            "episode": int(episode) if episode and episode.isdigit() else episode,
             "counter": current,
         }
         keep_dest_names.add(render_pattern(pattern, values))
@@ -208,17 +208,17 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
 
             match = SEASON_EPISODE_RE.search(original_src.stem)
             season = match.group("season") if match else ""
-            episode = match.group("episode") if match else ""
+            episode = (match.group("episode") or "") if match else ""  # Episode can be None
             key = (season, episode)
             current = counters.get(key, 0) + 1
             counters[key] = current
 
             values = {
-                "title": safe_name,
+                "title": base_title,
                 "base_title": base_title,
                 "year": parsed_year or "",
-                "season": int(season) if season.isdigit() else season,
-                "episode": int(episode) if episode.isdigit() else episode,
+                "season": int(season) if season and season.isdigit() else season,
+                "episode": int(episode) if episode and episode.isdigit() else episode,
                 "counter": current,
             }
 
@@ -231,7 +231,15 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
                         safe_remove(dest)
                     except (OSError, IsADirectoryError):
                         stem, ext = os.path.splitext(new_name)
-                        suffix = f" S{season}E{episode} #{current}".strip()
+                        # Build fallback suffix based on what info we have
+                        if season and episode:
+                            suffix = f" S{season}E{episode} #{current}"
+                        elif season:
+                            suffix = f" S{season} #{current}"
+                        elif episode:
+                            suffix = f" E{episode} #{current}"
+                        else:
+                            suffix = f" #{current}"
                         dest = target / f"{stem}{suffix}{ext}"
                 safe_rename(tmp_path, dest)
                 tmp_map.pop(original_src, None)

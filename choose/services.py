@@ -29,7 +29,10 @@ class GalleryImage(TypedDict):
 class GallerySection(TypedDict):
     """A group of images for the same season/episode combination."""
     title: str
+    season: str
+    episode: str
     images: list[GalleryImage]
+    choose_url: str
 
 
 class FolderImage(TypedDict):
@@ -156,7 +159,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
         grouped[key].append(image)
     
     # Convert grouped dict to sorted list of sections
-    # Sort by season (numeric), then episode (special like IN/OU before numeric)
+    # Sort order: General, Season X (or episode-only), Season X Intro, Season X Episodes, Season X Outro
     def sort_key(item: tuple[tuple[str, str], list[GalleryImage]]) -> tuple:
         season, episode = item[0]
         # Empty season/episode comes first (General section)
@@ -164,40 +167,57 @@ def list_gallery_images(folder: str) -> GalleryContext:
             return (0, 0, 0, "")
         
         # Parse season as int if possible
+        # For episode-only patterns (no season), treat as season 1
         try:
-            season_int = int(season) if season else 999999
+            season_int = int(season) if season else 1
         except ValueError:
             season_int = 999999
         
-        # Handle special episodes (IN, OU) - they should come before numeric episodes
-        episode_upper = episode.upper() if episode else ""
-        if episode_upper == "IN":
-            # Intro comes first in the season
+        # Handle empty episode (season-only) - comes right after General
+        if not episode:
             return (season_int, 1, 0, "")
+        
+        # Handle special episodes (IN, OU)
+        episode_upper = episode.upper()
+        if episode_upper == "IN":
+            # Intro comes after season-only
+            return (season_int, 2, 0, "")
         elif episode_upper == "OU":
             # Outro comes at the end after all episodes
             return (season_int, 999998, 0, "")
         
         # Parse episode as int if possible, otherwise use string sorting
         try:
-            episode_int = int(episode) if episode else 0
+            episode_int = int(episode)
             episode_str = ""
             # Regular episodes come after intro but before outro
-            return (season_int, 2, episode_int, episode_str)
+            return (season_int, 3, episode_int, episode_str)
         except ValueError:
             episode_int = 999999
-            episode_str = episode.upper()
-            return (season_int, 3, episode_int, episode_str)
+            episode_str = episode_upper
+            return (season_int, 4, episode_int, episode_str)
     
     sorted_groups = sorted(grouped.items(), key=sort_key)
     
-    sections: list[GallerySection] = [
-        {
-            "title": format_section_title(season, episode),
-            "images": group_images,
+    sections: list[GallerySection] = []
+    for (season, episode), group_images in sorted_groups:
+        # Build section-specific choose URL with query params for filtering
+        # Always add query params to ensure proper filtering by section
+        from urllib.parse import urlencode
+        params = {
+            'season': season,
+            'episode': episode,
         }
-        for (season, episode), group_images in sorted_groups
-    ]
+        section_choose_url = reverse("choose:folder", kwargs={"folder": safe_name})
+        section_choose_url = f"{section_choose_url}?{urlencode(params)}"
+        
+        sections.append({
+            "title": format_section_title(season, episode),
+            "season": season,
+            "episode": episode,
+            "images": group_images,
+            "choose_url": section_choose_url,
+        })
 
     choose_url = reverse("choose:folder", kwargs={"folder": safe_name})
 
@@ -215,7 +235,17 @@ def list_gallery_images(folder: str) -> GalleryContext:
     )
 
 
-def load_folder_context(folder: str) -> FolderContext:
+def load_folder_context(folder: str, season: str | None = None, episode: str | None = None) -> FolderContext:
+    """Load folder context for the chooser UI.
+    
+    Args:
+        folder: The folder name to load
+        season: Optional season filter (e.g., "01")
+        episode: Optional episode filter (e.g., "03", "IN", "OU")
+        
+    Returns:
+        FolderContext with images (optionally filtered by section)
+    """
     safe_name = validate_folder_name(folder)
     root_path = wallpapers_root()
     target = get_folder_path(safe_name, root_path)
@@ -224,6 +254,19 @@ def load_folder_context(folder: str) -> FolderContext:
         files = list_image_files(target)
     except PermissionError:
         files = []
+    
+    # Filter files by season/episode if specified
+    # Note: Empty strings mean we want to filter for the General section (no season/episode)
+    if season is not None or episode is not None:
+        filtered_files = []
+        for name in files:
+            file_season, file_episode = parse_season_episode(name)
+            # Match if both season and episode match exactly (including empty strings)
+            season_matches = season is None or file_season == season
+            episode_matches = episode is None or file_episode == episode
+            if season_matches and episode_matches:
+                filtered_files.append(name)
+        files = filtered_files
 
     decisions_qs = ImageDecision.objects.filter(folder=safe_name)
     decisions = list(decisions_qs.order_by("decided_at", "filename"))

@@ -23,6 +23,7 @@
   .gallery-section-header[aria-expanded="false"] { margin-bottom: 0; }
   .gallery-section-title { font-size: 1.15rem; font-weight: 600; flex: 1; text-align: left; }
   .gallery-section-count { font-size: 0.9rem; padding: 0.25rem 0.6rem; border-radius: 999px; background: rgba(124,76,245,0.18); color: #d1c5ff; font-weight: 600; }
+  .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.875rem; }
   .gallery-section-arrow { font-size: 0.85rem; color: var(--muted); transition: transform 0.2s ease; }
   .gallery-section-header[aria-expanded="false"] .gallery-section-arrow { transform: rotate(-90deg); }
   .gallery-section-content { overflow: hidden; transition: max-height 0.3s ease, opacity 0.2s ease; }
@@ -92,9 +93,12 @@
           {% if year %}<span>{{ year }}</span>{% endif %}
           <span class="gallery-count">{{ images|length }} image{% if images|length != 1 %}s{% endif %}</span>
         </div>
-        <div class="gallery-actions">
-          <a class="btn btn-primary" href="{{ choose_url }}">Choose</a>
-        </div>
+        {% if sections|length <= 1 %}
+          {# Only show global Choose button for non-series or single-section folders #}
+          <div class="gallery-actions">
+            <a class="btn btn-primary" href="{{ choose_url }}">Choose</a>
+          </div>
+        {% endif %}
       </div>
     </div>
 
@@ -106,6 +110,7 @@
             <button class="gallery-section-header" type="button" data-section-toggle aria-expanded="true">
               <span class="gallery-section-title">{{ section.title }}</span>
               <span class="gallery-section-count">{{ section.images|length }} image{% if section.images|length != 1 %}s{% endif %}</span>
+              <a class="btn btn-primary btn-sm" href="{{ section.choose_url }}" style="margin-left: auto; margin-right: 0.5rem;" onclick="event.stopPropagation();">Choose</a>
               <span class="gallery-section-arrow" aria-hidden="true">▼</span>
             </button>
             <div class="gallery-section-content" data-section-content>
