@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import asdict, dataclass
 from typing import TypedDict
 
@@ -11,6 +12,7 @@ from .utils import (
     get_folder_path,
     list_image_files,
     parse_folder_name,
+    parse_season_episode,
     thumbnail_url,
     validate_folder_name,
     wallpaper_url,
@@ -22,6 +24,12 @@ class GalleryImage(TypedDict):
     name: str
     url: str
     thumb_url: str | None
+
+
+class GallerySection(TypedDict):
+    """A group of images for the same season/episode combination."""
+    title: str
+    images: list[GalleryImage]
 
 
 class FolderImage(TypedDict):
@@ -40,7 +48,8 @@ class GalleryContext:
     cover_url: str | None
     cover_thumb_url: str | None
     choose_url: str
-    images: list[GalleryImage]
+    images: list[GalleryImage]  # kept for backward compatibility
+    sections: list[GallerySection]  # new grouped view
     root: str
 
     def to_dict(self) -> dict[str, object]:
@@ -59,6 +68,44 @@ class FolderContext:
 
     def to_dict(self) -> dict[str, object]:
         return asdict(self)
+
+
+def format_section_title(season: str, episode: str) -> str:
+    """Format a human-readable section title from season/episode identifiers.
+    
+    Args:
+        season: Season identifier (e.g., "01", "1", or "")
+        episode: Episode identifier (e.g., "03", "IN", "OU", or "")
+        
+    Returns:
+        Formatted title like "Season 1 Episode 3", "Season 1 Intro", "Season 1", or "General"
+    """
+    if not season and not episode:
+        return "General"
+    
+    parts = []
+    if season:
+        try:
+            season_num = int(season)
+            parts.append(f"Season {season_num}")
+        except ValueError:
+            parts.append(f"Season {season}")
+    
+    if episode:
+        # Check for special episode markers
+        episode_upper = episode.upper()
+        if episode_upper == "IN":
+            parts.append("Intro")
+        elif episode_upper == "OU":
+            parts.append("Outro")
+        else:
+            try:
+                ep_num = int(episode)
+                parts.append(f"Episode {ep_num}")
+            except ValueError:
+                parts.append(f"Episode {episode}")
+    
+    return " ".join(parts) if parts else "General"
 
 
 def list_gallery_images(folder: str) -> GalleryContext:
@@ -86,6 +133,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
         else None
     )
 
+    # Build flat list of images (for backward compatibility)
     images: list[GalleryImage] = [
         {
             "name": name,
@@ -93,6 +141,62 @@ def list_gallery_images(folder: str) -> GalleryContext:
             "thumb_url": thumbnail_url(safe_name, name, width=512, root=root_path),
         }
         for name in files
+    ]
+
+    # Group images by season/episode
+    grouped: dict[tuple[str, str], list[GalleryImage]] = defaultdict(list)
+    for name in files:
+        season, episode = parse_season_episode(name)
+        key = (season, episode)
+        image: GalleryImage = {
+            "name": name,
+            "url": wallpaper_url(safe_name, name, root=root_path),
+            "thumb_url": thumbnail_url(safe_name, name, width=512, root=root_path),
+        }
+        grouped[key].append(image)
+    
+    # Convert grouped dict to sorted list of sections
+    # Sort by season (numeric), then episode (special like IN/OU before numeric)
+    def sort_key(item: tuple[tuple[str, str], list[GalleryImage]]) -> tuple:
+        season, episode = item[0]
+        # Empty season/episode comes first (General section)
+        if not season and not episode:
+            return (0, 0, 0, "")
+        
+        # Parse season as int if possible
+        try:
+            season_int = int(season) if season else 999999
+        except ValueError:
+            season_int = 999999
+        
+        # Handle special episodes (IN, OU) - they should come before numeric episodes
+        episode_upper = episode.upper() if episode else ""
+        if episode_upper == "IN":
+            # Intro comes first in the season
+            return (season_int, 1, 0, "")
+        elif episode_upper == "OU":
+            # Outro comes at the end after all episodes
+            return (season_int, 999998, 0, "")
+        
+        # Parse episode as int if possible, otherwise use string sorting
+        try:
+            episode_int = int(episode) if episode else 0
+            episode_str = ""
+            # Regular episodes come after intro but before outro
+            return (season_int, 2, episode_int, episode_str)
+        except ValueError:
+            episode_int = 999999
+            episode_str = episode.upper()
+            return (season_int, 3, episode_int, episode_str)
+    
+    sorted_groups = sorted(grouped.items(), key=sort_key)
+    
+    sections: list[GallerySection] = [
+        {
+            "title": format_section_title(season, episode),
+            "images": group_images,
+        }
+        for (season, episode), group_images in sorted_groups
     ]
 
     choose_url = reverse("choose:folder", kwargs={"folder": safe_name})
@@ -106,6 +210,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
         cover_thumb_url=cover_thumb_url,
         choose_url=choose_url,
         images=images,
+        sections=sections,
         root=str(root_path),
     )
 

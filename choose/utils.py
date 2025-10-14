@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import Iterable, TypedDict
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
 
-from .constants import IMAGE_EXTS
+from .constants import IMAGE_EXTS, SEASON_EPISODE_PATTERN
 from kwc.utils.files import cache_token
 
 
@@ -177,6 +178,25 @@ def thumbnail_url(
 
     query = urlencode(params)
     return f"{base}?{query}" if query else base
+
+
+def parse_season_episode(filename: str) -> tuple[str, str]:
+    """Parse season and episode from a filename.
+    
+    Args:
+        filename: The filename to parse (e.g., "Title S01E02.jpg" or "Title S01EIN.jpg")
+        
+    Returns:
+        A tuple of (season, episode) where both are strings. Returns ("", "") if no match.
+        Season is numeric (e.g., "01"), episode can be numeric or special like "IN", "OU".
+    """
+    pattern = re.compile(SEASON_EPISODE_PATTERN, re.IGNORECASE)
+    match = pattern.search(filename)
+    if match:
+        season = match.group("season")
+        episode = match.group("episode")
+        return season, episode
+    return "", ""
 
 
 def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Path]:
