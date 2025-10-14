@@ -159,7 +159,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
         grouped[key].append(image)
     
     # Convert grouped dict to sorted list of sections
-    # Sort by season (numeric), then episode (special like IN/OU before numeric)
+    # Sort order: General, Season X, Season X Intro, Season X Outro, Season X Episode Y
     def sort_key(item: tuple[tuple[str, str], list[GalleryImage]]) -> tuple:
         season, episode = item[0]
         # Empty season/episode comes first (General section)
@@ -172,25 +172,29 @@ def list_gallery_images(folder: str) -> GalleryContext:
         except ValueError:
             season_int = 999999
         
-        # Handle special episodes (IN, OU) - they should come before numeric episodes
-        episode_upper = episode.upper() if episode else ""
-        if episode_upper == "IN":
-            # Intro comes first in the season
+        # Handle empty episode (season-only) - comes right after General
+        if not episode:
             return (season_int, 1, 0, "")
+        
+        # Handle special episodes (IN, OU)
+        episode_upper = episode.upper()
+        if episode_upper == "IN":
+            # Intro comes after season-only
+            return (season_int, 2, 0, "")
         elif episode_upper == "OU":
             # Outro comes at the end after all episodes
             return (season_int, 999998, 0, "")
         
         # Parse episode as int if possible, otherwise use string sorting
         try:
-            episode_int = int(episode) if episode else 0
+            episode_int = int(episode)
             episode_str = ""
             # Regular episodes come after intro but before outro
-            return (season_int, 2, episode_int, episode_str)
+            return (season_int, 3, episode_int, episode_str)
         except ValueError:
             episode_int = 999999
-            episode_str = episode.upper()
-            return (season_int, 3, episode_int, episode_str)
+            episode_str = episode_upper
+            return (season_int, 4, episode_int, episode_str)
     
     sorted_groups = sorted(grouped.items(), key=sort_key)
     
