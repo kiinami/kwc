@@ -14,4 +14,5 @@ services:
       - "${HOME}/.local/share/kwc/static:/app/static"
       # Wallpapers root (matches KWC_WALLPAPERS_FOLDER)
       - "${HOME}/media/wallpapers:/media/wallpapers"
+      - "${HOME}/tmp:/media/tmp"
     restart: unless-stopped

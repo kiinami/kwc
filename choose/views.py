@@ -20,6 +20,7 @@ import json
 from .models import ImageDecision, FolderProgress
 from .constants import SEASON_EPISODE_PATTERN, THUMB_MAX_DIMENSION, THUMB_CACHE_SIZE
 from extract.utils import render_pattern
+from kwc.utils.files import safe_remove, safe_rename
 from .utils import (
 	wallpapers_root,
 	parse_folder_name,
@@ -319,8 +320,8 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 		p = target / name
 		try:
 			if p.exists() and p.is_file():
-				os.remove(p)
-		except OSError as e:
+				safe_remove(p)
+		except (OSError, IsADirectoryError) as e:
 			delete_errors.append(f"{name}: {e}")
 
 	# Prepare renames for kept files to close gaps
@@ -337,10 +338,10 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 		tmp = target / f".{idx:04d}.renametmp.{os.getpid()}_{idx}{src.suffix.lower()}"
 		try:
 			if src.exists():
-				os.rename(src, tmp)
+				safe_rename(src, tmp)
 				tmp_map[src] = tmp
 				ordered_originals.append(src)
-		except OSError as e:
+		except (FileNotFoundError, OSError) as e:
 			# If temp rename fails, abort and report
 			return JsonResponse({"error": "temp_rename_failed", "file": name, "detail": str(e)}, status=500)
 
@@ -374,15 +375,15 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 			# If destination exists (rare), try to unlink or adjust name
 			if dest.exists():
 				try:
-					os.remove(dest)
-				except OSError:
+					safe_remove(dest)
+				except (OSError, IsADirectoryError):
 					# Fallback: append suffix using combined key and counter
 					stem, ext = os.path.splitext(new_name)
 					suffix = f" S{season}E{episode} #{current}".strip()
 					dest = target / f"{stem}{suffix}{ext}"
-			os.rename(tmp, dest)
+			safe_rename(tmp, dest)
 			final_keep_names.append(dest.name)
-		except OSError as e:
+		except (FileNotFoundError, OSError) as e:
 			rename_errors.append(f"{original_src.name} -> {dest.name}: {e}")
 
 	# Clean up any leftover temps on error
@@ -392,8 +393,8 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 			if tmp.exists():
 				try:
 					# best-effort cleanup
-					os.remove(tmp)
-				except OSError:
+					safe_remove(tmp)
+				except (OSError, IsADirectoryError):
 					pass
 		return JsonResponse({"error": "rename_failed", "details": rename_errors, "delete_errors": delete_errors}, status=500)
 

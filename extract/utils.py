@@ -11,6 +11,9 @@ from django.template import Engine, Context
 logger = logging.getLogger(__name__)
 
 
+PATTERN_ENGINE = Engine(builtins=["extract.templatetags.naming"])
+
+
 def trim_video(video: Path, output: Path, start: str | None = None, end: str | None = None) -> None:
     if start and end:
         options = {"ss": start, "to": end}
@@ -99,6 +102,5 @@ def render_pattern(pattern: str, values: dict[str, object]) -> str:
     The pattern can use template variables like {{ title }}, {{ counter }}, {{ year }}, {{ season }}, {{ episode }}
     and the custom filter "pad" from extract.templatetags.naming, for example: {{ counter|pad:4 }}.
     """
-    engine = Engine(builtins=["extract.templatetags.naming"])  # includes the 'pad' filter
-    tpl = engine.from_string(pattern)
+    tpl = PATTERN_ENGINE.from_string(pattern)
     return tpl.render(Context(values))

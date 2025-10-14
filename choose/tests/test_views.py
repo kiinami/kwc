@@ -10,7 +10,7 @@ from django.test import TestCase
 from django.urls import reverse
 from PIL import Image
 
-from .models import FolderProgress, ImageDecision
+from ..models import FolderProgress, ImageDecision
 
 
 class MediaLibraryViewsTests(TestCase):
@@ -153,4 +153,3 @@ class MediaLibraryViewsTests(TestCase):
 		images = chooser_response.context['images']
 		self.assertEqual(images[1]['decision'], ImageDecision.DECISION_KEEP)
 		self.assertEqual(images[2]['name'], folder_files[2])
-
