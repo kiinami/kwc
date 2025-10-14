@@ -54,6 +54,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const cacheControl = request.headers.get('Cache-Control') || '';
+  const shouldBypassCache =
+    requestUrl.pathname.includes('/api/') ||
+    cacheControl.toLowerCase().includes('no-store') ||
+    request.cache === 'no-store';
+
+  if (shouldBypassCache) {
+    event.respondWith(
+      fetch(request).catch(() =>
+        new Response(null, {
+          status: 503,
+          statusText: 'Service Unavailable',
+        })
+      )
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cachedResponse) => {
       if (cachedResponse) {

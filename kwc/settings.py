@@ -207,6 +207,30 @@ EXTRACT_IMAGE_PATTERN = os.getenv(
 )
 
 
+def _int_setting(env_name: str, default: int, *, minimum: int | None = None) -> int:
+    try:
+        value = int(os.getenv(env_name, str(default)))
+    except (TypeError, ValueError):
+        value = default
+    if minimum is not None and value < minimum:
+        return minimum
+    return value
+
+
+def _float_setting(env_name: str, default: float, *, minimum: float | None = None) -> float:
+    try:
+        value = float(os.getenv(env_name, str(default)))
+    except (TypeError, ValueError):
+        value = default
+    if minimum is not None and value < minimum:
+        return minimum
+    return value
+
+
+EXTRACT_FFMPEG_RETRIES = _int_setting('KWC_EXTRACT_FFMPEG_RETRIES', 2, minimum=0)
+EXTRACT_FFMPEG_RETRY_BACKOFF = _float_setting('KWC_EXTRACT_FFMPEG_RETRY_BACKOFF', 0.5, minimum=0.0)
+
+
 def _positive_int_or_none(value: str | None) -> int | None:
     if value is None:
         return None

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Iterable, Tuple, TypedDict
 import os
-import time
+from pathlib import Path
+from typing import Iterable, TypedDict
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
 
 from .constants import IMAGE_EXTS
+from kwc.utils.files import cache_token
 
 
 def validate_folder_name(folder: str) -> str:
@@ -67,7 +67,10 @@ def parse_title_year_from_folder(folder_name: str) -> tuple[str, str | int | Non
     """
     title, year_int = parse_folder_name(folder_name)
     return title, year_int
-    """Typed representation of a media folder discovered under the wallpapers root."""
+
+
+class MediaFolder(TypedDict):
+    """Metadata describing a folder of extracted wallpapers."""
 
     name: str
     title: str
@@ -88,7 +91,7 @@ def wallpapers_root() -> Path:
     return Path(settings.WALLPAPERS_FOLDER)
 
 
-def parse_folder_name(folder_name: str) -> Tuple[str, int | None]:
+def parse_folder_name(folder_name: str) -> tuple[str, int | None]:
     """Parse a folder name like "Title (2020)" into (title, year|None).
 
     If no year suffix exists, returns the whole name as title and year=None.
@@ -137,21 +140,12 @@ def find_cover_filename(folder: Path, files: Iterable[str] | None = None) -> str
     return None
 
 
-def _cache_token(path: Path) -> str:
-    try:
-        stat = path.stat()
-    except OSError:
-        return f"{int(time.time() * 1_000_000):x}"
-    ino = getattr(stat, "st_ino", 0)
-    return f"{stat.st_mtime_ns:x}-{stat.st_size:x}-{ino:x}"
-
-
 def wallpaper_url(folder: str, filename: str, *, root: Path | None = None) -> str:
     """Return a cache-busted URL for a wallpaper image."""
     base = f"/wallpapers/{quote(folder)}/{quote(filename)}"
     actual_root = root or wallpapers_root()
     path = actual_root / folder / filename
-    return f"{base}?v={_cache_token(path)}"
+    return f"{base}?v={cache_token(path)}"
 
 
 def thumbnail_url(
@@ -179,7 +173,7 @@ def thumbnail_url(
         params['w'] = str(width)
     if height and height > 0:
         params['h'] = str(height)
-    params['v'] = _cache_token(path)
+    params['v'] = cache_token(path)
 
     query = urlencode(params)
     return f"{base}?{query}" if query else base
@@ -223,19 +217,18 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
                     except Exception:
                         mtime = 0
 
-                    entries.append(
-                        {
-                            'name': folder_name,
-                            'title': title,
-                            'year': str(year_int) if year_int is not None else '',
-                            'year_raw': year_int,
-                            'year_sort': year_int if year_int is not None else -1,
-                            'mtime': mtime,
-                            'cover_filename': cover_filename,
-                            'cover_url': cover_url,
-                            'cover_thumb_url': cover_thumb_url,
-                        }
-                    )
+                    entry: MediaFolder = {
+                        'name': folder_name,
+                        'title': title,
+                        'year': str(year_int) if year_int is not None else '',
+                        'year_raw': year_int,
+                        'year_sort': year_int if year_int is not None else -1,
+                        'mtime': mtime,
+                        'cover_filename': cover_filename,
+                        'cover_url': cover_url,
+                        'cover_thumb_url': cover_thumb_url,
+                    }
+                    entries.append(entry)
         except PermissionError:
             # If the process lacks permissions, surface an empty list instead of failing.
             pass

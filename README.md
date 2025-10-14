@@ -6,6 +6,14 @@ Apps:
 - Extract: cut/trim and extract I-frame images using FFmpeg
 - Choose: review images and quickly mark keep/delete, then apply and rename
 
+## Prerequisites
+
+- Python 3.13 (matches the runtime in the Docker image and lockfile)
+- [uv 0.4.29](https://github.com/astral-sh/uv) for dependency and virtualenv management
+- Docker 24+ (optional, only for container workflows)
+
+Guides for setup and workflow will live in [Contributing](#contributing) and [Testing](#testing) soon.
+
 ## Configuration
 
 Copy `.env.example` to `.env` and tweak as needed. Key variables:
@@ -26,7 +34,7 @@ Build and run the container exposing port 8080. Volumes mount the DB, static fil
 
 ## Development
 
-Install Python 3.13 and dependencies with your preferred manager. Example using uv:
+Install Python 3.13 and dependencies with your preferred manager. Example using uv 0.4.29:
 
 1) Create a virtualenv and sync deps
 2) Run the dev server
@@ -59,3 +67,11 @@ After changing cache-related settings, deployers should bump `KWC_PWA_CACHE_ID` 
 
 - No tests are provided by design for this refactor.
 - Backwards-compatibility shims were intentionally removed. Templates use Django syntax only.
+
+## Contributing
+
+Details coming soon — track workflow updates here.
+
+## Testing
+
+Planned instructions will land here alongside the Contributing guide.

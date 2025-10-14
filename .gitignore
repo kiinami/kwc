@@ -1,5 +1,8 @@
-.env# Byte-compiled / optimized / DLL files
+.env
+
+# Byte-compiled / optimized / DLL files
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -159,10 +162,15 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+# Build outputs
 out*
 
+# Large media samples
 *.mkv
 *.mp4
+*.MP4
+*.MKV
+
 
 .llm
 ### Django template
@@ -262,3 +270,4 @@ media
 #.idea/
 
 *.sqlite3
+data/

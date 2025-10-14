@@ -19,7 +19,7 @@ ENV DJANGO_SETTINGS_MODULE=kwc.settings \
     VIRTUAL_ENV=/venv
 
 # Install uv from the official image
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.4.29 /uv /usr/local/bin/uv
 
 # System deps for building wheels if needed
 RUN <<EOT
