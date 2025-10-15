@@ -5,8 +5,10 @@ class ExtractionJob(models.Model):
 	class Status(models.TextChoices):
 		PENDING = "pending", "Pending"
 		RUNNING = "running", "Running"
+		CANCELLING = "cancelling", "Cancelling"
 		DONE = "done", "Done"
 		ERROR = "error", "Error"
+		CANCELLED = "cancelled", "Cancelled"
 
 	id = models.CharField(primary_key=True, max_length=32, editable=False)
 	name = models.CharField(max_length=255, blank=True, default="")
@@ -46,5 +48,7 @@ class ExtractionJob(models.Model):
 		return {
 			self.Status.DONE: "done",
 			self.Status.RUNNING: "running",
+			self.Status.CANCELLING: "running",
 			self.Status.ERROR: "error",
+			self.Status.CANCELLED: "cancelled",
 		}.get(self.status, "pending")

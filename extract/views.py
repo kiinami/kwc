@@ -163,6 +163,32 @@ def job_api(request: HttpRequest, job_id: str) -> JsonResponse:
 	return JsonResponse(payload)
 
 
+@require_POST
+def cancel_job(request: HttpRequest, job_id: str) -> JsonResponse:
+	"""Cancel a running extraction job."""
+	job_obj = get_object_or_404(ExtractionJob, pk=job_id)
+	
+	# Check if job is already finished
+	if job_obj.status in FINISHED_STATUSES:
+		return JsonResponse({"success": False, "error": "Job already finished"}, status=400)
+	
+	# Immediately mark the job as cancelling in the database
+	job_obj.status = ExtractionJob.Status.CANCELLING
+	job_obj.save(update_fields=["status", "updated_at"])
+	
+	# Try to cancel the job
+	was_running = job_runner.cancel_job(job_id)
+	
+	if not was_running:
+		# Job wasn't actually running, mark as fully cancelled
+		job_obj.status = ExtractionJob.Status.CANCELLED
+		job_obj.error = "Job cancelled by user"
+		job_obj.finished_at = timezone.now()
+		job_obj.save(update_fields=["status", "error", "finished_at", "updated_at"])
+	
+	return JsonResponse({"success": True, "status": job_obj.status})
+
+
 def index(request: HttpRequest) -> HttpResponse:
 	jobs = [
 		_job_summary(job)
