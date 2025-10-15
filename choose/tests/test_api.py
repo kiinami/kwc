@@ -210,16 +210,16 @@ def test_save_api_episode_only_preserves_episode_number(client, wallpapers_dir: 
 	assert len(files_after) == 3
 	
 	# Episode 1 files should have E01 in their names (counter resets per episode)
-	# Note: Pattern doesn't add space before E when there's no season
+	# Pattern now adds space before E when there's no season for proper parsing
 	ep1_files = [f for f in files_after if 'E01' in f]
 	assert len(ep1_files) == 2
-	assert 'ShowE01 〜 0001.jpg' in files_after
-	assert 'ShowE01 〜 0002.jpg' in files_after
+	assert 'Show E01 〜 0001.jpg' in files_after
+	assert 'Show E01 〜 0002.jpg' in files_after
 	
 	# Episode 2 file should have E02 in its name
 	ep2_files = [f for f in files_after if 'E02' in f]
 	assert len(ep2_files) == 1
-	assert 'ShowE02 〜 0001.jpg' in files_after
+	assert 'Show E02 〜 0001.jpg' in files_after
 
 	# Ensure no files without episode numbers (General category)
 	# This was the bug - files were being renamed to just "Show 〜 0001.jpg" without episode

@@ -201,9 +201,10 @@ EXTRACT_FOLDER_PATTERN = os.getenv(
 
 # Image filename pattern. Supports Django template syntax and brace placeholders.
 # Default: conditionally include season/episode; zero-pad using the 'pad' filter; pad counter to 4.
+# Note: Space before E when there's no season ensures episode-only files can be parsed back.
 EXTRACT_IMAGE_PATTERN = os.getenv(
     'KWC_IMAGE_PATTERN',
-    '{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}{% if episode %}E{{ episode|pad:2 }}{% endif %} 〜 {{ counter|pad:4 }}.jpg'
+    '{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}{% if episode %}{% if not season %} {% endif %}E{{ episode|pad:2 }}{% endif %} 〜 {{ counter|pad:4 }}.jpg'
 )
 
 
