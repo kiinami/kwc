@@ -3,11 +3,13 @@
 {% block title %}Extract · KWC{% endblock %}
 {% block content %}
 <div style="min-height: 60vh; display: grid; place-items: center;">
-  <div style="width: 100%; max-width: 720px;">
+  <div style="width: 100%; max-width: 960px;">
   <h1>New extraction</h1>
   <form method="post" action="" novalidate>
       {% csrf_token %}
-      <div class="card">
+      <div style="display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start;">
+        <!-- Main form fields -->
+        <div class="card">
         <div class="field">
           {% if form.non_field_errors %}
             <div class="status status--error">{{ form.non_field_errors }}</div>
@@ -66,6 +68,20 @@
             <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
           </div>
         </div>
+      </div>
+
+      <!-- Cover image field -->
+      <div>
+        <div class="field-label" style="margin-bottom:.5rem;">Cover image</div>
+        <input type="hidden" name="{{ form.cover_image_url.html_name }}" id="id_cover_image_url" />
+        <div id="coverField" class="cover-field" onclick="openCoverModal()">
+          <div id="coverPreview" class="cover-preview">
+            <div class="cover-placeholder">No cover selected</div>
+          </div>
+        </div>
+        <div class="muted" style="font-size:.85rem; margin-top:.5rem; text-align: center;">Click to select from TMDB</div>
+        {% if form.cover_image_url.errors %}<div class="status status--error">{{ form.cover_image_url.errors|striptags }}</div>{% endif %}
+      </div>
       </div>
     </form>
   </div>
@@ -373,5 +389,250 @@
   // Auto-run when user edits the video path
   videoEl?.addEventListener('change', () => guessFromVideoInput());
   videoEl?.addEventListener('blur', () => guessFromVideoInput());
+
+  // ============================================================================
+  // Cover Image Selection with TMDB
+  // ============================================================================
+
+  const coverImageUrlInput = document.getElementById('id_cover_image_url');
+  const coverPreview = document.getElementById('coverPreview');
+  const coverField = document.getElementById('coverField');
+  let selectedCoverUrl = '';
+  let isFolderExisting = false;
+
+  // Check if we're editing an existing folder
+  async function checkExistingFolder() {
+    const enteredTitle = titleEl?.value.trim() || '';
+    if (!enteredTitle) return false;
+    
+    const match = existingFolders.find(f => 
+      f.title.toLowerCase() === enteredTitle.toLowerCase()
+    );
+    
+    if (match) {
+      // Check if .cover file exists
+      try {
+        const folderName = match.name;
+        const coverCheckUrl = `/wallpapers/${encodeURIComponent(folderName)}/.cover.jpg`;
+        const response = await fetch(coverCheckUrl, { method: 'HEAD' });
+        if (response.ok) {
+          // Folder has existing cover
+          isFolderExisting = true;
+          coverField.style.cursor = 'not-allowed';
+          coverField.style.opacity = '0.7';
+          coverField.onclick = null;
+          
+          // Display existing cover
+          coverPreview.innerHTML = `<img src="${coverCheckUrl}" alt="Cover" class="cover-image" />`;
+          return true;
+        }
+      } catch (e) {
+        // If .cover.jpg doesn't exist, try other extensions
+        console.log('Cover check failed', e);
+      }
+    }
+    
+    // Reset to editable state
+    isFolderExisting = false;
+    coverField.style.cursor = 'pointer';
+    coverField.style.opacity = '1';
+    coverField.onclick = () => openCoverModal();
+    return false;
+  }
+
+  // Update cover preview when title changes
+  titleEl?.addEventListener('blur', checkExistingFolder);
+  titleEl?.addEventListener('change', checkExistingFolder);
+
+  function openCoverModal() {
+    if (isFolderExisting) return;
+    
+    const modal = ensureCoverModal();
+    modal.classList.add('open');
+    
+    // Pre-fill search with title if available
+    const searchInput = document.getElementById('tmdbSearchInput');
+    if (searchInput && titleEl) {
+      searchInput.value = titleEl.value.trim();
+    }
+    
+    // Clear previous results
+    document.getElementById('tmdbResults').innerHTML = '';
+    document.getElementById('tmdbPosters').innerHTML = '';
+  }
+
+  function closeCoverModal() {
+    const modal = document.getElementById('coverModal');
+    if (modal) {
+      modal.classList.remove('open');
+    }
+  }
+
+  function ensureCoverModal() {
+    let modal = document.getElementById('coverModal');
+    if (modal) return modal;
+    
+    modal = document.createElement('div');
+    modal.id = 'coverModal';
+    modal.innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target === this) closeCoverModal()">
+        <div class="modal-content cover-modal-content">
+          <div class="modal-header">
+            <h2 style="margin:0;">Select Cover Image</h2>
+            <button type="button" class="btn btn-ghost" onclick="closeCoverModal()">Close</button>
+          </div>
+          
+          <div class="modal-body">
+            <!-- Search section -->
+            <div class="search-section">
+              <div class="field">
+                <input type="text" id="tmdbSearchInput" class="input" placeholder="Search for movie or TV show..." />
+              </div>
+              <button type="button" class="btn btn-primary" onclick="searchTMDB()">Search</button>
+            </div>
+            
+            <!-- Search results -->
+            <div id="tmdbResults" class="tmdb-results"></div>
+            
+            <!-- Posters grid -->
+            <div id="tmdbPosters" class="posters-grid"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Enter key to search
+    const searchInput = document.getElementById('tmdbSearchInput');
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchTMDB();
+      }
+    });
+    
+    return modal;
+  }
+
+  async function searchTMDB() {
+    const searchInput = document.getElementById('tmdbSearchInput');
+    const query = searchInput.value.trim();
+    if (!query) return;
+    
+    const resultsDiv = document.getElementById('tmdbResults');
+    const postersDiv = document.getElementById('tmdbPosters');
+    
+    resultsDiv.innerHTML = '<div class="muted" style="padding:1rem;">Searching...</div>';
+    postersDiv.innerHTML = '';
+    
+    try {
+      const year = yearEl?.value.trim() || '';
+      const url = '{% url 'extract:tmdb_search_api' %}?' + new URLSearchParams({ query, year }).toString();
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Search failed');
+      }
+      
+      const data = await response.json();
+      displaySearchResults(data.results || []);
+    } catch (e) {
+      resultsDiv.innerHTML = `<div class="status status--error" style="padding:1rem;">${e.message}</div>`;
+      console.error('TMDB search failed', e);
+    }
+  }
+
+  function displaySearchResults(results) {
+    const resultsDiv = document.getElementById('tmdbResults');
+    
+    if (results.length === 0) {
+      resultsDiv.innerHTML = '<div class="muted" style="padding:1rem;">No results found</div>';
+      return;
+    }
+    
+    resultsDiv.innerHTML = '<div class="field-label" style="margin-bottom:.5rem;">Select a title:</div>';
+    
+    const grid = document.createElement('div');
+    grid.className = 'search-results-grid';
+    
+    results.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'search-result-card';
+      card.onclick = () => loadPosters(item.media_type, item.id);
+      
+      const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
+      const typeLabel = item.media_type === 'movie' ? 'Movie' : 'TV Show';
+      
+      card.innerHTML = `
+        <div style="font-weight:600;">${item.title}</div>
+        <div class="muted" style="font-size:.85rem;">${year} · ${typeLabel}</div>
+      `;
+      
+      grid.appendChild(card);
+    });
+    
+    resultsDiv.appendChild(grid);
+  }
+
+  async function loadPosters(mediaType, mediaId) {
+    const postersDiv = document.getElementById('tmdbPosters');
+    postersDiv.innerHTML = '<div class="muted" style="padding:1rem;">Loading posters...</div>';
+    
+    try {
+      const url = '{% url 'extract:tmdb_posters_api' %}?' + new URLSearchParams({ 
+        media_type: mediaType, 
+        media_id: mediaId 
+      }).toString();
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to load posters');
+      }
+      
+      const data = await response.json();
+      displayPosters(data.posters || []);
+    } catch (e) {
+      postersDiv.innerHTML = `<div class="status status--error" style="padding:1rem;">${e.message}</div>`;
+      console.error('TMDB load posters failed', e);
+    }
+  }
+
+  function displayPosters(posters) {
+    const postersDiv = document.getElementById('tmdbPosters');
+    
+    if (posters.length === 0) {
+      postersDiv.innerHTML = '<div class="muted" style="padding:1rem;">No posters found</div>';
+      return;
+    }
+    
+    postersDiv.innerHTML = '<div class="field-label" style="margin-bottom:.5rem;">Select a poster:</div>';
+    
+    const grid = document.createElement('div');
+    grid.className = 'posters-grid-inner';
+    
+    posters.forEach(poster => {
+      const card = document.createElement('div');
+      card.className = 'poster-card';
+      card.onclick = () => selectPoster(poster.url);
+      
+      card.innerHTML = `<img src="${poster.url}" alt="Poster" loading="lazy" />`;
+      grid.appendChild(card);
+    });
+    
+    postersDiv.appendChild(grid);
+  }
+
+  function selectPoster(url) {
+    selectedCoverUrl = url;
+    coverImageUrlInput.value = url;
+    
+    // Update preview
+    coverPreview.innerHTML = `<img src="${url}" alt="Cover" class="cover-image" />`;
+    
+    closeCoverModal();
+  }
+
 </script>
 {% endblock %}
