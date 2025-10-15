@@ -274,16 +274,18 @@ def browse_api(request: HttpRequest) -> JsonResponse:
 def folders_api(request: HttpRequest) -> JsonResponse:
 	"""List existing wallpaper folders with their metadata.
 
-	Returns a list of folders that can be used for autofill in the extract form.
+	Returns a list of folders that can be used for selection in the extract form.
 	"""
 	from choose.utils import list_media_folders
 	folders, _ = list_media_folders()
-	# Return simplified list with just the info needed for autofill
+	# Return folder data including cover URLs for the dropdown
 	result = [
 		{
 			"name": f["name"],
 			"title": f["title"],
 			"year": f["year_raw"],  # Return raw int or None
+			"cover_url": f["cover_url"],
+			"cover_thumb_url": f["cover_thumb_url"],
 		}
 		for f in folders
 	]

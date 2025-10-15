@@ -210,10 +210,14 @@ def test_folders_api_returns_existing_folders(tmp_path, settings):
 	movie_a = next(f for f in folders if f['name'] == "Movie A (2020)")
 	assert movie_a['title'] == "Movie A"
 	assert movie_a['year'] == 2020
+	assert 'cover_url' in movie_a
+	assert 'cover_thumb_url' in movie_a
 	
 	movie_c = next(f for f in folders if f['name'] == "Movie C")
 	assert movie_c['title'] == "Movie C"
 	assert movie_c['year'] is None
+	assert 'cover_url' in movie_c
+	assert 'cover_thumb_url' in movie_c
 
 
 @pytest.mark.django_db

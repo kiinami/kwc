@@ -7,6 +7,28 @@
   <h1>New extraction</h1>
   <form method="post" action="" novalidate>
       {% csrf_token %}
+      
+      <!-- Folder Selection Dropdown -->
+      <div class="field" style="margin-bottom: 1.5rem;">
+        <div class="field-label">Folder</div>
+        <div class="folder-select-wrapper">
+          <div id="folderSelectButton" class="folder-select-button">
+            <div class="folder-select-display">
+              <span>Create new</span>
+            </div>
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+            </svg>
+          </div>
+          <div id="folderSelectDropdown" class="folder-select-dropdown" style="display: none;">
+            <div class="folder-select-option" data-value="" data-title="" data-year="" data-cover-url="">
+              <span>Create new</span>
+            </div>
+          </div>
+        </div>
+        <input type="hidden" id="selectedFolder" value="" />
+      </div>
+      
       <div style="display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start;">
         <!-- Main form fields -->
         <div class="card">
@@ -27,7 +49,6 @@
           <div class="field">
             <div class="field-label">Title</div>
             {{ form.title }}
-            <datalist id="titleSuggestions"></datalist>
             {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
             
           </div>
@@ -99,7 +120,6 @@
   if (titleEl) { 
     titleEl.classList.add('input'); 
     titleEl.classList.add('input-narrow'); 
-    titleEl.setAttribute('list', 'titleSuggestions');
   }
   const yearEl = document.getElementById('{{ form.year.auto_id }}');
   const seasonEl = document.getElementById('{{ form.season.auto_id }}');
@@ -110,6 +130,9 @@
   const namingPreview = document.getElementById('namingPreview');
   const folderPattern = "{{ folder_pattern|escapejs }}";
   const imagePattern = "{{ image_pattern|escapejs }}";
+  const folderSelectButton = document.getElementById('folderSelectButton');
+  const folderSelectDropdown = document.getElementById('folderSelectDropdown');
+  const selectedFolderInput = document.getElementById('selectedFolder');
 
   function formatPreview() {
     const title = (titleEl?.value || '').trim() || 'Sample title';
@@ -128,7 +151,24 @@
   // Initialize preview
   formatPreview();
   
-  // Load existing folders for autocomplete
+  // Custom folder dropdown
+  let isDropdownOpen = false;
+  
+  folderSelectButton?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isDropdownOpen = !isDropdownOpen;
+    folderSelectDropdown.style.display = isDropdownOpen ? 'block' : 'none';
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (isDropdownOpen && !folderSelectButton?.contains(e.target) && !folderSelectDropdown?.contains(e.target)) {
+      isDropdownOpen = false;
+      folderSelectDropdown.style.display = 'none';
+    }
+  });
+  
+  // Load existing folders for dropdown
   let existingFolders = [];
   async function loadExistingFolders() {
     try {
@@ -137,18 +177,38 @@
       const data = await res.json();
       existingFolders = data.folders || [];
       
-      // Populate datalist with unique titles
-      const datalist = document.getElementById('titleSuggestions');
-      if (datalist) {
-        datalist.innerHTML = '';
-        const titles = new Set();
+      // Populate folder dropdown with styled options
+      if (folderSelectDropdown) {
         existingFolders.forEach(f => {
-          if (f.title && !titles.has(f.title)) {
-            titles.add(f.title);
-            const option = document.createElement('option');
-            option.value = f.title;
-            datalist.appendChild(option);
+          const option = document.createElement('div');
+          option.className = 'folder-select-option';
+          option.dataset.value = f.name;
+          option.dataset.title = f.title;
+          option.dataset.year = f.year || '';
+          option.dataset.coverUrl = f.cover_url || '';
+          option.dataset.coverThumbUrl = f.cover_thumb_url || '';
+          
+          // Create option content with cover, title, and year
+          if (f.cover_thumb_url) {
+            option.innerHTML = `
+              <img src="${f.cover_thumb_url}" alt="${f.title}" class="folder-option-cover" />
+              <div class="folder-option-text">
+                <div class="folder-option-title">${f.title}</div>
+                ${f.year ? `<div class="folder-option-year">${f.year}</div>` : ''}
+              </div>
+            `;
+          } else {
+            option.innerHTML = `
+              <div class="folder-option-no-cover"></div>
+              <div class="folder-option-text">
+                <div class="folder-option-title">${f.title}</div>
+                ${f.year ? `<div class="folder-option-year">${f.year}</div>` : ''}
+              </div>
+            `;
           }
+          
+          option.addEventListener('click', () => selectFolder(f));
+          folderSelectDropdown.appendChild(option);
         });
       }
     } catch (e) {
@@ -156,29 +216,72 @@
     }
   }
   
-  // Autofill year when title matches an existing folder
-  function autofillFromExistingFolder() {
-    if (!titleEl) return;
-    const enteredTitle = titleEl.value.trim();
-    if (!enteredTitle) return;
-    
-    // Find matching folder (case-insensitive)
-    const match = existingFolders.find(f => 
-      f.title.toLowerCase() === enteredTitle.toLowerCase()
-    );
-    
-    if (match) {
-      // Only autofill if the field is empty
-      if (yearEl && !yearEl.value && match.year) {
-        yearEl.value = match.year;
-        formatPreview();
+  // Handle folder selection
+  function selectFolder(folder) {
+    if (!folder || !folder.name) {
+      // "Create new" selected - reset
+      selectedFolderInput.value = '';
+      folderSelectButton.querySelector('.folder-select-display span').textContent = 'Create new';
+      
+      if (titleEl) {
+        titleEl.disabled = false;
+        titleEl.value = '';
       }
+      if (yearEl) {
+        yearEl.disabled = false;
+        yearEl.value = '';
+      }
+      coverField.style.cursor = 'pointer';
+      coverField.style.opacity = '1';
+      coverField.onclick = () => openCoverModal();
+      coverPreview.innerHTML = '<div class="cover-placeholder">No cover selected</div>';
+      coverImageUrlInput.value = '';
+      isFolderExisting = false;
+    } else {
+      // Existing folder selected
+      selectedFolderInput.value = folder.name;
+      
+      // Update button display
+      const displayText = `${folder.title}${folder.year ? ' (' + folder.year + ')' : ''}`;
+      folderSelectButton.querySelector('.folder-select-display span').textContent = displayText;
+      
+      // Fill and disable title and year
+      if (titleEl) {
+        titleEl.value = folder.title;
+        titleEl.disabled = true;
+      }
+      if (yearEl) {
+        yearEl.value = folder.year || '';
+        yearEl.disabled = true;
+      }
+      
+      // Set cover image
+      if (folder.cover_url) {
+        coverPreview.innerHTML = `<img src="${folder.cover_url}" alt="Cover" class="cover-image" />`;
+        coverField.style.cursor = 'not-allowed';
+        coverField.style.opacity = '0.7';
+        coverField.onclick = null;
+      } else {
+        coverPreview.innerHTML = '<div class="cover-placeholder">No cover available</div>';
+        coverField.style.cursor = 'not-allowed';
+        coverField.style.opacity = '0.7';
+        coverField.onclick = null;
+      }
+      
+      isFolderExisting = true;
     }
+    
+    // Close dropdown
+    isDropdownOpen = false;
+    folderSelectDropdown.style.display = 'none';
+    
+    formatPreview();
   }
   
-  // Trigger autofill when title input loses focus or user presses enter
-  titleEl?.addEventListener('blur', autofillFromExistingFolder);
-  titleEl?.addEventListener('change', autofillFromExistingFolder);
+  // Handle clicking "Create new" in dropdown
+  folderSelectDropdown?.querySelector('[data-value=""]')?.addEventListener('click', () => {
+    selectFolder(null);
+  });
   
   // Load folders on page load
   loadExistingFolders();
@@ -399,50 +502,6 @@
   const coverField = document.getElementById('coverField');
   let selectedCoverUrl = '';
   let isFolderExisting = false;
-
-  // Check if we're editing an existing folder
-  async function checkExistingFolder() {
-    const enteredTitle = titleEl?.value.trim() || '';
-    if (!enteredTitle) return false;
-    
-    const match = existingFolders.find(f => 
-      f.title.toLowerCase() === enteredTitle.toLowerCase()
-    );
-    
-    if (match) {
-      // Check if .cover file exists
-      try {
-        const folderName = match.name;
-        const coverCheckUrl = `/wallpapers/${encodeURIComponent(folderName)}/.cover.jpg`;
-        const response = await fetch(coverCheckUrl, { method: 'HEAD' });
-        if (response.ok) {
-          // Folder has existing cover
-          isFolderExisting = true;
-          coverField.style.cursor = 'not-allowed';
-          coverField.style.opacity = '0.7';
-          coverField.onclick = null;
-          
-          // Display existing cover
-          coverPreview.innerHTML = `<img src="${coverCheckUrl}" alt="Cover" class="cover-image" />`;
-          return true;
-        }
-      } catch (e) {
-        // If .cover.jpg doesn't exist, try other extensions
-        console.log('Cover check failed', e);
-      }
-    }
-    
-    // Reset to editable state
-    isFolderExisting = false;
-    coverField.style.cursor = 'pointer';
-    coverField.style.opacity = '1';
-    coverField.onclick = () => openCoverModal();
-    return false;
-  }
-
-  // Update cover preview when title changes
-  titleEl?.addEventListener('blur', checkExistingFolder);
-  titleEl?.addEventListener('change', checkExistingFolder);
 
   function openCoverModal() {
     if (isFolderExisting) return;

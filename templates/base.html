@@ -133,6 +133,86 @@
   /* Disabled inputs */
   .input[disabled] { opacity: .6; cursor: not-allowed; }
   
+  /* Custom folder select dropdown */
+  .folder-select-wrapper { position: relative; }
+  .folder-select-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.16);
+    color: var(--text);
+    border-radius: .6rem;
+    padding: .6rem .75rem;
+    cursor: pointer;
+    transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  }
+  .folder-select-button:hover {
+    border-color: rgba(255,255,255,0.26);
+  }
+  .folder-select-display {
+    flex: 1;
+  }
+  .folder-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: .25rem;
+    background: var(--panel);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: .6rem;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  }
+  .folder-select-option {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .75rem;
+    cursor: pointer;
+    transition: background .15s ease;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .folder-select-option:last-child {
+    border-bottom: none;
+  }
+  .folder-select-option:hover {
+    background: rgba(255,255,255,0.08);
+  }
+  .folder-option-cover {
+    width: 48px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: .4rem;
+    flex-shrink: 0;
+  }
+  .folder-option-no-cover {
+    width: 48px;
+    height: 72px;
+    background: rgba(255,255,255,0.04);
+    border-radius: .4rem;
+    flex-shrink: 0;
+  }
+  .folder-option-text {
+    flex: 1;
+    min-width: 0;
+  }
+  .folder-option-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .folder-option-year {
+    color: var(--muted);
+    font-size: .85rem;
+    margin-top: .125rem;
+  }
+  
   /* Cover image field */
   .cover-field { 
     cursor: pointer; 
