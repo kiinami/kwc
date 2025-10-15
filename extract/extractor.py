@@ -131,15 +131,11 @@ def _find_highest_counter(output_dir: Path, pattern: str, context: dict[str, obj
     return highest
 
 
-def _extract_frame(args: tuple[Path, float, Path, CancellationToken | None]) -> Path:
-    video, ts, output_file, cancel_token = args
+def _extract_frame(args: tuple[Path, float, Path]) -> Path:
+    video, ts, output_file = args
     retries, backoff = _get_retry_config()
     attempt = 0
     while True:
-        # Check for cancellation before starting
-        if cancel_token and cancel_token.is_cancelled():
-            raise CancelledException("Extraction cancelled")
-        
         try:
             ffmpeg = FFmpeg().option("y").input(str(video), ss=ts).output(str(output_file), frames="1", q="2")
             ffmpeg.execute()
@@ -225,7 +221,7 @@ def extract(
     start_counter = _find_highest_counter(output_dir, pattern, context_for_pattern) + 1
     logger.debug("Starting counter at %d (appending to existing files)", start_counter)
     
-    frame_args: list[tuple[Path, float, Path, CancellationToken | None]] = []
+    frame_args: list[tuple[Path, float, Path]] = []
     for idx, ts in enumerate(timestamps, start_counter):
         try:
             name = render_pattern(
@@ -241,7 +237,7 @@ def extract(
         except Exception:
             # Fallback in case of unexpected error
             name = f"output_{idx:04d}.jpg"
-        frame_args.append((video, ts, output_dir / name, params.cancel_token))
+        frame_args.append((video, ts, output_dir / name))
 
     total = len(frame_args)
     done = 0
