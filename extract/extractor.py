@@ -3,6 +3,7 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 import os
+import re
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -33,6 +34,78 @@ def _get_retry_config() -> tuple[int, float]:
     if backoff < 0:
         backoff = 0.0
     return retries, backoff
+
+
+def _find_highest_counter(output_dir: Path, pattern: str, context: dict[str, object]) -> int:
+    """
+    Find the highest counter value in existing files that match the pattern.
+    Returns 0 if no matching files are found or if the directory doesn't exist.
+    """
+    if not output_dir.exists():
+        return 0
+    
+    # We need to determine which files match our pattern by rendering it with different counters
+    # and comparing. Since we don't know the range, we'll iterate through existing files and try
+    # to extract the counter by comparing against the pattern.
+    
+    highest = 0
+    
+    try:
+        for entry in output_dir.iterdir():
+            if not entry.is_file():
+                continue
+            
+            filename = entry.name
+            
+            # Try to extract counter by testing various counter values
+            # We'll render the pattern with different counters and see which one matches the filename
+            # Since filenames use zero-padding, we need to handle that
+            
+            # First, determine if the filename could match by rendering with a dummy counter
+            # and checking if the non-counter parts match
+            
+            # Strategy: Generate pattern with counter=999999 (unlikely to collide)
+            # Replace that number with a regex and match
+            test_counter = 999999
+            try:
+                test_rendered = render_pattern(
+                    pattern,
+                    {**context, "counter": test_counter}
+                )
+            except Exception:
+                continue
+            
+            # Find where the counter appears in the rendered pattern
+            counter_str = str(test_counter)
+            if counter_str not in test_rendered:
+                # Pattern doesn't include counter, skip
+                continue
+            
+            # Split the rendered pattern into parts before and after the counter
+            parts = test_rendered.split(counter_str, 1)
+            if len(parts) != 2:
+                continue
+            
+            prefix, suffix = parts
+            
+            # Check if the filename matches the pattern structure
+            if not filename.startswith(prefix) or not filename.endswith(suffix):
+                continue
+            
+            # Extract the counter part from the filename
+            counter_part = filename[len(prefix):-len(suffix)] if suffix else filename[len(prefix):]
+            
+            # Try to parse it as an integer
+            try:
+                counter = int(counter_part)
+                highest = max(highest, counter)
+            except ValueError:
+                continue
+                
+    except OSError as e:
+        logger.warning("Error reading directory %s: %s", output_dir, e)
+    
+    return highest
 
 
 def _extract_frame(args: tuple[Path, float, Path]) -> Path:
@@ -105,8 +178,19 @@ def extract(
 
     # Build filename pattern
     pattern = params.image_pattern or "output {{ counter|pad:4 }}.jpg"
+    
+    # Find highest existing counter to append new files
+    context_for_pattern = {
+        "title": params.title,
+        "year": params.year or "",
+        "season": params.season or "",
+        "episode": params.episode or "",
+    }
+    start_counter = _find_highest_counter(output_dir, pattern, context_for_pattern) + 1
+    logger.debug("Starting counter at %d (appending to existing files)", start_counter)
+    
     frame_args: list[tuple[Path, float, Path]] = []
-    for idx, ts in enumerate(timestamps, 1):
+    for idx, ts in enumerate(timestamps, start_counter):
         try:
             name = render_pattern(
                 pattern,
