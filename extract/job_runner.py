@@ -9,7 +9,7 @@ from typing import Callable
 from django.db import close_old_connections
 from django.utils import timezone
 
-from .extractor import ExtractParams, extract
+from .extractor import CancellationToken, CancelledException, ExtractParams, extract
 from .models import ExtractionJob
 
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class JobRunner:
 	"""Manage extraction job execution and lifecycle in background threads."""
 
-	FINISHED_STATUSES = frozenset({ExtractionJob.Status.DONE, ExtractionJob.Status.ERROR})
+	FINISHED_STATUSES = frozenset({ExtractionJob.Status.DONE, ExtractionJob.Status.ERROR, ExtractionJob.Status.CANCELLED})
 
 	def __init__(
 		self,
@@ -32,15 +32,31 @@ class JobRunner:
 		self.model = model
 		self._thread_factory = thread_factory
 		self._threads: dict[str, threading.Thread] = {}
+		self._cancel_tokens: dict[str, CancellationToken] = {}
 		self._lock = threading.Lock()
-		self.finished_statuses = frozenset({model.Status.DONE, model.Status.ERROR})
+		self.finished_statuses = frozenset({model.Status.DONE, model.Status.ERROR, model.Status.CANCELLED})
 
 	def start_job(self, job_id: str) -> None:
 		"""Launch an extraction job in the background."""
+		cancel_token = CancellationToken()
 		thread = self._make_thread(job_id)
 		with self._lock:
 			self._threads[job_id] = thread
+			self._cancel_tokens[job_id] = cancel_token
 		thread.start()
+
+	def cancel_job(self, job_id: str) -> bool:
+		"""Cancel a running extraction job.
+		
+		Returns True if the job was running and cancellation was initiated,
+		False if the job was not running.
+		"""
+		with self._lock:
+			cancel_token = self._cancel_tokens.get(job_id)
+			if cancel_token is None:
+				return False
+			cancel_token.cancel()
+			return True
 
 	def is_running(self, job_id: str) -> bool:
 		with self._lock:
@@ -49,6 +65,7 @@ class JobRunner:
 	def mark_finished(self, job_id: str) -> None:
 		with self._lock:
 			self._threads.pop(job_id, None)
+			self._cancel_tokens.pop(job_id, None)
 
 	def run_job(self, job_id: str) -> None:
 		"""Execute an extraction job synchronously.
@@ -105,6 +122,10 @@ class JobRunner:
 			except (TypeError, ValueError):
 				max_workers_value = None
 
+		# Get cancellation token
+		with self._lock:
+			cancel_token = self._cancel_tokens.get(job_id)
+
 		extract_params = ExtractParams(
 			video=video_path,
 			output_dir=output_dir,
@@ -115,6 +136,7 @@ class JobRunner:
 			season=int(params_data["season"]) if params_data.get("season") not in (None, "") else None,
 			episode=params_data.get("episode") if params_data.get("episode") not in (None, "") else None,
 			max_workers=max_workers_value,
+			cancel_token=cancel_token,
 		)
 
 		def on_progress(done: int, total: int) -> None:
@@ -135,6 +157,14 @@ class JobRunner:
 			job.status = self.model.Status.DONE
 			job.finished_at = timezone.now()
 			job.save(update_fields=["status", "finished_at", "total_frames", "current_step", "total_steps", "updated_at"])
+		except CancelledException:
+			logger.info("extract job %s cancelled", job_id)
+			self.model.objects.filter(pk=job_id).update(
+				status=self.model.Status.CANCELLED,
+				error="Job cancelled by user",
+				finished_at=timezone.now(),
+				updated_at=timezone.now(),
+			)
 		except Exception as exc:  # pragma: no cover - defensive
 			logger.exception("extract job %s failed", job_id)
 			self.model.objects.filter(pk=job_id).update(
