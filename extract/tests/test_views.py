@@ -46,6 +46,23 @@ def test_job_view_button_text_is_open_gallery():
 
 
 @pytest.mark.django_db
+def test_browse_api_returns_no_store_cache_header():
+	"""Test that the browse_api endpoint returns Cache-Control: no-store header."""
+	client = Client()
+	
+	# Test with root path
+	response = client.get(reverse('extract:browse_api'), {'path': '/', 'dirs_only': '1'})
+	assert 'Cache-Control' in response
+	assert response['Cache-Control'] == 'no-store'
+	
+	# Test with not found path
+	response = client.get(reverse('extract:browse_api'), {'path': '/nonexistent/path/xyz'})
+	assert response.status_code == 404
+	assert 'Cache-Control' in response
+	assert response['Cache-Control'] == 'no-store'
+
+
+@pytest.mark.django_db
 def test_job_view_displays_filename():
 	"""Test that the job view displays the filename from the name field."""
 	job = ExtractionJob.objects.create(
