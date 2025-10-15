@@ -22,6 +22,7 @@ Copy `.env.example` to `.env` and tweak as needed. Key variables:
 - KWC_FOLDER_PATTERN: folder naming template (Django template syntax)
 - KWC_IMAGE_PATTERN: image filename template (supports the `pad` filter)
 - KWC_EXTRACT_WORKERS: override the number of parallel FFmpeg workers (default: CPU count)
+- KWC_FILE_PICKER_START_PATH: default start path for the file picker in extract form (default: /)
 
 Defaults place a SQLite database in `/data` (bind mount recommended) and serve static files with WhiteNoise.
 

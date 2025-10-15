@@ -104,6 +104,7 @@ def start(request: HttpRequest) -> HttpResponse:
 			"form": form,
 			"folder_pattern": settings.EXTRACT_FOLDER_PATTERN,
 			"image_pattern": settings.EXTRACT_IMAGE_PATTERN,
+			"file_picker_start_path": settings.FILE_PICKER_START_PATH,
 		},
 	)
 
@@ -228,10 +229,10 @@ def browse_api(request: HttpRequest) -> JsonResponse:
 	"""List directories and files under a given absolute path root.
 
 	Query params:
-	- path: absolute path to list; defaults to '/'
+	- path: absolute path to list; defaults to FILE_PICKER_START_PATH setting
 	- dirs_only: '1' to return only directories
 	"""
-	raw = request.GET.get("path") or "/"
+	raw = request.GET.get("path") or settings.FILE_PICKER_START_PATH
 	dirs_only = request.GET.get("dirs_only") == "1"
 	# Security: normalize and restrict to absolute paths; optionally restrict to allowlist here
 	path = os.path.abspath(raw)

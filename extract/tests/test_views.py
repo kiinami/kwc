@@ -213,3 +213,38 @@ def test_folders_api_returns_existing_folders(tmp_path, settings):
 	movie_c = next(f for f in folders if f['name'] == "Movie C")
 	assert movie_c['title'] == "Movie C"
 	assert movie_c['year'] is None
+
+
+@pytest.mark.django_db
+def test_browse_api_uses_default_start_path(tmp_path, settings):
+	"""Test that the browse API uses FILE_PICKER_START_PATH as default when no path is provided."""
+	# Create a test directory structure
+	test_dir = tmp_path / "custom" / "start"
+	test_dir.mkdir(parents=True)
+	(test_dir / "test_file.mp4").write_text("fake video")
+	
+	# Set the FILE_PICKER_START_PATH to our custom directory
+	settings.FILE_PICKER_START_PATH = str(test_dir)
+	
+	client = Client()
+	# Call browse_api without providing a path parameter
+	response = client.get(reverse('extract:browse_api'))
+	
+	assert response.status_code == 200
+	data = response.json()
+	assert data['path'] == str(test_dir)
+	assert len(data['entries']) == 1
+	assert data['entries'][0]['name'] == 'test_file.mp4'
+
+
+@pytest.mark.django_db
+def test_start_view_includes_file_picker_start_path(settings):
+	"""Test that the start view includes file_picker_start_path in context."""
+	settings.FILE_PICKER_START_PATH = '/custom/path'
+	
+	client = Client()
+	response = client.get(reverse('extract:start'))
+	
+	assert response.status_code == 200
+	assert 'file_picker_start_path' in response.context
+	assert response.context['file_picker_start_path'] == '/custom/path'
