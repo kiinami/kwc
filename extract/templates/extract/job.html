@@ -36,7 +36,7 @@
 
     <div style="margin-top: 1rem;">
       <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
-      <a class="btn btn-primary" id="chooseBtn" href="{% url 'choose:index' %}" style="{% if not is_done %}display:none{% endif %}">Open Choose</a>
+      <a class="btn btn-primary" id="chooseBtn" href="{{ gallery_url }}" style="{% if not is_done %}display:none{% endif %}">Open Gallery</a>
     </div>
   </div>
 </div>

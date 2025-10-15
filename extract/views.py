@@ -105,6 +105,11 @@ def start(request: HttpRequest) -> HttpResponse:
 def job(request: HttpRequest, job_id: str) -> HttpResponse:
 	job_obj = get_object_or_404(ExtractionJob, pk=job_id)
 	total_known = job_obj.total_steps > 0
+	
+	# Extract folder name from output_dir for gallery link
+	folder_name = os.path.basename(job_obj.output_dir.rstrip(os.sep))
+	gallery_url = reverse('choose:gallery', kwargs={'folder': folder_name})
+	
 	context = {
 		"job_id": job_obj.id,
 		"status": job_obj.status,
@@ -118,6 +123,7 @@ def job(request: HttpRequest, job_id: str) -> HttpResponse:
 		"is_finished": job_obj.status in FINISHED_STATUSES,
 		"is_done": job_obj.status == ExtractionJob.Status.DONE,
 		"is_error": job_obj.status == ExtractionJob.Status.ERROR,
+		"gallery_url": gallery_url,
 		"results": {
 			"total_frames": job_obj.total_frames,
 			"time_taken": _format_duration(job_obj),
