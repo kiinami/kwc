@@ -26,8 +26,8 @@ class StubFFmpeg:
 
 
 # Module-level mock function that can be pickled for multiprocessing
-def _mock_extract_frame_with_file_creation(args: tuple[Path, float, Path]) -> Path:
-	_video, _ts, output_file = args
+def _mock_extract_frame_with_file_creation(args: tuple[Path, float, Path, extractor.CancellationToken | None]) -> Path:
+	_video, _ts, output_file, _cancel_token = args
 	output_file.touch()  # Create the file
 	return output_file
 
@@ -46,7 +46,7 @@ def test_extract_frame_retries_success(monkeypatch: pytest.MonkeyPatch, settings
 	monkeypatch.setattr(extractor, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(behaviour))
 	monkeypatch.setattr(extractor, "_sleep", lambda _delay: None)
 
-	result = extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg")))
+	result = extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), None))
 	assert result == Path("/tmp/frame.jpg")
 	assert attempts == ["fail", "success"]
 
@@ -65,7 +65,7 @@ def test_extract_frame_retries_exhaust(monkeypatch: pytest.MonkeyPatch, settings
 	monkeypatch.setattr(extractor, "_sleep", lambda _delay: None)
 
 	with pytest.raises(RuntimeError):
-		extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg")))
+		extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), None))
 	assert attempts == 2
 
 
