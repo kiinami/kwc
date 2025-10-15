@@ -267,3 +267,23 @@ def browse_api(request: HttpRequest) -> JsonResponse:
 		response = JsonResponse({"error": str(e)}, status=500)
 		response['Cache-Control'] = 'no-store'
 		return response
+
+
+@require_GET
+def folders_api(request: HttpRequest) -> JsonResponse:
+	"""List existing wallpaper folders with their metadata.
+
+	Returns a list of folders that can be used for autofill in the extract form.
+	"""
+	from choose.utils import list_media_folders
+	folders, _ = list_media_folders()
+	# Return simplified list with just the info needed for autofill
+	result = [
+		{
+			"name": f["name"],
+			"title": f["title"],
+			"year": f["year_raw"],  # Return raw int or None
+		}
+		for f in folders
+	]
+	return JsonResponse({"folders": result})
