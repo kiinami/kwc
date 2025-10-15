@@ -36,7 +36,7 @@
 
     <div style="margin-top: 1rem;">
       <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
-      <button class="btn btn-ghost" id="cancelBtn" style="{% if is_finished %}display:none{% endif %}; color:#fca5a5; border-color:#fca5a5;">Cancel</button>
+      <button class="btn btn-ghost" id="cancelBtn" style="{% if is_finished %}display:none{% endif %}; color:#fca5a5; border-color:#fca5a5;" {% if status == 'cancelling' %}disabled{% endif %}>{% if status == 'cancelling' %}Cancelling...{% else %}Cancel{% endif %}</button>
       <a class="btn btn-primary" id="chooseBtn" href="{{ gallery_url }}" style="{% if not is_done %}display:none{% endif %}">Open Gallery</a>
     </div>
   </div>
@@ -160,11 +160,18 @@
 
       const finished = !!data.finished;
       const done = !!data.done;
+      const isCancelling = data.status === 'cancelling';
 
       if (progress) progress.style.display = finished ? 'none' : '';
       if (summary) summary.style.display = done ? '' : 'none';
       if (chooseBtn) chooseBtn.style.display = done ? '' : 'none';
-      if (cancelBtn) cancelBtn.style.display = finished ? 'none' : '';
+      if (cancelBtn) {
+        cancelBtn.style.display = finished ? 'none' : '';
+        if (isCancelling) {
+          cancelBtn.disabled = true;
+          cancelBtn.textContent = 'Cancelling...';
+        }
+      }
 
       if (finished) {
         return;

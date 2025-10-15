@@ -239,4 +239,4 @@ def test_extraction_job_cancelled_status_css() -> None:
 		params={},
 		output_dir="/tmp/output",
 	)
-	assert job.status_css() == "error"
+	assert job.status_css() == "cancelled"
