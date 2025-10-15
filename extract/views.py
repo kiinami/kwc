@@ -262,9 +262,13 @@ def browse_api(request: HttpRequest) -> JsonResponse:
 	# Security: normalize and restrict to absolute paths; optionally restrict to allowlist here
 	path = os.path.abspath(raw)
 	if not os.path.isabs(path):
-		return JsonResponse({"error": "path_must_be_absolute"}, status=400)
+		response = JsonResponse({"error": "path_must_be_absolute"}, status=400)
+		response['Cache-Control'] = 'no-store'
+		return response
 	if not os.path.exists(path):
-		return JsonResponse({"error": "not_found"}, status=404)
+		response = JsonResponse({"error": "not_found"}, status=404)
+		response['Cache-Control'] = 'no-store'
+		return response
 	try:
 		entries = []
 		with os.scandir(path) as it:
@@ -278,11 +282,17 @@ def browse_api(request: HttpRequest) -> JsonResponse:
 				})
 		# Sort dirs first then files, by name
 		entries.sort(key=lambda x: (not x["is_dir"], x["name"].lower()))
-		return JsonResponse({"path": path, "entries": entries})
+		response = JsonResponse({"path": path, "entries": entries})
+		response['Cache-Control'] = 'no-store'
+		return response
 	except PermissionError:
-		return JsonResponse({"error": "permission_denied"}, status=403)
+		response = JsonResponse({"error": "permission_denied"}, status=403)
+		response['Cache-Control'] = 'no-store'
+		return response
 	except OSError as e:
-		return JsonResponse({"error": str(e)}, status=500)
+		response = JsonResponse({"error": str(e)}, status=500)
+		response['Cache-Control'] = 'no-store'
+		return response
 
 
 @require_GET
