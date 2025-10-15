@@ -156,3 +156,43 @@ def test_start_view_extracts_filename_from_video_path(tmp_path):
 	# Verify the job was created with the correct name
 	job = ExtractionJob.objects.get(id=job_id)
 	assert job.name == "my_test_video.mkv"
+
+
+@pytest.mark.django_db
+def test_folders_api_returns_existing_folders(tmp_path, settings):
+	"""Test that the folders API returns existing wallpaper folders."""
+	# Set up temporary wallpapers folder
+	settings.WALLPAPERS_FOLDER = str(tmp_path)
+	
+	# Create some test folders
+	(tmp_path / "Movie A (2020)").mkdir()
+	(tmp_path / "Movie A (2020)" / "test.jpg").write_text("fake image")
+	(tmp_path / "Show B (2021)").mkdir()
+	(tmp_path / "Show B (2021)" / "test.jpg").write_text("fake image")
+	(tmp_path / "Movie C").mkdir()
+	(tmp_path / "Movie C" / "test.jpg").write_text("fake image")
+	
+	client = Client()
+	response = client.get(reverse('extract:folders_api'))
+	
+	assert response.status_code == 200
+	data = response.json()
+	assert 'folders' in data
+	
+	folders = data['folders']
+	assert len(folders) == 3
+	
+	# Check that folders contain the expected structure
+	folder_names = {f['name'] for f in folders}
+	assert "Movie A (2020)" in folder_names
+	assert "Show B (2021)" in folder_names
+	assert "Movie C" in folder_names
+	
+	# Check that title and year are parsed correctly
+	movie_a = next(f for f in folders if f['name'] == "Movie A (2020)")
+	assert movie_a['title'] == "Movie A"
+	assert movie_a['year'] == 2020
+	
+	movie_c = next(f for f in folders if f['name'] == "Movie C")
+	assert movie_c['title'] == "Movie C"
+	assert movie_c['year'] is None

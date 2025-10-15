@@ -12,4 +12,5 @@ urlpatterns = [
     path('jobs/api/', views.jobs_api, name='jobs_api'),
     path('browse/api/', views.browse_api, name='browse_api'),
     path('guess/api/', views.guess_api, name='guess_api'),
+    path('folders/api/', views.folders_api, name='folders_api'),
 ]
