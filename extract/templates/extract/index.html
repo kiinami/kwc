@@ -26,7 +26,7 @@
                   {% endif %}
                 </span>
                 {% endwith %}
-                <a href="{% url 'extract:job' job_id=j.id %}">{{ j.id }}</a>
+                <a href="{% url 'extract:job' job_id=j.id %}">{% if j.name %}{{ j.name }}{% else %}{{ j.id }}{% endif %}</a>
                 <span class="status status--{{ j.status_class }}" style="margin-left:auto">{{ j.status_label }}</span>
               </div>
               <div class="bar-wrap" style="margin-top: .5rem; background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden; {% if j.finished %}display:none{% endif %}">
@@ -62,11 +62,12 @@
           const href = encodeURI(`{% url 'extract:job' job_id='__ID__' %}`.replace('__ID__', j.id));
           const statusClass = 'status--' + (j.status_class || 'pending');
           const hideBar = !!j.finished;
+          const displayName = j.name || j.id;
           return `
             <div class="card">
               <div style="display:flex; align-items:center; gap:.5rem;">
                 <span class="status-icon ${statusClass}" aria-hidden="true">${iconFor(j.status)}</span>
-                <a href="${href}">${j.id}</a>
+                <a href="${href}">${displayName}</a>
                 <span class="status ${statusClass}" style="margin-left:auto">${j.status_label || j.status}</span>
               </div>
               <div class="bar-wrap" style="margin-top: .5rem; background: rgba(255,255,255,0.08); border-radius: .6rem; overflow: hidden; ${hideBar ? 'display:none' : ''}">
