@@ -7,6 +7,7 @@
  * Render a Django-like template pattern with the given values.
  * Supports:
  * - Simple conditionals: {% if X %}...{% endif %}
+ * - Negative conditionals: {% if not X %}...{% endif %}
  * - Variables: {{ variable }}
  * - Pad filter: {{ variable|pad:N }}
  *
@@ -15,7 +16,18 @@
  * @returns {string} Rendered pattern
  */
 function renderPattern(values, pattern) {
-  // Replace simple conditionals {% if X %}...{% endif %}
+  // Replace negative conditionals first {% if not X %}...{% endif %}
+  pattern = pattern.replace(/\{\%\s*if\s+not\s+season\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => 
+    (!values.season ? inner : '')
+  );
+  pattern = pattern.replace(/\{\%\s*if\s+not\s+episode\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => 
+    (!values.episode ? inner : '')
+  );
+  pattern = pattern.replace(/\{\%\s*if\s+not\s+year\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => 
+    (!values.year ? inner : '')
+  );
+  
+  // Replace positive conditionals {% if X %}...{% endif %}
   pattern = pattern.replace(/\{\%\s*if\s+season\s*\%\}([\s\S]*?)\{\%\s*endif\s*\%\}/g, (_m, inner) => 
     (values.season ? inner : '')
   );
