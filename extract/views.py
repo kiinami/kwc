@@ -55,6 +55,7 @@ def start(request: HttpRequest) -> HttpResponse:
 			job_id = uuid.uuid4().hex
 			params = form.cleaned_data.copy()
 			params["trim_intervals"] = form.cleaned_data.get("trim_intervals", [])
+			params["cover_image_url"] = form.cleaned_data.get("cover_image_url", "")
 
 			root = Path(settings.WALLPAPERS_FOLDER)
 			folder_pattern = settings.EXTRACT_FOLDER_PATTERN
@@ -287,3 +288,72 @@ def folders_api(request: HttpRequest) -> JsonResponse:
 		for f in folders
 	]
 	return JsonResponse({"folders": result})
+
+
+@require_GET
+def tmdb_search_api(request: HttpRequest) -> JsonResponse:
+	"""Search TMDB for movies and TV shows.
+
+	Query params:
+	- query: The title to search for (required)
+	- year: Optional year to filter results
+	"""
+	from django.conf import settings
+	from . import tmdb
+
+	if not settings.TMDB_API_KEY:
+		return JsonResponse({"error": "tmdb_not_configured"}, status=500)
+
+	query = request.GET.get("query", "").strip()
+	if not query:
+		return JsonResponse({"error": "missing_query"}, status=400)
+
+	year_str = request.GET.get("year", "").strip()
+	year = None
+	if year_str:
+		try:
+			year = int(year_str)
+		except ValueError:
+			pass
+
+	try:
+		tmdb.configure_api_key(settings.TMDB_API_KEY)
+		results = tmdb.search_multi(query, year=year)
+		return JsonResponse({"results": results})
+	except RuntimeError as e:
+		return JsonResponse({"error": str(e)}, status=500)
+
+
+@require_GET
+def tmdb_posters_api(request: HttpRequest) -> JsonResponse:
+	"""Get posters for a specific movie or TV show.
+
+	Query params:
+	- media_type: Either "movie" or "tv" (required)
+	- media_id: The TMDB ID of the media (required)
+	"""
+	from django.conf import settings
+	from . import tmdb
+
+	if not settings.TMDB_API_KEY:
+		return JsonResponse({"error": "tmdb_not_configured"}, status=500)
+
+	media_type = request.GET.get("media_type", "").strip()
+	media_id_str = request.GET.get("media_id", "").strip()
+
+	if not media_type or not media_id_str:
+		return JsonResponse({"error": "missing_parameters"}, status=400)
+
+	try:
+		media_id = int(media_id_str)
+	except ValueError:
+		return JsonResponse({"error": "invalid_media_id"}, status=400)
+
+	try:
+		tmdb.configure_api_key(settings.TMDB_API_KEY)
+		posters = tmdb.get_posters(media_type, media_id)
+		return JsonResponse({"posters": posters})
+	except ValueError as e:
+		return JsonResponse({"error": str(e)}, status=400)
+	except RuntimeError as e:
+		return JsonResponse({"error": str(e)}, status=500)

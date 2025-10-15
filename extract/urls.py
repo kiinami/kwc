@@ -12,4 +12,6 @@ urlpatterns = [
     path('browse/api/', views.browse_api, name='browse_api'),
     path('guess/api/', views.guess_api, name='guess_api'),
     path('folders/api/', views.folders_api, name='folders_api'),
+    path('tmdb/search/api/', views.tmdb_search_api, name='tmdb_search_api'),
+    path('tmdb/posters/api/', views.tmdb_posters_api, name='tmdb_posters_api'),
 ]

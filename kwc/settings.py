@@ -245,6 +245,8 @@ def _positive_int_or_none(value: str | None) -> int | None:
 # Optional override for the number of workers used during frame extraction
 EXTRACT_MAX_WORKERS = _positive_int_or_none(os.getenv('KWC_EXTRACT_WORKERS'))
 
+# TMDB API key for cover art selection
+TMDB_API_KEY = os.getenv('TMDB_API_KEY', '')
 
 # Progressive Web App configuration (tweak via env vars if desired)
 PWA_APP_NAME = os.getenv('KWC_PWA_APP_NAME', 'KWC Wallpapers')

@@ -10,6 +10,7 @@ dependencies = [
     "python-ffmpeg>=2.0.12",
     "python-dotenv>=1.0.1",
     "pillow>=11.3.0",
+    "tmdbsimple>=2.9.1",
 ]
 
 [dependency-groups]

@@ -43,6 +43,9 @@ class ExtractStartForm(forms.Form):
 
     # Backed by a hidden JSON string that the UI manages
     trim_intervals = forms.CharField(widget=forms.HiddenInput(), required=False)
+    
+    # Cover image URL from TMDB (optional)
+    cover_image_url = forms.CharField(widget=forms.HiddenInput(), required=False)
 
     def clean(self):
         cleaned = super().clean()
@@ -97,3 +100,14 @@ class ExtractStartForm(forms.Form):
                 raise forms.ValidationError("Interval end must be after start.")
             normalized.append(item)
         return normalized
+
+    def clean_cover_image_url(self):
+        """Validate the cover image URL if provided."""
+        url = (self.cleaned_data.get("cover_image_url") or "").strip()
+        # Allow empty (optional field)
+        if not url:
+            return ""
+        # Basic URL validation - should be an https URL
+        if not url.startswith("https://"):
+            raise forms.ValidationError("Cover image URL must be an HTTPS URL.")
+        return url

@@ -127,6 +127,12 @@ class JobRunner:
 
 		try:
 			frame_count = self.extractor(params=extract_params, on_progress=on_progress)
+			
+			# Download cover image if URL was provided
+			cover_image_url = params_data.get("cover_image_url", "").strip()
+			if cover_image_url:
+				self._download_cover_image(cover_image_url, output_dir)
+			
 			job.refresh_from_db()
 			job.total_frames = frame_count
 			if job.total_steps == 0:
@@ -143,6 +149,31 @@ class JobRunner:
 				finished_at=timezone.now(),
 				updated_at=timezone.now(),
 			)
+
+	def _download_cover_image(self, url: str, output_dir: Path) -> None:
+		"""Download a cover image from a URL and save it to the output directory."""
+		import requests
+		from PIL import Image
+		from io import BytesIO
+		
+		try:
+			# Create output directory if it doesn't exist
+			output_dir.mkdir(parents=True, exist_ok=True)
+			
+			# Download the image
+			response = requests.get(url, timeout=30)
+			response.raise_for_status()
+			
+			# Open and convert the image
+			img = Image.open(BytesIO(response.content))
+			
+			# Save as .cover.jpg
+			cover_path = output_dir / ".cover.jpg"
+			img.convert("RGB").save(cover_path, "JPEG", quality=95)
+			logger.info(f"Downloaded cover image to {cover_path}")
+		except Exception as e:
+			logger.warning(f"Failed to download cover image: {e}")
+			# Don't fail the job if cover download fails
 
 	def _get_job(self, job_id: str) -> ExtractionJob | None:
 		try:
