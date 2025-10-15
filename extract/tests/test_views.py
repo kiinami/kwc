@@ -61,6 +61,8 @@ def test_browse_api_returns_no_store_cache_header():
 	assert 'Cache-Control' in response
 	assert response['Cache-Control'] == 'no-store'
 
+
+@pytest.mark.django_db
 def test_job_view_displays_filename():
 	"""Test that the job view displays the filename from the name field."""
 	job = ExtractionJob.objects.create(
