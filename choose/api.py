@@ -164,7 +164,8 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
     for original_src, _tmp in plans_decided:
         match = SEASON_EPISODE_RE.search(original_src.stem)
         season = match.group("season") if match else ""
-        episode = (match.group("episode") or "") if match else ""  # Episode can be None
+        # Episode can be in either "episode" group (when season present) or "ep_only" group
+        episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
         key = (season, episode)
         current = preview_counters.get(key, 0) + 1
         preview_counters[key] = current
@@ -208,7 +209,8 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
 
             match = SEASON_EPISODE_RE.search(original_src.stem)
             season = match.group("season") if match else ""
-            episode = (match.group("episode") or "") if match else ""  # Episode can be None
+            # Episode can be in either "episode" group (when season present) or "ep_only" group
+            episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
             key = (season, episode)
             current = counters.get(key, 0) + 1
             counters[key] = current

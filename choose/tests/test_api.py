@@ -180,3 +180,48 @@ def test_save_api_transaction_rolls_back_on_error(client, wallpapers_dir: Path, 
 	assert response.json()['error'] == 'invalid_folder'
 	assert ImageDecision.objects.filter(folder=folder_name).count() == 1
 	assert not any(p.name.endswith('.renametmp') for p in folder.iterdir())
+
+
+def test_save_api_episode_only_preserves_episode_number(client, wallpapers_dir: Path) -> None:
+	"""Test that episode-only files (E01, E02) keep their episode numbers when renamed."""
+	folder_name = 'Show'
+	folder = wallpapers_dir / folder_name
+	folder.mkdir()
+
+	# Create files with episode-only format (no season)
+	(folder / 'Show E01 ~ 0001.jpg').write_bytes(b'a')
+	(folder / 'Show E01 ~ 0002.jpg').write_bytes(b'b')
+	(folder / 'Show E02 ~ 0001.jpg').write_bytes(b'c')
+
+	# Mark all files as keep
+	ImageDecision.objects.create(folder=folder_name, filename='Show E01 ~ 0001.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='Show E01 ~ 0002.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='Show E02 ~ 0001.jpg', decision=ImageDecision.DECISION_KEEP)
+
+	response = client.post(reverse('choose:save_api', kwargs={'folder': folder_name}))
+
+	assert response.status_code == 200
+	payload = response.json()
+	assert payload['ok'] is True
+	assert payload['kept'] == 3
+
+	# Check the renamed files - they should preserve episode numbers
+	files_after = sorted(p.name for p in folder.iterdir())
+	assert len(files_after) == 3
+	
+	# Episode 1 files should have E01 in their names (counter resets per episode)
+	# Note: Pattern doesn't add space before E when there's no season
+	ep1_files = [f for f in files_after if 'E01' in f]
+	assert len(ep1_files) == 2
+	assert 'ShowE01 〜 0001.jpg' in files_after
+	assert 'ShowE01 〜 0002.jpg' in files_after
+	
+	# Episode 2 file should have E02 in its name
+	ep2_files = [f for f in files_after if 'E02' in f]
+	assert len(ep2_files) == 1
+	assert 'ShowE02 〜 0001.jpg' in files_after
+
+	# Ensure no files without episode numbers (General category)
+	# This was the bug - files were being renamed to just "Show 〜 0001.jpg" without episode
+	general_files = [f for f in files_after if 'E0' not in f and f.endswith('.jpg')]
+	assert len(general_files) == 0, f"Files without episode numbers found: {general_files}"
