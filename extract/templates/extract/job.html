@@ -3,7 +3,7 @@
 {% block content %}
 <div style="min-height: 60vh; display: grid; place-items: center;">
   <div class="card" style="max-width: 720px; width: 100%;">
-    <h1 style="margin-top:0">Extraction</h1>
+    <h1 style="margin-top:0">{% if job_name %}{{ job_name }}{% else %}Extraction{% endif %}</h1>
 
     <div style="display:flex; align-items:center; gap:.5rem; margin-top:.75rem;">
       <span id="statusBadge" class="status status--{{ status_class }}">{{ status_label }}</span>
