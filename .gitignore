@@ -271,3 +271,4 @@ media
 
 *.sqlite3
 data/
+extracted/
