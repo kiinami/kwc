@@ -9,6 +9,7 @@ class ExtractionJob(models.Model):
 		ERROR = "error", "Error"
 
 	id = models.CharField(primary_key=True, max_length=32, editable=False)
+	name = models.CharField(max_length=255, blank=True, default="")
 	params = models.JSONField()
 	output_dir = models.CharField(max_length=1024)
 	status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)

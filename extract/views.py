@@ -30,6 +30,7 @@ FINISHED_STATUSES = JobRunner.FINISHED_STATUSES
 def _job_summary(job: ExtractionJob) -> dict[str, Any]:
 	return {
 		"id": job.id,
+		"name": job.name,
 		"status": job.status,
 		"status_label": job.get_status_display(),
 		"status_class": job.status_css(),
@@ -72,8 +73,13 @@ def start(request: HttpRequest) -> HttpResponse:
 			params["output_dir"] = str(output_dir)
 			params["image_pattern"] = settings.EXTRACT_IMAGE_PATTERN
 
+			# Extract filename from video path for job name
+			video_path = params.get("video", "")
+			job_name = os.path.basename(video_path) if video_path else ""
+
 			ExtractionJob.objects.create(
 				id=job_id,
+				name=job_name,
 				params=params,
 				output_dir=str(output_dir),
 			)
@@ -112,6 +118,7 @@ def job(request: HttpRequest, job_id: str) -> HttpResponse:
 	
 	context = {
 		"job_id": job_obj.id,
+		"job_name": job_obj.name,
 		"status": job_obj.status,
 		"status_label": job_obj.get_status_display(),
 		"status_class": job_obj.status_css(),
@@ -137,6 +144,7 @@ def job_api(request: HttpRequest, job_id: str) -> JsonResponse:
 	job_obj = get_object_or_404(ExtractionJob, pk=job_id)
 	total_known = job_obj.total_steps > 0
 	payload = {
+		"name": job_obj.name,
 		"status": job_obj.status,
 		"status_label": job_obj.get_status_display(),
 		"status_class": job_obj.status_css(),

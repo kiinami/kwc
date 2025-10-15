@@ -368,7 +368,12 @@
         let idx = parseInt(active.getAttribute('data-index') || '0', 10);
         if (Number.isNaN(idx)) idx = 0;
         const next = thumbs[idx + 1];
-        if (next) activateThumb(next);
+        if (next) {
+          activateThumb(next);
+        } else {
+          // No more images after this one - open save dialog
+          openSaveModal();
+        }
 
         // Persist in background
         persistDecision(filename, decision);

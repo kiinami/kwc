@@ -60,3 +60,114 @@ def test_browse_api_returns_no_store_cache_header():
 	assert response.status_code == 404
 	assert 'Cache-Control' in response
 	assert response['Cache-Control'] == 'no-store'
+
+def test_job_view_displays_filename():
+	"""Test that the job view displays the filename from the name field."""
+	job = ExtractionJob.objects.create(
+		id="test-job-789",
+		name="my_video.mp4",
+		params={"title": "Test Movie"},
+		output_dir="/test/path/Test Movie",
+		status=ExtractionJob.Status.DONE,
+	)
+	
+	client = Client()
+	response = client.get(reverse('extract:job', kwargs={'job_id': job.id}))
+	
+	assert response.status_code == 200
+	content = response.content.decode('utf-8')
+	assert 'my_video.mp4' in content
+
+
+@pytest.mark.django_db
+def test_job_view_falls_back_to_extraction_when_no_name():
+	"""Test that the job view displays 'Extraction' when name is empty."""
+	job = ExtractionJob.objects.create(
+		id="test-job-101",
+		name="",
+		params={"title": "Test Movie"},
+		output_dir="/test/path/Test Movie",
+		status=ExtractionJob.Status.DONE,
+	)
+	
+	client = Client()
+	response = client.get(reverse('extract:job', kwargs={'job_id': job.id}))
+	
+	assert response.status_code == 200
+	content = response.content.decode('utf-8')
+	assert 'Extraction' in content
+
+
+@pytest.mark.django_db
+def test_job_api_includes_name():
+	"""Test that the job API endpoint returns the job name."""
+	job = ExtractionJob.objects.create(
+		id="test-job-202",
+		name="video_file.mkv",
+		params={"title": "Test Show"},
+		output_dir="/test/path/Test Show",
+		status=ExtractionJob.Status.RUNNING,
+	)
+	
+	client = Client()
+	response = client.get(reverse('extract:job_api', kwargs={'job_id': job.id}))
+	
+	assert response.status_code == 200
+	data = response.json()
+	assert data['name'] == "video_file.mkv"
+
+
+@pytest.mark.django_db
+def test_jobs_api_includes_names():
+	"""Test that the jobs API endpoint returns job names."""
+	ExtractionJob.objects.create(
+		id="test-job-303",
+		name="first_video.mp4",
+		params={"title": "First"},
+		output_dir="/test/path/First",
+		status=ExtractionJob.Status.DONE,
+	)
+	ExtractionJob.objects.create(
+		id="test-job-404",
+		name="second_video.mp4",
+		params={"title": "Second"},
+		output_dir="/test/path/Second",
+		status=ExtractionJob.Status.RUNNING,
+	)
+	
+	client = Client()
+	response = client.get(reverse('extract:jobs_api'))
+	
+	assert response.status_code == 200
+	data = response.json()
+	jobs = data['jobs']
+	assert len(jobs) == 2
+	job_names = [j['name'] for j in jobs]
+	assert "first_video.mp4" in job_names
+	assert "second_video.mp4" in job_names
+
+
+@pytest.mark.django_db
+def test_start_view_extracts_filename_from_video_path(tmp_path):
+	"""Test that creating a job via the start view extracts the filename."""
+	# Create a dummy video file
+	video_file = tmp_path / "my_test_video.mkv"
+	video_file.write_text("fake video")
+	
+	client = Client()
+	response = client.post(reverse('extract:start'), {
+		'video': str(video_file),
+		'title': 'Test Movie',
+		'trim_intervals': '[]',
+	})
+	
+	# Should redirect to job page
+	assert response.status_code == 302
+	
+	# Extract job ID from redirect URL
+	job_url = response.url
+	job_id = job_url.split('/')[-2]
+	
+	# Verify the job was created with the correct name
+	job = ExtractionJob.objects.get(id=job_id)
+	assert job.name == "my_test_video.mkv"
