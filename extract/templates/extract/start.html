@@ -25,6 +25,7 @@
           <div class="field">
             <div class="field-label">Title</div>
             {{ form.title }}
+            <datalist id="titleSuggestions"></datalist>
             {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
             
           </div>
@@ -79,7 +80,11 @@
   const videoEl = document.getElementById('{{ form.video.auto_id }}');
   // Title input
   const titleEl = document.getElementById('{{ form.title.auto_id }}');
-  if (titleEl) { titleEl.classList.add('input'); titleEl.classList.add('input-narrow'); }
+  if (titleEl) { 
+    titleEl.classList.add('input'); 
+    titleEl.classList.add('input-narrow'); 
+    titleEl.setAttribute('list', 'titleSuggestions');
+  }
   const yearEl = document.getElementById('{{ form.year.auto_id }}');
   const seasonEl = document.getElementById('{{ form.season.auto_id }}');
   const episodeEl = document.getElementById('{{ form.episode.auto_id }}');
@@ -106,6 +111,61 @@
   episodeEl?.addEventListener('input', formatPreview);
   // Initialize preview
   formatPreview();
+  
+  // Load existing folders for autocomplete
+  let existingFolders = [];
+  async function loadExistingFolders() {
+    try {
+      const res = await fetch('{% url 'extract:folders_api' %}');
+      if (!res.ok) return;
+      const data = await res.json();
+      existingFolders = data.folders || [];
+      
+      // Populate datalist with unique titles
+      const datalist = document.getElementById('titleSuggestions');
+      if (datalist) {
+        datalist.innerHTML = '';
+        const titles = new Set();
+        existingFolders.forEach(f => {
+          if (f.title && !titles.has(f.title)) {
+            titles.add(f.title);
+            const option = document.createElement('option');
+            option.value = f.title;
+            datalist.appendChild(option);
+          }
+        });
+      }
+    } catch (e) {
+      console.warn('Failed to load existing folders', e);
+    }
+  }
+  
+  // Autofill year when title matches an existing folder
+  function autofillFromExistingFolder() {
+    if (!titleEl) return;
+    const enteredTitle = titleEl.value.trim();
+    if (!enteredTitle) return;
+    
+    // Find matching folder (case-insensitive)
+    const match = existingFolders.find(f => 
+      f.title.toLowerCase() === enteredTitle.toLowerCase()
+    );
+    
+    if (match) {
+      // Only autofill if the field is empty
+      if (yearEl && !yearEl.value && match.year) {
+        yearEl.value = match.year;
+        formatPreview();
+      }
+    }
+  }
+  
+  // Trigger autofill when title input loses focus or user presses enter
+  titleEl?.addEventListener('blur', autofillFromExistingFolder);
+  titleEl?.addEventListener('change', autofillFromExistingFolder);
+  
+  // Load folders on page load
+  loadExistingFolders();
   
 
   // Show chosen file name next to the file input
