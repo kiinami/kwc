@@ -82,8 +82,8 @@
       gap: .5rem;
       color: var(--muted);
       font-size: .9rem;
-      padding: .5rem;
-      margin: -.5rem -.5rem .75rem;
+      padding: .45rem .6rem;
+      margin: 0;
       border-radius: .5rem;
       transition: color .15s ease, background .15s ease;
     }
@@ -289,27 +289,78 @@
       transform: translateY(-50%);
     }
     
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      margin-bottom: .75rem;
+    }
+
+    .sidebar-header .back-btn {
+      flex: 1;
+    }
+
+    .sidebar-header .toggle-sidebar-btn {
+      flex-shrink: 0;
+    }
+
     .toggle-sidebar-btn {
-      position: absolute;
-      top: 1rem;
-      left: 1rem;
+      position: relative;
       width: 2.5rem;
       height: 2.5rem;
-      border-radius: .5rem;
+      border-radius: .6rem;
       border: 1px solid rgba(255,255,255,0.18);
       background: rgba(26,32,56,0.85);
       color: #fff;
       display: grid;
       place-items: center;
-      font-size: 1.2rem;
+      font-size: 1.15rem;
       cursor: pointer;
-      transition: all 0.15s ease;
-      z-index: 5;
+      transition: background .15s ease, border-color .15s ease, opacity .2s ease, transform .2s ease;
     }
     
-    .toggle-sidebar-btn:hover {
+    .toggle-sidebar-btn:hover,
+    .toggle-sidebar-btn:focus-visible {
       background: rgba(44,52,88,0.9);
       border-color: rgba(255,255,255,0.35);
+    }
+
+    .toggle-sidebar-btn--floating {
+      position: absolute;
+      top: clamp(1rem, 4vh, 1.5rem);
+      left: clamp(1rem, 4vw, 1.5rem);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    .toggle-sidebar-btn--floating::after {
+      content: "";
+      position: absolute;
+      inset: -1rem;
+      border-radius: 999px;
+      background: rgba(17,20,38,0.6);
+      opacity: 0;
+      transition: opacity .2s ease;
+      pointer-events: none;
+    }
+
+    .lightbox-layout.sidebar-hidden .toggle-sidebar-btn--floating {
+      pointer-events: auto;
+    }
+
+    .lightbox-layout.sidebar-hidden .toggle-sidebar-btn--floating::after {
+      opacity: 0.15;
+    }
+
+    .lightbox-layout.sidebar-hidden .toggle-sidebar-btn--floating:hover,
+    .lightbox-layout.sidebar-hidden .toggle-sidebar-btn--floating:focus-visible {
+      opacity: 1;
+    }
+
+    .lightbox-layout.sidebar-hidden .toggle-sidebar-btn--floating:hover::after,
+    .lightbox-layout.sidebar-hidden .toggle-sidebar-btn--floating:focus-visible::after {
+      opacity: 0.4;
     }
     
     /* Action buttons */
@@ -461,8 +512,11 @@
     <div class="lightbox-layout" id="lightboxLayout">
       <aside class="lightbox-sidebar" id="lightboxSidebar">
         <div class="sidebar-scrollable">
-          <div class="sidebar-section">
-            <a href="{% url 'choose:gallery' folder=folder %}" class="back-btn">← Back to gallery</a>
+          <div class="sidebar-section sidebar-section--intro">
+            <div class="sidebar-header">
+              <a href="{% url 'choose:gallery' folder=folder %}" class="back-btn">← Back to gallery</a>
+              <button class="toggle-sidebar-btn" type="button" data-toggle-sidebar aria-label="Hide sidebar" title="Hide sidebar">⇤</button>
+            </div>
             <div class="metadata-title-group">
               <div class="metadata-title">{{ title }}</div>
               {% if year %}<div class="metadata-year">{{ year }}</div>{% endif %}
@@ -573,7 +627,7 @@
         <div class="viewer-spinner" aria-hidden="true"></div>
         <img class="viewer-img" id="viewerImg" src="{{ current_image.url }}" alt="{{ current_image.name }}" />
         
-        <button class="toggle-sidebar-btn" id="toggleSidebarBtn" type="button" aria-label="Toggle sidebar" title="Toggle sidebar (S)">☰</button>
+  <button class="toggle-sidebar-btn toggle-sidebar-btn--floating" type="button" data-toggle-sidebar aria-label="Show sidebar" title="Show sidebar (S)">☰</button>
         
         {% if prev_image %}
           <button class="nav-btn nav-prev" id="prevBtn" type="button" aria-label="Previous image" title="Previous image (←)">‹</button>
@@ -610,7 +664,7 @@
       const viewerImg = document.getElementById('viewerImg');
       const downloadBtn = document.getElementById('downloadBtn');
       const deleteBtn = document.getElementById('deleteBtn');
-      const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
+  const toggleSidebarButtons = document.querySelectorAll('[data-toggle-sidebar]');
       const prevBtn = document.getElementById('prevBtn');
       const nextBtn = document.getElementById('nextBtn');
       const deleteModal = document.getElementById('deleteModal');
@@ -628,11 +682,31 @@
       let currentVersions = {{ current_image.versions|safe }};
       
       // Sidebar toggle
-      if (toggleSidebarBtn) {
-        toggleSidebarBtn.addEventListener('click', function() {
-          layout.classList.toggle('sidebar-hidden');
+      function updateSidebarToggleButtons() {
+        const isHidden = layout.classList.contains('sidebar-hidden');
+        toggleSidebarButtons.forEach(function(btn) {
+          btn.setAttribute('aria-expanded', (!isHidden).toString());
         });
       }
+
+      function toggleSidebar(forceHidden) {
+        if (forceHidden === true) {
+          layout.classList.add('sidebar-hidden');
+        } else if (forceHidden === false) {
+          layout.classList.remove('sidebar-hidden');
+        } else {
+          layout.classList.toggle('sidebar-hidden');
+        }
+        updateSidebarToggleButtons();
+      }
+
+      toggleSidebarButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          toggleSidebar();
+        });
+      });
+
+      updateSidebarToggleButtons();
       
       // Keyboard navigation
       document.addEventListener('keydown', function(event) {
@@ -643,7 +717,7 @@
         
         if (event.key === 's' || event.key === 'S') {
           event.preventDefault();
-          layout.classList.toggle('sidebar-hidden');
+          toggleSidebar();
         }
         
         if (event.key === 'ArrowLeft' && prevBtn && !prevBtn.disabled) {
