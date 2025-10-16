@@ -8,101 +8,106 @@
   <form method="post" action="" novalidate>
       {% csrf_token %}
       
-      <!-- Folder Selection Dropdown -->
-      <div class="field" style="margin-bottom: 1.5rem;">
-        <div class="field-label">Folder</div>
-        <div class="folder-select-wrapper">
-          <div id="folderSelectButton" class="folder-select-button">
-            <div class="folder-select-display">
-              <span>Create new</span>
+      <!-- Main form card with cover on the side -->
+      <div class="card">
+        <div style="display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start;">
+          <!-- Form fields -->
+          <div>
+            {% if form.non_field_errors %}
+              <div class="status status--error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <!-- Folder Selection Dropdown -->
+            <div class="field">
+              <div class="field-label">Folder</div>
+              <div class="folder-select-wrapper">
+                <div id="folderSelectButton" class="folder-select-button">
+                  <div class="folder-select-display">
+                    <span>Create new</span>
+                  </div>
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                  </svg>
+                </div>
+                <div id="folderSelectDropdown" class="folder-select-dropdown" style="display: none;">
+                  <div class="folder-select-option" data-value="" data-title="" data-year="" data-cover-url="">
+                    <span>Create new</span>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" id="selectedFolder" value="" />
             </div>
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-            </svg>
+
+            <!-- Title and Year -->
+            <div class="two-col">
+              <label>
+                <div style="margin-bottom:.25rem;">Title</div>
+                {{ form.title }}
+                {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
+              </label>
+              <label>
+                <div style="margin-bottom:.25rem;">Year</div>
+                {{ form.year }}
+                {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
+              </label>
+            </div>
+
+            <!-- Episode and Season -->
+            <div class="two-col">
+              <label>
+                <div style="margin-bottom:.25rem;">Episode</div>
+                {{ form.episode }}
+                {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
+              </label>
+              <label>
+                <div style="margin-bottom:.25rem;">Season</div>
+                {{ form.season }}
+                {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
+              </label>
+            </div>
+
+            <!-- Video file -->
+            <div class="field">
+              <div class="field-label">Video file</div>
+              <div class="input-group">
+                {{ form.video }}
+                <button type="button" class="btn btn-ghost" onclick="openBrowseModal('video')">Browse…</button>
+              </div>
+              {% if form.video.errors %}<div class="status status--error">{{ form.video.errors|striptags }}</div>{% endif %}
+            </div>
+
+            <div id="namingPreview" class="muted" style="margin-top:.25rem;"></div>
+
+            <!-- Trim intervals -->
+            <div class="field">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <div class="field-label" style="margin:0">Trim intervals</div>
+                <button type="button" class="btn btn-ghost" onclick="addInterval()">Add</button>
+              </div>
+              <input type="hidden" name="{{ form.trim_intervals.html_name }}" id="id_trim_intervals" />
+              <div id="intervals" class="grid" style="margin-top:.5rem;"></div>
+              {% if form.trim_intervals.errors %}<div class="status status--error">{{ form.trim_intervals.errors|striptags }}</div>{% endif %}
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit" id="startBtn">Start</button>
+              <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
+            </div>
           </div>
-          <div id="folderSelectDropdown" class="folder-select-dropdown" style="display: none;">
-            <div class="folder-select-option" data-value="" data-title="" data-year="" data-cover-url="">
-              <span>Create new</span>
+
+          <!-- Cover image field on the side -->
+          <div>
+            <div class="field-label" style="margin-bottom:.5rem;">Cover image</div>
+            <input type="hidden" name="{{ form.cover_image_url.html_name }}" id="id_cover_image_url" />
+            <div id="coverField" class="cover-field" onclick="openCoverModal()">
+              <div id="coverPreview" class="cover-preview">
+                <div class="cover-placeholder">No cover selected</div>
+              </div>
             </div>
+            <div class="muted" style="font-size:.85rem; margin-top:.5rem; text-align: center;">Click to select from TMDB</div>
+            {% if form.cover_image_url.errors %}<div class="status status--error">{{ form.cover_image_url.errors|striptags }}</div>{% endif %}
           </div>
         </div>
-        <input type="hidden" id="selectedFolder" value="" />
-      </div>
-      
-      <div style="display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start;">
-        <!-- Main form fields -->
-        <div class="card">
-        <div class="field">
-          {% if form.non_field_errors %}
-            <div class="status status--error">{{ form.non_field_errors }}</div>
-          {% endif %}
-
-          <div class="field">
-            <div class="field-label">Video file</div>
-            <div class="input-group">
-              {{ form.video }}
-              <button type="button" class="btn btn-ghost" onclick="openBrowseModal('video')">Browse…</button>
-            </div>
-            {% if form.video.errors %}<div class="status status--error">{{ form.video.errors|striptags }}</div>{% endif %}
-          </div>
-
-          <div class="field">
-            <div class="field-label">Title</div>
-            {{ form.title }}
-            {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
-            
-          </div>
-
-          <div class="two-col">
-            <label>
-              <div style="margin-bottom:.25rem;">Year</div>
-              {{ form.year }}
-              {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
-            </label>
-            <label>
-              <div style="margin-bottom:.25rem;">Season</div>
-              {{ form.season }}
-              {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
-            </label>
-          </div>
-
-          <div class="field">
-            <div style="margin-bottom:.25rem;">Episode</div>
-            {{ form.episode }}
-            {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
-          </div>
-
-          <div id="namingPreview" class="muted" style="margin-top:.25rem;"></div>
-
-          <div class="field">
-            <div style="display:flex; align-items:center; justify-content:space-between;">
-              <div class="field-label" style="margin:0">Trim intervals</div>
-              <button type="button" class="btn btn-ghost" onclick="addInterval()">Add</button>
-            </div>
-            <input type="hidden" name="{{ form.trim_intervals.html_name }}" id="id_trim_intervals" />
-            <div id="intervals" class="grid" style="margin-top:.5rem;"></div>
-            {% if form.trim_intervals.errors %}<div class="status status--error">{{ form.trim_intervals.errors|striptags }}</div>{% endif %}
-          </div>
-
-          <div class="form-actions">
-            <button class="btn btn-primary" type="submit" id="startBtn">Start</button>
-            <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
-          </div>
-        </div>
-      </div>
-
-      <!-- Cover image field -->
-      <div>
-        <div class="field-label" style="margin-bottom:.5rem;">Cover image</div>
-        <input type="hidden" name="{{ form.cover_image_url.html_name }}" id="id_cover_image_url" />
-        <div id="coverField" class="cover-field" onclick="openCoverModal()">
-          <div id="coverPreview" class="cover-preview">
-            <div class="cover-placeholder">No cover selected</div>
-          </div>
-        </div>
-        <div class="muted" style="font-size:.85rem; margin-top:.5rem; text-align: center;">Click to select from TMDB</div>
-        {% if form.cover_image_url.errors %}<div class="status status--error">{{ form.cover_image_url.errors|striptags }}</div>{% endif %}
-      </div>
       </div>
     </form>
   </div>
