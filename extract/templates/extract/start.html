@@ -2,68 +2,114 @@
 {% load static naming %}
 {% block title %}Extract · KWC{% endblock %}
 {% block content %}
-<div style="min-height: 60vh; display: grid; place-items: center;">
-  <div style="width: 100%; max-width: 720px;">
-  <h1>New extraction</h1>
-  <form method="post" action="" novalidate>
+<div class="extract-page-shell">
+  <div class="extract-page-inner">
+    <h1>New extraction</h1>
+    <form method="post" action="" novalidate>
       {% csrf_token %}
-      <div class="card">
-        <div class="field">
-          {% if form.non_field_errors %}
-            <div class="status status--error">{{ form.non_field_errors }}</div>
-          {% endif %}
-
-          <div class="field">
-            <div class="field-label">Video file</div>
-            <div class="input-group">
-              {{ form.video }}
-              <button type="button" class="btn btn-ghost" onclick="openBrowseModal('video')">Browse…</button>
+      
+    <!-- Main form card -->
+    <div class="card extract-form-card">
+        {% if form.non_field_errors %}
+          <div class="status status--error">{{ form.non_field_errors }}</div>
+        {% endif %}
+        
+        <div class="extract-form-container">
+          <!-- Left: Form fields -->
+          <div class="extract-form-main">
+            <!-- Folder Selection Dropdown -->
+            <div class="form-row">
+              <div class="form-field form-field-full">
+                <div class="field-label">Folder</div>
+                <div class="folder-select-wrapper">
+                  <div id="folderSelectButton" class="folder-select-button">
+                    <div class="folder-select-display">
+                      <span>Create new</span>
+                    </div>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                    </svg>
+                  </div>
+                  <div id="folderSelectDropdown" class="folder-select-dropdown" style="display: none;">
+                    <div class="folder-select-option" data-value="" data-title="" data-year="" data-cover-url="">
+                      <span>Create new</span>
+                    </div>
+                  </div>
+                </div>
+                <input type="hidden" id="selectedFolder" value="" />
+              </div>
             </div>
-            {% if form.video.errors %}<div class="status status--error">{{ form.video.errors|striptags }}</div>{% endif %}
-          </div>
 
-          <div class="field">
-            <div class="field-label">Title</div>
-            {{ form.title }}
-            <datalist id="titleSuggestions"></datalist>
-            {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
-            
-          </div>
-
-          <div class="two-col">
-            <label>
-              <div style="margin-bottom:.25rem;">Year</div>
-              {{ form.year }}
-              {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
-            </label>
-            <label>
-              <div style="margin-bottom:.25rem;">Season</div>
-              {{ form.season }}
-              {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
-            </label>
-          </div>
-
-          <div class="field">
-            <div style="margin-bottom:.25rem;">Episode</div>
-            {{ form.episode }}
-            {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
-          </div>
-
-          <div id="namingPreview" class="muted" style="margin-top:.25rem;"></div>
-
-          <div class="field">
-            <div style="display:flex; align-items:center; justify-content:space-between;">
-              <div class="field-label" style="margin:0">Trim intervals</div>
-              <button type="button" class="btn btn-ghost" onclick="addInterval()">Add</button>
+            <!-- Title, Year, Season, Episode -->
+            <div class="form-row form-row-2col">
+              <div class="form-field">
+                <div class="field-label">Title</div>
+                {{ form.title }}
+                {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="form-field">
+                <div class="field-label">Year</div>
+                {{ form.year }}
+                {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="form-field">
+                <div class="field-label">Season</div>
+                {{ form.season }}
+                {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="form-field">
+                <div class="field-label">Episode</div>
+                {{ form.episode }}
+                {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
+              </div>
             </div>
-            <input type="hidden" name="{{ form.trim_intervals.html_name }}" id="id_trim_intervals" />
-            <div id="intervals" class="grid" style="margin-top:.5rem;"></div>
-            {% if form.trim_intervals.errors %}<div class="status status--error">{{ form.trim_intervals.errors|striptags }}</div>{% endif %}
+
+            <!-- Video file -->
+            <div class="form-row">
+              <div class="form-field form-field-full">
+                <div class="field-label">Video file</div>
+                <div class="input-group">
+                  {{ form.video }}
+                  <button type="button" class="btn btn-ghost" onclick="openBrowseModal('video')">Browse…</button>
+                </div>
+                {% if form.video.errors %}<div class="status status--error">{{ form.video.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div id="namingPreview" class="muted" style="font-size: 0.9rem; margin-bottom: 1rem;"></div>
+
+            <!-- Trim intervals -->
+            <div class="form-row">
+              <div class="form-field form-field-full">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <div class="field-label" style="margin:0">Trim intervals</div>
+                  <button type="button" class="btn btn-ghost" onclick="addInterval()">Add</button>
+                </div>
+                <input type="hidden" name="{{ form.trim_intervals.html_name }}" id="id_trim_intervals" />
+                <div id="intervals" class="grid" style="margin-top:.5rem;"></div>
+                {% if form.trim_intervals.errors %}<div class="status status--error">{{ form.trim_intervals.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+            <div class="form-actions">
+              <button class="btn btn-primary" type="submit" id="startBtn">Start</button>
+              <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
+            </div>
           </div>
 
-          <div class="form-actions">
-            <button class="btn btn-primary" type="submit" id="startBtn">Start</button>
-            <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
+          <!-- Right: Cover image -->
+          <div class="extract-form-sidebar">
+            <div class="form-field">
+              <div class="field-label">Cover image</div>
+              <input type="hidden" name="{{ form.cover_image_url.html_name }}" id="id_cover_image_url" />
+              <div id="coverField" class="cover-field" onclick="openCoverModal()">
+                <div id="coverPreview" class="cover-preview">
+                  <div class="cover-placeholder">No cover selected</div>
+                </div>
+              </div>
+              <div class="muted" style="font-size:.85rem; margin-top:.5rem; text-align: center;">Click to select from TMDB</div>
+              {% if form.cover_image_url.errors %}<div class="status status--error">{{ form.cover_image_url.errors|striptags }}</div>{% endif %}
+            </div>
           </div>
         </div>
       </div>
@@ -80,20 +126,27 @@
   const videoEl = document.getElementById('{{ form.video.auto_id }}');
   // Title input
   const titleEl = document.getElementById('{{ form.title.auto_id }}');
-  if (titleEl) { 
-    titleEl.classList.add('input'); 
-    titleEl.classList.add('input-narrow'); 
-    titleEl.setAttribute('list', 'titleSuggestions');
+  if (titleEl) {
+    titleEl.classList.add('input');
   }
   const yearEl = document.getElementById('{{ form.year.auto_id }}');
   const seasonEl = document.getElementById('{{ form.season.auto_id }}');
   const episodeEl = document.getElementById('{{ form.episode.auto_id }}');
-  if (yearEl) { yearEl.classList.add('input'); yearEl.style.maxWidth = '200px'; }
-  if (seasonEl) { seasonEl.classList.add('input'); seasonEl.style.maxWidth = '200px'; }
-  if (episodeEl) { episodeEl.classList.add('input'); episodeEl.classList.add('input-narrow'); }
+  if (yearEl) {
+    yearEl.classList.add('input');
+  }
+  if (seasonEl) {
+    seasonEl.classList.add('input');
+  }
+  if (episodeEl) {
+    episodeEl.classList.add('input');
+  }
   const namingPreview = document.getElementById('namingPreview');
   const folderPattern = "{{ folder_pattern|escapejs }}";
   const imagePattern = "{{ image_pattern|escapejs }}";
+  const folderSelectButton = document.getElementById('folderSelectButton');
+  const folderSelectDropdown = document.getElementById('folderSelectDropdown');
+  const selectedFolderInput = document.getElementById('selectedFolder');
 
   function formatPreview() {
     const title = (titleEl?.value || '').trim() || 'Sample title';
@@ -112,7 +165,24 @@
   // Initialize preview
   formatPreview();
   
-  // Load existing folders for autocomplete
+  // Custom folder dropdown
+  let isDropdownOpen = false;
+  
+  folderSelectButton?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isDropdownOpen = !isDropdownOpen;
+    folderSelectDropdown.style.display = isDropdownOpen ? 'block' : 'none';
+  });
+  
+  // Close dropdown when clicking outside
+  document.addEventListener('click', (e) => {
+    if (isDropdownOpen && !folderSelectButton?.contains(e.target) && !folderSelectDropdown?.contains(e.target)) {
+      isDropdownOpen = false;
+      folderSelectDropdown.style.display = 'none';
+    }
+  });
+  
+  // Load existing folders for dropdown
   let existingFolders = [];
   async function loadExistingFolders() {
     try {
@@ -121,18 +191,38 @@
       const data = await res.json();
       existingFolders = data.folders || [];
       
-      // Populate datalist with unique titles
-      const datalist = document.getElementById('titleSuggestions');
-      if (datalist) {
-        datalist.innerHTML = '';
-        const titles = new Set();
+      // Populate folder dropdown with styled options
+      if (folderSelectDropdown) {
         existingFolders.forEach(f => {
-          if (f.title && !titles.has(f.title)) {
-            titles.add(f.title);
-            const option = document.createElement('option');
-            option.value = f.title;
-            datalist.appendChild(option);
+          const option = document.createElement('div');
+          option.className = 'folder-select-option';
+          option.dataset.value = f.name;
+          option.dataset.title = f.title;
+          option.dataset.year = f.year || '';
+          option.dataset.coverUrl = f.cover_url || '';
+          option.dataset.coverThumbUrl = f.cover_thumb_url || '';
+          
+          // Create option content with cover, title, and year
+          if (f.cover_thumb_url) {
+            option.innerHTML = `
+              <img src="${f.cover_thumb_url}" alt="${f.title}" class="folder-option-cover" />
+              <div class="folder-option-text">
+                <div class="folder-option-title">${f.title}</div>
+                ${f.year ? `<div class="folder-option-year">${f.year}</div>` : ''}
+              </div>
+            `;
+          } else {
+            option.innerHTML = `
+              <div class="folder-option-no-cover"></div>
+              <div class="folder-option-text">
+                <div class="folder-option-title">${f.title}</div>
+                ${f.year ? `<div class="folder-option-year">${f.year}</div>` : ''}
+              </div>
+            `;
           }
+          
+          option.addEventListener('click', () => selectFolder(f));
+          folderSelectDropdown.appendChild(option);
         });
       }
     } catch (e) {
@@ -140,29 +230,72 @@
     }
   }
   
-  // Autofill year when title matches an existing folder
-  function autofillFromExistingFolder() {
-    if (!titleEl) return;
-    const enteredTitle = titleEl.value.trim();
-    if (!enteredTitle) return;
-    
-    // Find matching folder (case-insensitive)
-    const match = existingFolders.find(f => 
-      f.title.toLowerCase() === enteredTitle.toLowerCase()
-    );
-    
-    if (match) {
-      // Only autofill if the field is empty
-      if (yearEl && !yearEl.value && match.year) {
-        yearEl.value = match.year;
-        formatPreview();
+  // Handle folder selection
+  function selectFolder(folder) {
+    if (!folder || !folder.name) {
+      // "Create new" selected - reset
+      selectedFolderInput.value = '';
+      folderSelectButton.querySelector('.folder-select-display span').textContent = 'Create new';
+      
+      if (titleEl) {
+        titleEl.disabled = false;
+        titleEl.value = '';
       }
+      if (yearEl) {
+        yearEl.disabled = false;
+        yearEl.value = '';
+      }
+      coverField.style.cursor = 'pointer';
+      coverField.style.opacity = '1';
+      coverField.onclick = () => openCoverModal();
+      coverPreview.innerHTML = '<div class="cover-placeholder">No cover selected</div>';
+      coverImageUrlInput.value = '';
+      isFolderExisting = false;
+    } else {
+      // Existing folder selected
+      selectedFolderInput.value = folder.name;
+      
+      // Update button display
+      const displayText = `${folder.title}${folder.year ? ' (' + folder.year + ')' : ''}`;
+      folderSelectButton.querySelector('.folder-select-display span').textContent = displayText;
+      
+      // Fill and disable title and year
+      if (titleEl) {
+        titleEl.value = folder.title;
+        titleEl.disabled = true;
+      }
+      if (yearEl) {
+        yearEl.value = folder.year || '';
+        yearEl.disabled = true;
+      }
+      
+      // Set cover image
+      if (folder.cover_url) {
+        coverPreview.innerHTML = `<img src="${folder.cover_url}" alt="Cover" class="cover-image" />`;
+        coverField.style.cursor = 'not-allowed';
+        coverField.style.opacity = '0.7';
+        coverField.onclick = null;
+      } else {
+        coverPreview.innerHTML = '<div class="cover-placeholder">No cover available</div>';
+        coverField.style.cursor = 'not-allowed';
+        coverField.style.opacity = '0.7';
+        coverField.onclick = null;
+      }
+      
+      isFolderExisting = true;
     }
+    
+    // Close dropdown
+    isDropdownOpen = false;
+    folderSelectDropdown.style.display = 'none';
+    
+    formatPreview();
   }
   
-  // Trigger autofill when title input loses focus or user presses enter
-  titleEl?.addEventListener('blur', autofillFromExistingFolder);
-  titleEl?.addEventListener('change', autofillFromExistingFolder);
+  // Handle clicking "Create new" in dropdown
+  folderSelectDropdown?.querySelector('[data-value=""]')?.addEventListener('click', () => {
+    selectFolder(null);
+  });
   
   // Load folders on page load
   loadExistingFolders();
@@ -373,5 +506,206 @@
   // Auto-run when user edits the video path
   videoEl?.addEventListener('change', () => guessFromVideoInput());
   videoEl?.addEventListener('blur', () => guessFromVideoInput());
+
+  // ============================================================================
+  // Cover Image Selection with TMDB
+  // ============================================================================
+
+  const coverImageUrlInput = document.getElementById('id_cover_image_url');
+  const coverPreview = document.getElementById('coverPreview');
+  const coverField = document.getElementById('coverField');
+  let selectedCoverUrl = '';
+  let isFolderExisting = false;
+
+  function openCoverModal() {
+    if (isFolderExisting) return;
+    
+    const modal = ensureCoverModal();
+    modal.classList.add('open');
+    
+    // Pre-fill search with title if available
+    const searchInput = document.getElementById('tmdbSearchInput');
+    if (searchInput && titleEl) {
+      searchInput.value = titleEl.value.trim();
+    }
+    
+    // Clear previous results
+    document.getElementById('tmdbResults').innerHTML = '';
+    document.getElementById('tmdbPosters').innerHTML = '';
+  }
+
+  function closeCoverModal() {
+    const modal = document.getElementById('coverModal');
+    if (modal) {
+      modal.classList.remove('open');
+    }
+  }
+
+  function ensureCoverModal() {
+    let modal = document.getElementById('coverModal');
+    if (modal) return modal;
+    
+    modal = document.createElement('div');
+    modal.id = 'coverModal';
+    modal.innerHTML = `
+      <div class="modal-overlay" onclick="if(event.target === this) closeCoverModal()">
+        <div class="modal-content cover-modal-content">
+          <div class="modal-header">
+            <h2 style="margin:0;">Select Cover Image</h2>
+            <button type="button" class="btn btn-ghost" onclick="closeCoverModal()">Close</button>
+          </div>
+          
+          <div class="modal-body">
+            <!-- Search section -->
+            <div class="search-section">
+              <div class="field">
+                <input type="text" id="tmdbSearchInput" class="input" placeholder="Search for movie or TV show..." />
+              </div>
+              <button type="button" class="btn btn-primary" onclick="searchTMDB()">Search</button>
+            </div>
+            
+            <!-- Search results -->
+            <div id="tmdbResults" class="tmdb-results"></div>
+            
+            <!-- Posters grid -->
+            <div id="tmdbPosters" class="posters-grid"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Enter key to search
+    const searchInput = document.getElementById('tmdbSearchInput');
+    searchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchTMDB();
+      }
+    });
+    
+    return modal;
+  }
+
+  async function searchTMDB() {
+    const searchInput = document.getElementById('tmdbSearchInput');
+    const query = searchInput.value.trim();
+    if (!query) return;
+    
+    const resultsDiv = document.getElementById('tmdbResults');
+    const postersDiv = document.getElementById('tmdbPosters');
+    
+    resultsDiv.innerHTML = '<div class="muted" style="padding:1rem;">Searching...</div>';
+    postersDiv.innerHTML = '';
+    
+    try {
+      const year = yearEl?.value.trim() || '';
+      const url = '{% url 'extract:tmdb_search_api' %}?' + new URLSearchParams({ query, year }).toString();
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Search failed');
+      }
+      
+      const data = await response.json();
+      displaySearchResults(data.results || []);
+    } catch (e) {
+      resultsDiv.innerHTML = `<div class="status status--error" style="padding:1rem;">${e.message}</div>`;
+      console.error('TMDB search failed', e);
+    }
+  }
+
+  function displaySearchResults(results) {
+    const resultsDiv = document.getElementById('tmdbResults');
+    
+    if (results.length === 0) {
+      resultsDiv.innerHTML = '<div class="muted" style="padding:1rem;">No results found</div>';
+      return;
+    }
+    
+    resultsDiv.innerHTML = '<div class="field-label" style="margin-bottom:.5rem;">Select a title:</div>';
+    
+    const grid = document.createElement('div');
+    grid.className = 'search-results-grid';
+    
+    results.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'search-result-card';
+      card.onclick = () => loadPosters(item.media_type, item.id);
+      
+      const year = item.release_date ? new Date(item.release_date).getFullYear() : '';
+      const typeLabel = item.media_type === 'movie' ? 'Movie' : 'TV Show';
+      
+      card.innerHTML = `
+        <div style="font-weight:600;">${item.title}</div>
+        <div class="muted" style="font-size:.85rem;">${year} · ${typeLabel}</div>
+      `;
+      
+      grid.appendChild(card);
+    });
+    
+    resultsDiv.appendChild(grid);
+  }
+
+  async function loadPosters(mediaType, mediaId) {
+    const postersDiv = document.getElementById('tmdbPosters');
+    postersDiv.innerHTML = '<div class="muted" style="padding:1rem;">Loading posters...</div>';
+    
+    try {
+      const url = '{% url 'extract:tmdb_posters_api' %}?' + new URLSearchParams({ 
+        media_type: mediaType, 
+        media_id: mediaId 
+      }).toString();
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to load posters');
+      }
+      
+      const data = await response.json();
+      displayPosters(data.posters || []);
+    } catch (e) {
+      postersDiv.innerHTML = `<div class="status status--error" style="padding:1rem;">${e.message}</div>`;
+      console.error('TMDB load posters failed', e);
+    }
+  }
+
+  function displayPosters(posters) {
+    const postersDiv = document.getElementById('tmdbPosters');
+    
+    if (posters.length === 0) {
+      postersDiv.innerHTML = '<div class="muted" style="padding:1rem;">No posters found</div>';
+      return;
+    }
+    
+    postersDiv.innerHTML = '<div class="field-label" style="margin-bottom:.5rem;">Select a poster:</div>';
+    
+    const grid = document.createElement('div');
+    grid.className = 'posters-grid-inner';
+    
+    posters.forEach(poster => {
+      const card = document.createElement('div');
+      card.className = 'poster-card';
+      card.onclick = () => selectPoster(poster.url);
+      
+      card.innerHTML = `<img src="${poster.url}" alt="Poster" loading="lazy" />`;
+      grid.appendChild(card);
+    });
+    
+    postersDiv.appendChild(grid);
+  }
+
+  function selectPoster(url) {
+    selectedCoverUrl = url;
+    coverImageUrlInput.value = url;
+    
+    // Update preview
+    coverPreview.innerHTML = `<img src="${url}" alt="Cover" class="cover-image" />`;
+    
+    closeCoverModal();
+  }
+
 </script>
 {% endblock %}
