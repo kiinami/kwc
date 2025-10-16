@@ -1,7 +1,15 @@
 {% extends 'base.html' %}
 {% block title %}Wallpaper library · KWC{% endblock %}
 {% block content %}
-  <div style="max-width: 1120px; margin: 0 auto;">
+  <style>
+    .library-wrapper {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 4vw, 2rem) 2rem;
+      box-sizing: border-box;
+    }
+  </style>
+  <div class="library-wrapper">
     {% include 'choose/_library_grid.html' with folders=folders heading='Wallpaper library' intro='Explore your extracted shows and films. Click a cover to open its gallery, then download favorites or switch into choose mode.' %}
   </div>
 {% endblock %}

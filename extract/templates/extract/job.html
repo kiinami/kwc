@@ -1,8 +1,29 @@
 {% extends 'base.html' %}
 {% block title %}Job · KWC{% endblock %}
 {% block content %}
-<div style="min-height: 60vh; display: grid; place-items: center;">
-  <div class="card" style="max-width: 720px; width: 100%;">
+<style>
+  .job-shell {
+    min-height: 60vh;
+    display: grid;
+    place-items: center;
+    padding: 0 clamp(1rem, 4vw, 2rem) 2rem;
+    box-sizing: border-box;
+  }
+
+  .job-card {
+    max-width: 720px;
+    width: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .job-card {
+      padding-inline: clamp(1rem, 6vw, 1.75rem);
+      box-sizing: border-box;
+    }
+  }
+</style>
+<div class="job-shell">
+  <div class="card job-card">
     <h1 style="margin-top:0">{% if job_name %}{{ job_name }}{% else %}Extraction{% endif %}</h1>
 
     <div style="display:flex; align-items:center; gap:.5rem; margin-top:.75rem;">

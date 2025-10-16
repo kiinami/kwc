@@ -1,13 +1,48 @@
 {% extends 'base.html' %}
 {% block title %}Extract · KWC{% endblock %}
 {% block content %}
-  <div style="min-height: 60vh; display: grid; place-items: center;">
-    <div style="text-align:center; width: 100%;">
+  <style>
+    .extract-index-shell {
+      min-height: 60vh;
+      display: grid;
+      place-items: center;
+      padding: 0 clamp(1rem, 4vw, 2.25rem) 2.5rem;
+      box-sizing: border-box;
+    }
+
+    .extract-index-inner {
+      text-align: center;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .extract-jobs {
+      margin-top: 1.25rem;
+      max-width: 640px;
+      margin-inline: auto;
+      text-align: left;
+      padding-inline: clamp(0rem, 3vw, .5rem);
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 640px) {
+      .extract-index-inner h1 {
+        margin-bottom: .85rem;
+      }
+
+      .extract-jobs {
+        width: 100%;
+      }
+    }
+  </style>
+  <div class="extract-index-shell">
+    <div class="extract-index-inner">
       <h1>Extract</h1>
       <div style="margin-top: .75rem;">
         <a class="btn btn-primary" href="{% url 'extract:start' %}">Start new extraction</a>
       </div>
-      <div style="margin-top: 1.25rem; max-width: 640px; margin-inline: auto; text-align:left;">
+      <div class="extract-jobs">
         <h3 style="margin-top:0">Jobs</h3>
         <div id="jobs-list" class="grid">
           {% for j in jobs %}
