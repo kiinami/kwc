@@ -308,7 +308,7 @@
     browseTarget = target;
     const modal = ensureBrowseModal();
     modal.classList.add('open');
-    loadDir('/');
+    loadDir('{{ file_picker_start_path|escapejs }}');
     modal.dataset.dirsOnly = target === 'video' ? '0' : '1';
     const useBtn = document.getElementById('useCurrentBtn');
     if (useBtn) { useBtn.style.display = 'none'; }

@@ -105,6 +105,7 @@ def start(request: HttpRequest) -> HttpResponse:
 			"form": form,
 			"folder_pattern": settings.EXTRACT_FOLDER_PATTERN,
 			"image_pattern": settings.EXTRACT_IMAGE_PATTERN,
+			"file_picker_start_path": settings.FILE_PICKER_START_PATH,
 		},
 	)
 
@@ -161,6 +162,32 @@ def job_api(request: HttpRequest, job_id: str) -> JsonResponse:
 		"output_dir": job_obj.output_dir,
 	}
 	return JsonResponse(payload)
+
+
+@require_POST
+def cancel_job(request: HttpRequest, job_id: str) -> JsonResponse:
+	"""Cancel a running extraction job."""
+	job_obj = get_object_or_404(ExtractionJob, pk=job_id)
+	
+	# Check if job is already finished
+	if job_obj.status in FINISHED_STATUSES:
+		return JsonResponse({"success": False, "error": "Job already finished"}, status=400)
+	
+	# Immediately mark the job as cancelling in the database
+	job_obj.status = ExtractionJob.Status.CANCELLING
+	job_obj.save(update_fields=["status", "updated_at"])
+	
+	# Try to cancel the job
+	was_running = job_runner.cancel_job(job_id)
+	
+	if not was_running:
+		# Job wasn't actually running, mark as fully cancelled
+		job_obj.status = ExtractionJob.Status.CANCELLED
+		job_obj.error = "Job cancelled by user"
+		job_obj.finished_at = timezone.now()
+		job_obj.save(update_fields=["status", "error", "finished_at", "updated_at"])
+	
+	return JsonResponse({"success": True, "status": job_obj.status})
 
 
 def index(request: HttpRequest) -> HttpResponse:
@@ -229,10 +256,10 @@ def browse_api(request: HttpRequest) -> JsonResponse:
 	"""List directories and files under a given absolute path root.
 
 	Query params:
-	- path: absolute path to list; defaults to '/'
+	- path: absolute path to list; defaults to FILE_PICKER_START_PATH setting
 	- dirs_only: '1' to return only directories
 	"""
-	raw = request.GET.get("path") or "/"
+	raw = request.GET.get("path") or settings.FILE_PICKER_START_PATH
 	dirs_only = request.GET.get("dirs_only") == "1"
 	# Security: normalize and restrict to absolute paths; optionally restrict to allowlist here
 	path = os.path.abspath(raw)

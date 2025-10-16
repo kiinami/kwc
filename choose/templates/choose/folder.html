@@ -418,8 +418,8 @@
             headers: { 'X-CSRFToken': getCsrf() },
           });
           if (!res.ok) throw new Error('request_failed');
-          // Redirect to chooser home on success
-          window.location.assign('/choose/');
+          // Redirect to gallery on success
+          window.location.assign(`${window.location.pathname}gallery/`);
         } catch (e) {
           console.error('Save failed', e);
           alert('Saving failed. Please try again.');

@@ -4,6 +4,8 @@ import concurrent.futures
 import logging
 import os
 import re
+import signal
+import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +18,27 @@ from .utils import cut_video, get_iframe_timestamps, render_pattern
 
 logger = logging.getLogger(__name__)
 _sleep = time.sleep
+
+
+class CancellationToken:
+	"""Thread-safe token for signaling cancellation."""
+	
+	def __init__(self) -> None:
+		self._cancelled = False
+		self._lock = threading.Lock()
+	
+	def cancel(self) -> None:
+		with self._lock:
+			self._cancelled = True
+	
+	def is_cancelled(self) -> bool:
+		with self._lock:
+			return self._cancelled
+
+
+class CancelledException(Exception):
+	"""Raised when an extraction is cancelled."""
+	pass
 
 
 def _get_retry_config() -> tuple[int, float]:
@@ -151,6 +174,7 @@ class ExtractParams:
     season: int | None = None
     episode: str | int | None = None
     max_workers: int | None = None
+    cancel_token: CancellationToken | None = None
 
 
 def extract(
@@ -163,6 +187,10 @@ def extract(
 
     on_progress(current, total) can be used to track progress.
     """
+    # Check for cancellation early
+    if params.cancel_token and params.cancel_token.is_cancelled():
+        raise CancelledException("Extraction cancelled")
+    
     video = params.video
     output_dir = params.output_dir
     if not output_dir.exists():
@@ -172,6 +200,10 @@ def extract(
         video = cut_video(video, [tuple(interval.split("-")) for interval in params.trim_intervals])
 
     logger.info('Extracting frames from "%s" to "%s"...', video.absolute(), output_dir.absolute())
+
+    # Check for cancellation before getting timestamps
+    if params.cancel_token and params.cancel_token.is_cancelled():
+        raise CancelledException("Extraction cancelled")
 
     timestamps = get_iframe_timestamps(video)
     logger.debug("Found %d keyframes", len(timestamps))
@@ -241,6 +273,14 @@ def extract(
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(_extract_frame, arg): arg for arg in frame_args}
             for f in concurrent.futures.as_completed(futures):
+                # Check for cancellation
+                if params.cancel_token and params.cancel_token.is_cancelled():
+                    # Cancel all pending futures
+                    for future in futures:
+                        future.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise CancelledException("Extraction cancelled")
+                
                 # Retrieve result to surface exceptions immediately
                 f.result()
                 done += 1

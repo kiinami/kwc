@@ -36,12 +36,14 @@
 
     <div style="margin-top: 1rem;">
       <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
+      <button class="btn btn-ghost" id="cancelBtn" style="{% if is_finished %}display:none{% endif %}; color:#fca5a5; border-color:#fca5a5;" {% if status == 'cancelling' %}disabled{% endif %}>{% if status == 'cancelling' %}Cancelling...{% else %}Cancel{% endif %}</button>
       <a class="btn btn-primary" id="chooseBtn" href="{{ gallery_url }}" style="{% if not is_done %}display:none{% endif %}">Open Gallery</a>
     </div>
   </div>
 </div>
 <script>
   const apiUrl = "{% url 'extract:job_api' job_id=job_id %}";
+  const cancelUrl = "{% url 'extract:cancel_job' job_id=job_id %}";
   const statusBadge = document.getElementById('statusBadge');
   const bar = document.getElementById('bar');
   const percentEl = document.getElementById('percent');
@@ -49,6 +51,7 @@
   const totalEl = document.getElementById('total');
   const elapsedEl = document.getElementById('elapsed');
   const chooseBtn = document.getElementById('chooseBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
   const progress = document.getElementById('progress');
   const summary = document.getElementById('summary');
   const framesEl = document.getElementById('frames');
@@ -56,6 +59,63 @@
   const countsNumbers = document.getElementById('countsNumbers');
   const countsUnknown = document.getElementById('countsUnknown');
   const errorEl = document.getElementById('errorMessage');
+
+  // Cancel button handler
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to cancel this extraction job?')) {
+        return;
+      }
+      
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = 'Cancelling...';
+      
+      try {
+        const res = await fetch(cancelUrl, {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+          },
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success) {
+            // Poll immediately to update UI
+            setTimeout(poll, 100);
+          } else {
+            alert('Failed to cancel: ' + (data.error || 'Unknown error'));
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = 'Cancel';
+          }
+        } else {
+          alert('Failed to cancel job');
+          cancelBtn.disabled = false;
+          cancelBtn.textContent = 'Cancel';
+        }
+      } catch (e) {
+        alert('Error cancelling job: ' + e.message);
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = 'Cancel';
+      }
+    });
+  }
+
+  // CSRF token helper
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
 
   async function poll() {
     try {
@@ -100,10 +160,18 @@
 
       const finished = !!data.finished;
       const done = !!data.done;
+      const isCancelling = data.status === 'cancelling';
 
       if (progress) progress.style.display = finished ? 'none' : '';
       if (summary) summary.style.display = done ? '' : 'none';
       if (chooseBtn) chooseBtn.style.display = done ? '' : 'none';
+      if (cancelBtn) {
+        cancelBtn.style.display = finished ? 'none' : '';
+        if (isCancelling) {
+          cancelBtn.disabled = true;
+          cancelBtn.textContent = 'Cancelling...';
+        }
+      }
 
       if (finished) {
         return;
@@ -112,6 +180,6 @@
     setTimeout(poll, 1000);
   }
   // Only poll if not done
-  {% if not is_done %}poll();{% endif %}
+  {% if not is_finished %}poll();{% endif %}
 </script>
 {% endblock %}
