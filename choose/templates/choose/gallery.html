@@ -51,18 +51,20 @@
   .lightbox-media img.loaded { opacity: 1; }
   .lightbox-spinner { position: absolute; inset: 0; display: grid; place-items: center; }
   .lightbox-media:not(.is-loading) .lightbox-spinner { display: none; }
-    .lightbox-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; }
+    .lightbox-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: .75rem; position: relative; z-index: 10; }
     .lightbox-caption { font-weight: 600; word-break: break-word; }
-    .lightbox-buttons { display: inline-flex; gap: .5rem; }
-    .lightbox-close, .lightbox-prev, .lightbox-next, .lightbox-version-prev, .lightbox-version-next { position: absolute; width: 2.75rem; height: 2.75rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: rgba(26,32,56,0.85); color: #fff; display: grid; place-items: center; font-size: 1.4rem; font-weight: 700; cursor: pointer; }
+    .lightbox-buttons { display: inline-flex; gap: .5rem; align-items: center; }
+    .lightbox-close, .lightbox-prev, .lightbox-next { position: absolute; width: 2.75rem; height: 2.75rem; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: rgba(26,32,56,0.85); color: #fff; display: grid; place-items: center; font-size: 1.4rem; font-weight: 700; cursor: pointer; }
     .lightbox-close { right: 1rem; top: 1rem; }
     .lightbox-prev { left: 1rem; top: 50%; transform: translateY(-50%); }
     .lightbox-next { right: 1rem; top: 50%; transform: translateY(-50%); }
-    .lightbox-version-prev { left: 50%; bottom: 6rem; transform: translateX(calc(-50% - 2rem)); }
-    .lightbox-version-next { left: 50%; bottom: 6rem; transform: translateX(calc(-50% + 2rem)); }
-    .lightbox-close:hover, .lightbox-prev:hover, .lightbox-next:hover, .lightbox-version-prev:hover, .lightbox-version-next:hover { background: rgba(44,52,88,0.9); border-color: rgba(255,255,255,0.35); }
-    .lightbox-prev[disabled], .lightbox-next[disabled], .lightbox-version-prev[disabled], .lightbox-version-next[disabled] { opacity: .35; cursor: not-allowed; }
+    .lightbox-close:hover, .lightbox-prev:hover, .lightbox-next:hover { background: rgba(44,52,88,0.9); border-color: rgba(255,255,255,0.35); }
+    .lightbox-prev[disabled], .lightbox-next[disabled] { opacity: .35; cursor: not-allowed; }
     .lightbox-version-info { font-size: 0.9rem; color: var(--muted); margin-top: 0.25rem; }
+    .lightbox-version-nav { display: inline-flex; gap: 0.25rem; }
+    .lightbox-version-prev, .lightbox-version-next { width: 2.2rem; height: 2.2rem; border-radius: 0.5rem; border: 1px solid rgba(255,255,255,0.18); background: rgba(26,32,56,0.85); color: #fff; display: grid; place-items: center; font-size: 1rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease; }
+    .lightbox-version-prev:hover, .lightbox-version-next:hover { background: rgba(44,52,88,0.9); border-color: rgba(255,255,255,0.35); }
+    .lightbox-version-prev[disabled], .lightbox-version-next[disabled] { opacity: .35; cursor: not-allowed; }
 
     @media (max-width: 960px) {
       .gallery-header { grid-template-columns: 1fr; }
@@ -177,14 +179,16 @@
             <div id="lightbox-version-info" class="lightbox-version-info"></div>
           </div>
           <div class="lightbox-buttons">
+            <div class="lightbox-version-nav">
+              <button class="lightbox-version-prev" type="button" aria-label="Previous version" title="Previous version (↑)">▲</button>
+              <button class="lightbox-version-next" type="button" aria-label="Next version" title="Next version (↓)">▼</button>
+            </div>
             <a id="lightbox-download" class="btn btn-primary" href="#" download>Download</a>
           </div>
         </div>
         <button class="lightbox-close" type="button" aria-label="Close viewer">×</button>
         <button class="lightbox-prev" type="button" aria-label="Previous image">‹</button>
         <button class="lightbox-next" type="button" aria-label="Next image">›</button>
-        <button class="lightbox-version-prev" type="button" aria-label="Previous version" title="Previous version (↑)">▲</button>
-        <button class="lightbox-version-next" type="button" aria-label="Next version" title="Next version (↓)">▼</button>
       </div>
     </div>
 
