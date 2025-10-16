@@ -12,6 +12,92 @@ from .constants import IMAGE_EXTS, SEASON_EPISODE_PATTERN
 from kwc.utils.files import cache_token
 
 
+def parse_version_suffix(filename: str) -> tuple[str, str]:
+    """Parse version suffix from a filename.
+    
+    Version suffixes are 1-2 uppercase ASCII letters appended before the extension,
+    after the counter. They must not repeat letters.
+    
+    Examples:
+        "Title ~ 0001.jpg" -> ("", "")
+        "Title ~ 0001U.jpg" -> ("U", "")
+        "Title ~ 0001UM.jpg" -> ("UM", "")
+        "Title ~ 0001e.jpg" -> ("", "e")  # invalid: lowercase
+        "Title ~ 0001EE.jpg" -> ("", "EE")  # invalid: repeated
+        "Title ~ 0001EPU.jpg" -> ("", "EPU")  # invalid: too long
+    
+    Args:
+        filename: The filename to parse
+        
+    Returns:
+        A tuple of (valid_suffix, invalid_suffix) where at most one is non-empty.
+        If the suffix is valid, it's in the first element. If invalid, it's in the second.
+    """
+    # Get the stem (filename without extension)
+    stem = os.path.splitext(filename)[0]
+    
+    # Pattern to match suffix: 1-2 characters at the end of the stem
+    # We look for sequences of letters after the last number/space/tilde
+    match = re.search(r'([A-Za-z]{1,3})$', stem)
+    
+    if not match:
+        return ("", "")
+    
+    suffix = match.group(1)
+    
+    # Validate suffix:
+    # 1. Must be 1-2 characters
+    if len(suffix) > 2:
+        return ("", suffix)
+    
+    # 2. Must be all uppercase
+    if not suffix.isupper():
+        return ("", suffix)
+    
+    # 3. Must not have repeated letters
+    if len(suffix) != len(set(suffix)):
+        return ("", suffix)
+    
+    return (suffix, "")
+
+
+def strip_version_suffix(filename: str) -> str:
+    """Remove version suffix from a filename, returning the base filename.
+    
+    Args:
+        filename: The filename to strip
+        
+    Returns:
+        The filename without any valid or invalid version suffix
+    """
+    stem = os.path.splitext(filename)[0]
+    ext = os.path.splitext(filename)[1]
+    
+    # Remove any suffix (valid or invalid) that matches our pattern
+    stem_without_suffix = re.sub(r'[A-Za-z]{1,3}$', '', stem)
+    
+    return stem_without_suffix + ext
+
+
+def add_version_suffix(filename: str, suffix: str) -> str:
+    """Add a version suffix to a filename.
+    
+    Args:
+        filename: The base filename (should not already have a suffix)
+        suffix: The suffix to add (1-2 uppercase letters)
+        
+    Returns:
+        The filename with the suffix added before the extension
+    """
+    stem = os.path.splitext(filename)[0]
+    ext = os.path.splitext(filename)[1]
+    
+    if not suffix:
+        return filename
+    
+    return stem + suffix + ext
+
+
 def validate_folder_name(folder: str) -> str:
     """Validate and sanitize a folder name to prevent path traversal.
     

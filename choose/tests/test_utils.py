@@ -6,10 +6,13 @@ import pytest
 
 from choose.utils import (
 	MediaFolder,
+	add_version_suffix,
 	list_media_folders,
 	parse_folder_name,
 	parse_season_episode,
 	parse_title_year_from_folder,
+	parse_version_suffix,
+	strip_version_suffix,
 	validate_folder_name,
 )
 from choose.services import format_section_title
@@ -188,4 +191,74 @@ def test_format_section_title_episode_only_intro() -> None:
 
 def test_format_section_title_episode_only_outro() -> None:
 	assert format_section_title("", "OU") == "Outro"
+
+
+def test_parse_version_suffix_no_suffix() -> None:
+	valid, invalid = parse_version_suffix("Title ~ 0001.jpg")
+	assert valid == ""
+	assert invalid == ""
+
+
+def test_parse_version_suffix_single_letter() -> None:
+	valid, invalid = parse_version_suffix("Title ~ 0001U.jpg")
+	assert valid == "U"
+	assert invalid == ""
+
+
+def test_parse_version_suffix_two_letters() -> None:
+	valid, invalid = parse_version_suffix("Title ~ 0001UM.jpg")
+	assert valid == "UM"
+	assert invalid == ""
+
+
+def test_parse_version_suffix_lowercase_invalid() -> None:
+	valid, invalid = parse_version_suffix("Title ~ 0001e.jpg")
+	assert valid == ""
+	assert invalid == "e"
+
+
+def test_parse_version_suffix_repeated_invalid() -> None:
+	valid, invalid = parse_version_suffix("Title ~ 0001EE.jpg")
+	assert valid == ""
+	assert invalid == "EE"
+
+
+def test_parse_version_suffix_too_long_invalid() -> None:
+	valid, invalid = parse_version_suffix("Title ~ 0001EPU.jpg")
+	assert valid == ""
+	assert invalid == "EPU"
+
+
+def test_parse_version_suffix_mixed_case_invalid() -> None:
+	valid, invalid = parse_version_suffix("Title ~ 0001Ue.jpg")
+	assert valid == ""
+	assert invalid == "Ue"
+
+
+def test_strip_version_suffix_with_valid_suffix() -> None:
+	assert strip_version_suffix("Title ~ 0001U.jpg") == "Title ~ 0001.jpg"
+	assert strip_version_suffix("Title ~ 0001UM.jpg") == "Title ~ 0001.jpg"
+
+
+def test_strip_version_suffix_with_invalid_suffix() -> None:
+	assert strip_version_suffix("Title ~ 0001e.jpg") == "Title ~ 0001.jpg"
+	assert strip_version_suffix("Title ~ 0001EE.jpg") == "Title ~ 0001.jpg"
+	assert strip_version_suffix("Title ~ 0001EPU.jpg") == "Title ~ 0001.jpg"
+
+
+def test_strip_version_suffix_no_suffix() -> None:
+	assert strip_version_suffix("Title ~ 0001.jpg") == "Title ~ 0001.jpg"
+
+
+def test_add_version_suffix_single_letter() -> None:
+	assert add_version_suffix("Title ~ 0001.jpg", "U") == "Title ~ 0001U.jpg"
+
+
+def test_add_version_suffix_two_letters() -> None:
+	assert add_version_suffix("Title ~ 0001.jpg", "UM") == "Title ~ 0001UM.jpg"
+
+
+def test_add_version_suffix_empty() -> None:
+	assert add_version_suffix("Title ~ 0001.jpg", "") == "Title ~ 0001.jpg"
+
 

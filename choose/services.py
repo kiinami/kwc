@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from dataclasses import asdict, dataclass
 from typing import TypedDict
 
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 
 from .models import FolderProgress, ImageDecision
 from .utils import (
@@ -13,6 +15,8 @@ from .utils import (
     list_image_files,
     parse_folder_name,
     parse_season_episode,
+    parse_version_suffix,
+    strip_version_suffix,
     thumbnail_url,
     validate_folder_name,
     wallpaper_url,
@@ -24,6 +28,10 @@ class GalleryImage(TypedDict):
     name: str
     url: str
     thumb_url: str | None
+    version_suffix: str  # e.g., "U", "UM", "" for base
+    base_name: str  # filename without version suffix
+    versions: list[dict[str, str]]  # list of {name, url, thumb_url, version_suffix} for all versions
+    versions_json: str  # JSON-encoded versions for template use
 
 
 class GallerySection(TypedDict):
@@ -136,26 +144,68 @@ def list_gallery_images(folder: str) -> GalleryContext:
         else None
     )
 
-    # Build flat list of images (for backward compatibility)
-    images: list[GalleryImage] = [
-        {
-            "name": name,
-            "url": wallpaper_url(safe_name, name, root=root_path),
-            "thumb_url": thumbnail_url(safe_name, name, width=512, root=root_path),
+    # First, group files by their base name (without version suffix) to identify version sets
+    version_groups: dict[str, list[str]] = defaultdict(list)
+    for name in files:
+        valid_suffix, invalid_suffix = parse_version_suffix(name)
+        if valid_suffix or not invalid_suffix:
+            # Valid suffix or no suffix - group by base name
+            base_name = strip_version_suffix(name)
+            version_groups[base_name].append(name)
+        else:
+            # Invalid suffix - treat as separate image
+            version_groups[name].append(name)
+    
+    # Build gallery images with version information
+    # For each version group, the base image (no suffix) should be the "primary" one
+    processed_files: set[str] = set()
+    images_with_versions: list[GalleryImage] = []
+    
+    for base_name, version_files in version_groups.items():
+        # Sort so base image (no suffix) comes first, then alphabetically by suffix
+        def sort_key(filename: str) -> tuple[int, str]:
+            suffix, _ = parse_version_suffix(filename)
+            # Base image (no suffix) sorts first (0), others by suffix (1)
+            return (0 if not suffix else 1, suffix)
+        
+        sorted_versions = sorted(version_files, key=sort_key)
+        primary_name = sorted_versions[0]
+        
+        # Build version info for all files in this group
+        versions = []
+        for vname in sorted_versions:
+            vsuffix, _ = parse_version_suffix(vname)
+            versions.append({
+                "name": vname,
+                "url": wallpaper_url(safe_name, vname, root=root_path),
+                "thumb_url": thumbnail_url(safe_name, vname, width=512, root=root_path),
+                "version_suffix": vsuffix,
+            })
+        
+        # Create the primary gallery image (represents the whole version stack)
+        primary_suffix, _ = parse_version_suffix(primary_name)
+        image: GalleryImage = {
+            "name": primary_name,
+            "url": wallpaper_url(safe_name, primary_name, root=root_path),
+            "thumb_url": thumbnail_url(safe_name, primary_name, width=512, root=root_path),
+            "version_suffix": primary_suffix,
+            "base_name": base_name,
+            "versions": versions,
+            "versions_json": mark_safe(json.dumps(versions)),  # JSON-encoded for template
         }
-        for name in files
-    ]
+        images_with_versions.append(image)
+        processed_files.update(version_files)
+
+    # Build flat list of images (for backward compatibility - use primary images only)
+    images: list[GalleryImage] = images_with_versions
 
     # Group images by season/episode
     grouped: dict[tuple[str, str], list[GalleryImage]] = defaultdict(list)
-    for name in files:
-        season, episode = parse_season_episode(name)
+    for image in images_with_versions:
+        # Parse season/episode from the base name (without suffix)
+        base_name = image["base_name"]
+        season, episode = parse_season_episode(base_name)
         key = (season, episode)
-        image: GalleryImage = {
-            "name": name,
-            "url": wallpaper_url(safe_name, name, root=root_path),
-            "thumb_url": thumbnail_url(safe_name, name, width=512, root=root_path),
-        }
         grouped[key].append(image)
     
     # Convert grouped dict to sorted list of sections
