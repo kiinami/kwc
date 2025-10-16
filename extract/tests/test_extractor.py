@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pickle
 from pathlib import Path
 
 import pytest
@@ -26,8 +27,8 @@ class StubFFmpeg:
 
 
 # Module-level mock function that can be pickled for multiprocessing
-def _mock_extract_frame_with_file_creation(args: tuple[Path, float, Path, extractor.CancellationToken | None]) -> Path:
-	_video, _ts, output_file, _cancel_token = args
+def _mock_extract_frame_with_file_creation(args: tuple[Path, float, Path]) -> Path:
+	_video, _ts, output_file = args
 	output_file.touch()  # Create the file
 	return output_file
 
@@ -46,7 +47,7 @@ def test_extract_frame_retries_success(monkeypatch: pytest.MonkeyPatch, settings
 	monkeypatch.setattr(extractor, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(behaviour))
 	monkeypatch.setattr(extractor, "_sleep", lambda _delay: None)
 
-	result = extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), None))
+	result = extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg")))
 	assert result == Path("/tmp/frame.jpg")
 	assert attempts == ["fail", "success"]
 
@@ -65,8 +66,17 @@ def test_extract_frame_retries_exhaust(monkeypatch: pytest.MonkeyPatch, settings
 	monkeypatch.setattr(extractor, "_sleep", lambda _delay: None)
 
 	with pytest.raises(RuntimeError):
-		extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), None))
+		extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg")))
 	assert attempts == 2
+
+
+def test_extract_frame_args_are_picklable() -> None:
+	"""Test that _extract_frame arguments can be pickled for multiprocessing."""
+	args = (Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"))
+	# This should not raise an exception
+	pickled = pickle.dumps(args)
+	unpickled = pickle.loads(pickled)
+	assert unpickled == args
 
 
 def test_get_iframe_timestamps_logs_failure(monkeypatch: pytest.MonkeyPatch, caplog) -> None:
@@ -200,3 +210,53 @@ def test_extract_appends_to_existing_files(tmp_path: Path, monkeypatch: pytest.M
 	# Old files should still exist
 	assert (output_dir / "Test ~ 0001.jpg").exists()
 	assert (output_dir / "Test ~ 0005.jpg").exists()
+
+
+def test_extract_with_cancellation_token(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that extract handles cancellation tokens properly (not passed to workers)."""
+	output_dir = tmp_path / "output"
+	output_dir.mkdir()
+	
+	# Use module-level mock function that can be pickled
+	monkeypatch.setattr(extractor, "_extract_frame", _mock_extract_frame_with_file_creation)
+	monkeypatch.setattr(extractor, "get_iframe_timestamps", lambda _video: [1.0, 2.0])
+	
+	# Create a cancellation token
+	cancel_token = extractor.CancellationToken()
+	
+	params = extractor.ExtractParams(
+		video=Path("/tmp/test.mp4"),
+		output_dir=output_dir,
+		title="Test",
+		image_pattern="output {{ counter|pad:4 }}.jpg",
+		max_workers=1,
+		cancel_token=cancel_token,  # Pass the token
+	)
+	
+	# Should complete successfully without pickle errors
+	result = extractor.extract(params=params)
+	assert result == 2
+	assert (output_dir / "output 0001.jpg").exists()
+	assert (output_dir / "output 0002.jpg").exists()
+
+
+def test_extract_respects_early_cancellation(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that extract checks cancellation before starting extraction."""
+	output_dir = tmp_path / "output"
+	output_dir.mkdir()
+	
+	monkeypatch.setattr(extractor, "get_iframe_timestamps", lambda _video: [1.0, 2.0])
+	
+	# Create a cancellation token and cancel it immediately
+	cancel_token = extractor.CancellationToken()
+	cancel_token.cancel()
+	
+	params = extractor.ExtractParams(
+		video=Path("/tmp/test.mp4"),
+		output_dir=output_dir,
+		cancel_token=cancel_token,
+	)
+	
+	# Should raise CancelledException
+	with pytest.raises(extractor.CancelledException):
+		extractor.extract(params=params)
