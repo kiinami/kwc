@@ -225,3 +225,85 @@ def test_save_api_episode_only_preserves_episode_number(client, wallpapers_dir: 
 	# This was the bug - files were being renamed to just "Show 〜 0001.jpg" without episode
 	general_files = [f for f in files_after if 'E0' not in f and f.endswith('.jpg')]
 	assert len(general_files) == 0, f"Files without episode numbers found: {general_files}"
+
+
+def test_save_api_preserves_version_suffixes(client, wallpapers_dir: Path) -> None:
+	"""Test that version suffixes (U, M, P, etc.) are preserved during rename."""
+	folder_name = 'Movie (2024)'
+	folder = wallpapers_dir / folder_name
+	folder.mkdir()
+
+	# Create files with version suffixes
+	(folder / 'frame01.jpg').write_bytes(b'base1')
+	(folder / 'frame01U.jpg').write_bytes(b'upscaled1')
+	(folder / 'frame01M.jpg').write_bytes(b'mobile1')
+	(folder / 'frame02.jpg').write_bytes(b'base2')
+	(folder / 'frame02UM.jpg').write_bytes(b'upscaled_mobile2')
+
+	# Mark all files as keep
+	ImageDecision.objects.create(folder=folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='frame01U.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='frame01M.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='frame02.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='frame02UM.jpg', decision=ImageDecision.DECISION_KEEP)
+
+	response = client.post(reverse('choose:save_api', kwargs={'folder': folder_name}))
+
+	assert response.status_code == 200
+	payload = response.json()
+	assert payload['ok'] is True
+	assert payload['kept'] == 5
+
+	files_after = {p.name for p in folder.iterdir()}
+	
+	# Verify base images and their versions are renamed with the same counter
+	# frame01 variants should all become 0001
+	assert 'Movie 〜 0001.jpg' in files_after, "Base image should be renamed to 0001"
+	assert 'Movie 〜 0001U.jpg' in files_after, "U version should preserve suffix and have same counter"
+	assert 'Movie 〜 0001M.jpg' in files_after, "M version should preserve suffix and have same counter"
+	
+	# frame02 variants should all become 0002
+	assert 'Movie 〜 0002.jpg' in files_after, "Second base image should be renamed to 0002"
+	assert 'Movie 〜 0002UM.jpg' in files_after, "UM version should preserve suffix and have same counter"
+	
+	# Verify no old filenames remain
+	assert 'frame01.jpg' not in files_after
+	assert 'frame01U.jpg' not in files_after
+	assert 'frame02UM.jpg' not in files_after
+
+
+def test_save_api_removes_invalid_suffixes(client, wallpapers_dir: Path) -> None:
+	"""Test that invalid version suffixes (lowercase, repeated, too long) are removed during rename."""
+	folder_name = 'Movie (2024)'
+	folder = wallpapers_dir / folder_name
+	folder.mkdir()
+
+	# Create files with invalid suffixes
+	(folder / 'frame01e.jpg').write_bytes(b'lowercase')  # Invalid: lowercase
+	(folder / 'frame02EE.jpg').write_bytes(b'repeated')  # Invalid: repeated letter
+	(folder / 'frame03EPU.jpg').write_bytes(b'toolong')  # Invalid: too long
+
+	# Mark all files as keep
+	ImageDecision.objects.create(folder=folder_name, filename='frame01e.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='frame02EE.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='frame03EPU.jpg', decision=ImageDecision.DECISION_KEEP)
+
+	response = client.post(reverse('choose:save_api', kwargs={'folder': folder_name}))
+
+	assert response.status_code == 200
+	payload = response.json()
+	assert payload['ok'] is True
+	assert payload['kept'] == 3
+
+	files_after = {p.name for p in folder.iterdir()}
+	
+	# Invalid suffixes should be removed, files renamed with proper counters
+	assert 'Movie 〜 0001.jpg' in files_after
+	assert 'Movie 〜 0002.jpg' in files_after
+	assert 'Movie 〜 0003.jpg' in files_after
+	
+	# Verify no files with invalid suffixes remain
+	assert not any('e.jpg' in f for f in files_after if not f.startswith('.'))
+	assert not any('EE.jpg' in f for f in files_after if not f.startswith('.'))
+	assert not any('EPU.jpg' in f for f in files_after if not f.startswith('.'))
+

@@ -19,6 +19,9 @@ from .utils import (
     get_folder_path,
     list_image_files,
     parse_title_year_from_folder,
+    parse_version_suffix,
+    strip_version_suffix,
+    add_version_suffix,
     validate_folder_name,
     wallpapers_root,
 )
@@ -143,6 +146,21 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
 
     undecided_keeps = [name for name in remaining_names if name not in seen_keeps]
 
+    # Build suffix map and group files by their base name (without suffix)
+    suffix_map: dict[str, str] = {}
+    base_name_map: dict[str, str] = {}  # Maps filename to its base (without suffix)
+    
+    for name in files:
+        valid_suffix, invalid_suffix = parse_version_suffix(name)
+        # If valid suffix exists, store it
+        if valid_suffix:
+            suffix_map[name] = valid_suffix
+            base_name_map[name] = strip_version_suffix(name)
+        else:
+            # No suffix or invalid suffix - treat as base
+            suffix_map[name] = ""
+            base_name_map[name] = name
+
     tmp_counter = 0
     plans_decided: list[tuple[Path, Path]] = []
     for name in ordered_decided_keeps:
@@ -161,14 +179,32 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
 
     preview_counters: dict[tuple[str, str], int] = {}
     keep_dest_names: set[str] = set()
+    # Track which base names we've already assigned counters to (for preview)
+    preview_assigned_bases: dict[tuple[str, str], set[str]] = {}
+    
     for original_src, _tmp in plans_decided:
-        match = SEASON_EPISODE_RE.search(original_src.stem)
+        original_name = original_src.name
+        base_name_for_parsing = base_name_map.get(original_name, original_name)
+        base_stem = os.path.splitext(base_name_for_parsing)[0]
+        
+        match = SEASON_EPISODE_RE.search(base_stem)
         season = match.group("season") if match else ""
         # Episode can be in either "episode" group (when season present) or "ep_only" group
         episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
         key = (season, episode)
-        current = preview_counters.get(key, 0) + 1
-        preview_counters[key] = current
+        
+        # Only increment counter if this is a new base image (not a version of one we've seen)
+        if key not in preview_assigned_bases:
+            preview_assigned_bases[key] = set()
+        
+        if base_name_for_parsing not in preview_assigned_bases[key]:
+            current = preview_counters.get(key, 0) + 1
+            preview_counters[key] = current
+            preview_assigned_bases[key].add(base_name_for_parsing)
+        else:
+            # This is a version of an image we've already counted
+            current = preview_counters[key]
+        
         values = {
             "title": base_title,
             "base_title": base_title,
@@ -177,7 +213,12 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
             "episode": int(episode) if episode and episode.isdigit() else episode,
             "counter": current,
         }
-        keep_dest_names.add(render_pattern(pattern, values))
+        new_base_name = render_pattern(pattern, values)
+        # Add both base and versioned names to the set
+        keep_dest_names.add(new_base_name)
+        if original_name in suffix_map and suffix_map[original_name]:
+            versioned_name = add_version_suffix(new_base_name, suffix_map[original_name])
+            keep_dest_names.add(versioned_name)
 
     deferred_names = [name for name in undecided_keeps if name in keep_dest_names]
     other_undecided = [name for name in undecided_keeps if name not in keep_dest_names]
@@ -200,6 +241,10 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
     rename_errors: list[str] = []
     counters: dict[tuple[str, str], int] = {}
     final_keep_names: list[str] = []
+    # Track which base names we've already assigned counters to (for actual renames)
+    assigned_bases: dict[tuple[str, str], set[str]] = {}
+    # Map from base name to the counter it was assigned
+    base_to_counter: dict[tuple[tuple[str, str], str], int] = {}
 
     def _finalise_renames(plans: list[tuple[Path, Path]]) -> bool:
         for original_src, tmp in plans:
@@ -207,13 +252,31 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
             if tmp_path is None or not tmp_path.exists():
                 continue
 
-            match = SEASON_EPISODE_RE.search(original_src.stem)
+            # Strip version suffix from original filename before parsing
+            original_name = original_src.name
+            base_name_for_parsing = base_name_map.get(original_name, original_name)
+            base_stem = os.path.splitext(base_name_for_parsing)[0]
+            
+            match = SEASON_EPISODE_RE.search(base_stem)
             season = match.group("season") if match else ""
             # Episode can be in either "episode" group (when season present) or "ep_only" group
             episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
             key = (season, episode)
-            current = counters.get(key, 0) + 1
-            counters[key] = current
+            
+            # Check if we've already assigned a counter to this base image
+            if key not in assigned_bases:
+                assigned_bases[key] = set()
+            
+            lookup_key = (key, base_name_for_parsing)
+            if lookup_key in base_to_counter:
+                # Reuse the same counter for this version
+                current = base_to_counter[lookup_key]
+            else:
+                # New base image - assign new counter
+                current = counters.get(key, 0) + 1
+                counters[key] = current
+                assigned_bases[key].add(base_name_for_parsing)
+                base_to_counter[lookup_key] = current
 
             values = {
                 "title": base_title,
@@ -225,6 +288,11 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
             }
 
             new_name = render_pattern(pattern, values)
+            
+            # Re-apply version suffix if the original had one
+            if original_name in suffix_map and suffix_map[original_name]:
+                new_name = add_version_suffix(new_name, suffix_map[original_name])
+            
             dest = target / new_name
 
             try:
@@ -235,14 +303,14 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
                         stem, ext = os.path.splitext(new_name)
                         # Build fallback suffix based on what info we have
                         if season and episode:
-                            suffix = f" S{season}E{episode} #{current}"
+                            fallback_suffix = f" S{season}E{episode} #{current}"
                         elif season:
-                            suffix = f" S{season} #{current}"
+                            fallback_suffix = f" S{season} #{current}"
                         elif episode:
-                            suffix = f" E{episode} #{current}"
+                            fallback_suffix = f" E{episode} #{current}"
                         else:
-                            suffix = f" #{current}"
-                        dest = target / f"{stem}{suffix}{ext}"
+                            fallback_suffix = f" #{current}"
+                        dest = target / f"{stem}{fallback_suffix}{ext}"
                 safe_rename(tmp_path, dest)
                 tmp_map.pop(original_src, None)
                 final_keep_names.append(dest.name)
