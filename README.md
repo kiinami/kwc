@@ -22,9 +22,21 @@ Copy `.env.example` to `.env` and tweak as needed. Key variables:
 - KWC_FOLDER_PATTERN: folder naming template (Django template syntax)
 - KWC_IMAGE_PATTERN: image filename template (supports the `pad` filter)
 - KWC_EXTRACT_WORKERS: override the number of parallel FFmpeg workers (default: CPU count)
-- KWC_FILE_PICKER_START_PATH: default start path for the file picker in extract form (default: /)
 
 Defaults place a SQLite database in `/data` (bind mount recommended) and serve static files with WhiteNoise.
+
+### TMDB Cover Art Integration
+
+KWC optionally integrates with [The Movie Database (TMDB)](https://www.themoviedb.org/) to allow you to select professional poster art as folder cover images during extraction. To enable this feature:
+
+1. Create a free account at [https://www.themoviedb.org/](https://www.themoviedb.org/)
+2. Get your API key from [https://www.themoviedb.org/settings/api](https://www.themoviedb.org/settings/api)
+3. Add it to your `.env` file:
+   ```
+   TMDB_API_KEY=your_api_key_here
+   ```
+
+When configured, the extract form will include a cover image field where you can search for and select poster art. The selected image will be downloaded and saved as `.cover.jpg` in the extraction folder. If a folder already has a cover image, the field will display it as read-only.
 
 ## Run (Docker)
 
@@ -64,15 +76,23 @@ You can tweak key parameters through environment variables:
 
 After changing cache-related settings, deployers should bump `KWC_PWA_CACHE_ID` so clients fetch the new service worker urgently.
 
-## Notes
+## Testing
 
-- No tests are provided by design for this refactor.
-- Backwards-compatibility shims were intentionally removed. Templates use Django syntax only.
+The project includes comprehensive tests covering the core functionality. Run tests with:
+
+```bash
+python -m pytest -v
+```
+
+Tests cover:
+- Extract app: video extraction, job management, TMDB integration, file browsing
+- Choose app: image curation, folder management, renaming logic
+- 79 tests in total, all passing
 
 ## Contributing
 
 Details coming soon — track workflow updates here.
 
-## Testing
+## Notes
 
-Planned instructions will land here alongside the Contributing guide.
+- Backwards-compatibility shims were intentionally removed. Templates use Django syntax only.

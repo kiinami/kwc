@@ -248,6 +248,8 @@ EXTRACT_MAX_WORKERS = _positive_int_or_none(os.getenv('KWC_EXTRACT_WORKERS'))
 # Default start path for the file picker in the extract form
 FILE_PICKER_START_PATH = os.getenv('KWC_FILE_PICKER_START_PATH', '/')
 
+# TMDB API key for cover art selection
+TMDB_API_KEY = os.getenv('TMDB_API_KEY', '')
 
 # Progressive Web App configuration (tweak via env vars if desired)
 PWA_APP_NAME = os.getenv('KWC_PWA_APP_NAME', 'KWC Wallpapers')
