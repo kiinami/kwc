@@ -44,6 +44,75 @@ def gallery(request: HttpRequest, folder: str) -> HttpResponse:
 	return render(request, 'choose/gallery.html', context.to_dict())
 
 
+def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
+	"""Full-page lightbox viewer for a single image with sidebar showing metadata and versions."""
+	try:
+		context = list_gallery_images(folder)
+	except (ValueError, FileNotFoundError):
+		raise Http404("Folder not found")
+	
+	# Find the image in the gallery
+	try:
+		safe_name = validate_folder_name(folder)
+	except ValueError:
+		raise Http404("Invalid folder")
+	
+	safe_filename = os.path.basename(filename)
+	if safe_filename != filename:
+		raise Http404("Invalid filename")
+	
+	# Find the matching image in the gallery
+	current_image = None
+	current_index = -1
+	for idx, img in enumerate(context.images):
+		if img["name"] == safe_filename:
+			current_image = img
+			current_index = idx
+			break
+	
+	if current_image is None:
+		raise Http404("Image not found")
+	
+	# Get prev/next images
+	prev_image = context.images[current_index - 1] if current_index > 0 else None
+	next_image = context.images[current_index + 1] if current_index < len(context.images) - 1 else None
+	
+	# Get file info
+	root = wallpapers_root()
+	image_path = root / safe_name / safe_filename
+	file_size = image_path.stat().st_size if image_path.exists() else 0
+	file_ext = os.path.splitext(safe_filename)[1].lstrip('.')
+	
+	# Get image dimensions
+	try:
+		from PIL import Image
+		with Image.open(image_path) as img:
+			width, height = img.size
+	except Exception:
+		width, height = 0, 0
+	
+	# Parse season/episode from filename
+	from .utils import parse_season_episode
+	season, episode = parse_season_episode(safe_filename)
+	
+	lightbox_context = {
+		**context.to_dict(),
+		'current_image': current_image,
+		'current_index': current_index,
+		'prev_image': prev_image,
+		'next_image': next_image,
+		'file_size': file_size,
+		'file_ext': file_ext.upper() if file_ext else '',
+		'image_width': width,
+		'image_height': height,
+		'season': season,
+		'episode': episode,
+		'filepath': str(image_path.relative_to(root)),
+	}
+	
+	return render(request, 'choose/lightbox.html', lightbox_context)
+
+
 def folder(request: HttpRequest, folder: str) -> HttpResponse:
 	"""Detail page for a media folder: show a two-pane chooser UI with sidebar and viewport."""
 	# Get optional section filters from query params
