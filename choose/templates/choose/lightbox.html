@@ -49,6 +49,10 @@
       overflow: hidden;
       transition: transform 0.3s ease;
     }
+
+    .lightbox-layout:not(.sidebar-transition-ready) .lightbox-sidebar {
+      transition: none !important;
+    }
     
     .lightbox-layout.sidebar-hidden .lightbox-sidebar {
       transform: translateX(-100%);
@@ -682,10 +686,14 @@
       let currentVersions = {{ current_image.versions|safe }};
       
       // Sidebar toggle
+      function isSidebarHidden() {
+        return layout.classList.contains('sidebar-hidden');
+      }
+
       function updateSidebarToggleButtons() {
-        const isHidden = layout.classList.contains('sidebar-hidden');
+        const hidden = isSidebarHidden();
         toggleSidebarButtons.forEach(function(btn) {
-          btn.setAttribute('aria-expanded', (!isHidden).toString());
+          btn.setAttribute('aria-expanded', (!hidden).toString());
         });
       }
 
@@ -697,6 +705,7 @@
         } else {
           layout.classList.toggle('sidebar-hidden');
         }
+        sessionStorage.setItem('kwcLightboxSidebarHidden', isSidebarHidden() ? '1' : '0');
         updateSidebarToggleButtons();
       }
 
@@ -706,7 +715,15 @@
         });
       });
 
+      const storedSidebarState = sessionStorage.getItem('kwcLightboxSidebarHidden');
+      if (storedSidebarState === '1') {
+        layout.classList.add('sidebar-hidden');
+      }
       updateSidebarToggleButtons();
+
+      requestAnimationFrame(function() {
+        layout.classList.add('sidebar-transition-ready');
+      });
       
       // Keyboard navigation
       document.addEventListener('keydown', function(event) {
@@ -815,11 +832,16 @@
       });
       
       // Navigation
+      function navigateToImage(targetUrl) {
+        sessionStorage.setItem('kwcLightboxSidebarHidden', isSidebarHidden() ? '1' : '0');
+        window.location.href = targetUrl;
+      }
+
       if (prevBtn) {
         prevBtn.addEventListener('click', function() {
           if (currentIndex > 0) {
             const prevImage = allImages[currentIndex - 1];
-            window.location.href = `/choose/${encodeURIComponent(folder)}/lightbox/${encodeURIComponent(prevImage.name)}`;
+            navigateToImage(`/choose/${encodeURIComponent(folder)}/lightbox/${encodeURIComponent(prevImage.name)}`);
           }
         });
       }
@@ -828,7 +850,7 @@
         nextBtn.addEventListener('click', function() {
           if (currentIndex < allImages.length - 1) {
             const nextImage = allImages[currentIndex + 1];
-            window.location.href = `/choose/${encodeURIComponent(folder)}/lightbox/${encodeURIComponent(nextImage.name)}`;
+            navigateToImage(`/choose/${encodeURIComponent(folder)}/lightbox/${encodeURIComponent(nextImage.name)}`);
           }
         });
       }
