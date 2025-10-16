@@ -283,10 +283,61 @@
     /* Action buttons */
     .action-buttons {
       display: flex;
-      flex-direction: column;
-      gap: .5rem;
+      gap: .75rem;
+      align-items: flex-end;
+      justify-content: flex-start;
     }
-    
+
+    .action-button {
+      width: 2.75rem;
+      height: 2.75rem;
+      border-radius: .65rem;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(26,32,56,0.85);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background .15s ease, border-color .15s ease, transform .15s ease;
+    }
+
+    .action-button svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .action-button:hover {
+      background: rgba(44,52,88,0.9);
+      border-color: rgba(255,255,255,0.35);
+      transform: translateY(-1px);
+    }
+
+    .action-button:focus-visible {
+      outline: 2px solid var(--accent-2);
+      outline-offset: 2px;
+    }
+
+    .action-button--download {
+      background: linear-gradient(135deg, rgba(76,139,245,0.25), rgba(124,76,245,0.35));
+      border-color: rgba(76,139,245,0.35);
+    }
+
+    .action-button--download:hover {
+      background: linear-gradient(135deg, rgba(76,139,245,0.35), rgba(124,76,245,0.45));
+      border-color: rgba(124,76,245,0.55);
+    }
+
+    .action-button--delete {
+      background: rgba(239,68,68,0.15);
+      border-color: rgba(239,68,68,0.6);
+    }
+
+    .action-button--delete:hover {
+      background: rgba(239,68,68,0.22);
+      border-color: rgba(239,68,68,0.85);
+    }
+
     .btn-delete {
       border-color: rgba(239,68,68,.6);
       color: #fff;
@@ -460,8 +511,24 @@
         <div class="sidebar-fixed-bottom">
           <div class="sidebar-section">
             <div class="action-buttons">
-              <a class="btn btn-primary" id="downloadBtn" href="{{ current_image.url }}" download="{{ current_image.name }}">Download</a>
-              <button class="btn btn-ghost btn-delete" id="deleteBtn" type="button">Delete Image</button>
+              <a class="action-button action-button--download" id="downloadBtn" href="{{ current_image.url }}" download="{{ current_image.name }}" aria-label="Download image" title="Download image">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3v12" />
+                  <path d="m7 12 5 5 5-5" />
+                  <path d="M4 21h16" />
+                </svg>
+                <span class="sr-only">Download image</span>
+              </a>
+              <button class="action-button action-button--delete" id="deleteBtn" type="button" aria-label="Delete image" title="Delete image">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18" />
+                  <path d="m8 6 .9-1.8A2 2 0 0 1 10.7 3h2.6a2 2 0 0 1 1.8 1.2L16 6" />
+                  <path d="M19 6v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                </svg>
+                <span class="sr-only">Delete image</span>
+              </button>
             </div>
           </div>
         </div>
