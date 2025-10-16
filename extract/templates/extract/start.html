@@ -10,9 +10,9 @@
       
       <!-- Main form card with cover on the side -->
       <div class="card">
-        <div style="display: grid; grid-template-columns: 1fr 280px; gap: 1.5rem; align-items: start;">
+        <div class="extract-form-grid">
           <!-- Form fields -->
-          <div>
+          <div class="extract-form-fields">
             {% if form.non_field_errors %}
               <div class="status status--error">{{ form.non_field_errors }}</div>
             {% endif %}
@@ -39,31 +39,35 @@
             </div>
 
             <!-- Title and Year -->
-            <div class="two-col">
-              <label>
-                <div style="margin-bottom:.25rem;">Title</div>
-                {{ form.title }}
-                {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
-              </label>
-              <label>
-                <div style="margin-bottom:.25rem;">Year</div>
-                {{ form.year }}
-                {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
-              </label>
+            <div class="field">
+              <div class="two-col">
+                <div>
+                  <div class="field-label">Title</div>
+                  {{ form.title }}
+                  {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
+                </div>
+                <div>
+                  <div class="field-label">Year</div>
+                  {{ form.year }}
+                  {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
+                </div>
+              </div>
             </div>
 
-            <!-- Episode and Season -->
-            <div class="two-col">
-              <label>
-                <div style="margin-bottom:.25rem;">Episode</div>
-                {{ form.episode }}
-                {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
-              </label>
-              <label>
-                <div style="margin-bottom:.25rem;">Season</div>
-                {{ form.season }}
-                {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
-              </label>
+            <!-- Season and Episode (swapped order) -->
+            <div class="field">
+              <div class="two-col">
+                <div>
+                  <div class="field-label">Season</div>
+                  {{ form.season }}
+                  {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
+                </div>
+                <div>
+                  <div class="field-label">Episode</div>
+                  {{ form.episode }}
+                  {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
+                </div>
+              </div>
             </div>
 
             <!-- Video file -->
@@ -96,7 +100,7 @@
           </div>
 
           <!-- Cover image field on the side -->
-          <div>
+          <div class="extract-form-cover">
             <div class="field-label" style="margin-bottom:.5rem;">Cover image</div>
             <input type="hidden" name="{{ form.cover_image_url.html_name }}" id="id_cover_image_url" />
             <div id="coverField" class="cover-field" onclick="openCoverModal()">
