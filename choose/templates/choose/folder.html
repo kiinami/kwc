@@ -18,11 +18,11 @@
       max-width: 100vw;
       box-sizing: border-box; /* include padding in width to avoid overflow */
       overflow-x: hidden; /* guard against sub-pixel overflow */
-      padding-left: .75rem;  /* small horizontal padding */
-      padding-right: .75rem;
+      padding-left: 0;
+      padding-right: 0;
     }
     @media (min-width: 1024px) {
-      .fullbleed { padding-left: 1rem; padding-right: 1rem; }
+      .fullbleed { padding-left: 0; padding-right: 0; }
     }
   .chooser-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; height: calc(100vh - var(--nav-height, 72px)); min-height: calc(100vh - var(--nav-height, 72px)); overflow: hidden; }
   .chooser-layout.sidebar-hidden { grid-template-columns: 1fr; }
