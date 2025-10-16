@@ -46,6 +46,7 @@
       .gallery-header { grid-template-columns: 1fr; }
       .gallery-cover { width: clamp(160px, 45vw, 220px); justify-self: center; }
       .gallery-meta { text-align: center; }
+      .gallery-details { justify-content: center; text-align: center; }
       .gallery-actions { justify-content: center; }
     }
 
@@ -67,7 +68,7 @@
         {% endif %}
       </div>
       <div class="gallery-meta">
-        <h1>{{ title }}{% if year %} <span style="color: var(--muted);">({{ year }})</span>{% endif %}</h1>
+  <h1>{{ title }}</h1>
         <div class="gallery-details">
           {% if year %}<span>{{ year }}</span>{% endif %}
           <span class="gallery-count">{{ images|length }} image{% if images|length != 1 %}s{% endif %}</span>
