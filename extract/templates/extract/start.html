@@ -8,89 +8,91 @@
   <form method="post" action="" novalidate>
       {% csrf_token %}
       
-      <!-- Main form card with cover on the side -->
+      <!-- Main form card -->
       <div class="card">
-        <div class="extract-form-grid">
-          <!-- Form fields -->
-          <div class="extract-form-fields">
-            {% if form.non_field_errors %}
-              <div class="status status--error">{{ form.non_field_errors }}</div>
-            {% endif %}
-
+        {% if form.non_field_errors %}
+          <div class="status status--error">{{ form.non_field_errors }}</div>
+        {% endif %}
+        
+        <div class="extract-form-container">
+          <!-- Left: Form fields -->
+          <div class="extract-form-main">
             <!-- Folder Selection Dropdown -->
-            <div class="field">
-              <div class="field-label">Folder</div>
-              <div class="folder-select-wrapper">
-                <div id="folderSelectButton" class="folder-select-button">
-                  <div class="folder-select-display">
-                    <span>Create new</span>
+            <div class="form-row">
+              <div class="form-field form-field-full">
+                <div class="field-label">Folder</div>
+                <div class="folder-select-wrapper">
+                  <div id="folderSelectButton" class="folder-select-button">
+                    <div class="folder-select-display">
+                      <span>Create new</span>
+                    </div>
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
+                    </svg>
                   </div>
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/>
-                  </svg>
-                </div>
-                <div id="folderSelectDropdown" class="folder-select-dropdown" style="display: none;">
-                  <div class="folder-select-option" data-value="" data-title="" data-year="" data-cover-url="">
-                    <span>Create new</span>
+                  <div id="folderSelectDropdown" class="folder-select-dropdown" style="display: none;">
+                    <div class="folder-select-option" data-value="" data-title="" data-year="" data-cover-url="">
+                      <span>Create new</span>
+                    </div>
                   </div>
                 </div>
+                <input type="hidden" id="selectedFolder" value="" />
               </div>
-              <input type="hidden" id="selectedFolder" value="" />
             </div>
 
             <!-- Title and Year -->
-            <div class="field">
-              <div class="two-col">
-                <div>
-                  <div class="field-label">Title</div>
-                  {{ form.title }}
-                  {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
-                </div>
-                <div>
-                  <div class="field-label">Year</div>
-                  {{ form.year }}
-                  {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
-                </div>
+            <div class="form-row form-row-2col">
+              <div class="form-field">
+                <div class="field-label">Title</div>
+                {{ form.title }}
+                {% if form.title.errors %}<div class="status status--error">{{ form.title.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="form-field">
+                <div class="field-label">Year</div>
+                {{ form.year }}
+                {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
               </div>
             </div>
 
-            <!-- Season and Episode (swapped order) -->
-            <div class="field">
-              <div class="two-col">
-                <div>
-                  <div class="field-label">Season</div>
-                  {{ form.season }}
-                  {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
-                </div>
-                <div>
-                  <div class="field-label">Episode</div>
-                  {{ form.episode }}
-                  {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
-                </div>
+            <!-- Season and Episode -->
+            <div class="form-row form-row-2col">
+              <div class="form-field">
+                <div class="field-label">Season</div>
+                {{ form.season }}
+                {% if form.season.errors %}<div class="status status--error">{{ form.season.errors|striptags }}</div>{% endif %}
+              </div>
+              <div class="form-field">
+                <div class="field-label">Episode</div>
+                {{ form.episode }}
+                {% if form.episode.errors %}<div class="status status--error">{{ form.episode.errors|striptags }}</div>{% endif %}
               </div>
             </div>
 
             <!-- Video file -->
-            <div class="field">
-              <div class="field-label">Video file</div>
-              <div class="input-group">
-                {{ form.video }}
-                <button type="button" class="btn btn-ghost" onclick="openBrowseModal('video')">Browse…</button>
+            <div class="form-row">
+              <div class="form-field form-field-full">
+                <div class="field-label">Video file</div>
+                <div class="input-group">
+                  {{ form.video }}
+                  <button type="button" class="btn btn-ghost" onclick="openBrowseModal('video')">Browse…</button>
+                </div>
+                {% if form.video.errors %}<div class="status status--error">{{ form.video.errors|striptags }}</div>{% endif %}
               </div>
-              {% if form.video.errors %}<div class="status status--error">{{ form.video.errors|striptags }}</div>{% endif %}
             </div>
 
-            <div id="namingPreview" class="muted" style="margin-top:.25rem;"></div>
+            <div id="namingPreview" class="muted" style="font-size: 0.9rem; margin-bottom: 1rem;"></div>
 
             <!-- Trim intervals -->
-            <div class="field">
-              <div style="display:flex; align-items:center; justify-content:space-between;">
-                <div class="field-label" style="margin:0">Trim intervals</div>
-                <button type="button" class="btn btn-ghost" onclick="addInterval()">Add</button>
+            <div class="form-row">
+              <div class="form-field form-field-full">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <div class="field-label" style="margin:0">Trim intervals</div>
+                  <button type="button" class="btn btn-ghost" onclick="addInterval()">Add</button>
+                </div>
+                <input type="hidden" name="{{ form.trim_intervals.html_name }}" id="id_trim_intervals" />
+                <div id="intervals" class="grid" style="margin-top:.5rem;"></div>
+                {% if form.trim_intervals.errors %}<div class="status status--error">{{ form.trim_intervals.errors|striptags }}</div>{% endif %}
               </div>
-              <input type="hidden" name="{{ form.trim_intervals.html_name }}" id="id_trim_intervals" />
-              <div id="intervals" class="grid" style="margin-top:.5rem;"></div>
-              {% if form.trim_intervals.errors %}<div class="status status--error">{{ form.trim_intervals.errors|striptags }}</div>{% endif %}
             </div>
 
             <div class="form-actions">
@@ -99,17 +101,19 @@
             </div>
           </div>
 
-          <!-- Cover image field on the side -->
-          <div class="extract-form-cover">
-            <div class="field-label" style="margin-bottom:.5rem;">Cover image</div>
-            <input type="hidden" name="{{ form.cover_image_url.html_name }}" id="id_cover_image_url" />
-            <div id="coverField" class="cover-field" onclick="openCoverModal()">
-              <div id="coverPreview" class="cover-preview">
-                <div class="cover-placeholder">No cover selected</div>
+          <!-- Right: Cover image -->
+          <div class="extract-form-sidebar">
+            <div class="form-field">
+              <div class="field-label">Cover image</div>
+              <input type="hidden" name="{{ form.cover_image_url.html_name }}" id="id_cover_image_url" />
+              <div id="coverField" class="cover-field" onclick="openCoverModal()">
+                <div id="coverPreview" class="cover-preview">
+                  <div class="cover-placeholder">No cover selected</div>
+                </div>
               </div>
+              <div class="muted" style="font-size:.85rem; margin-top:.5rem; text-align: center;">Click to select from TMDB</div>
+              {% if form.cover_image_url.errors %}<div class="status status--error">{{ form.cover_image_url.errors|striptags }}</div>{% endif %}
             </div>
-            <div class="muted" style="font-size:.85rem; margin-top:.5rem; text-align: center;">Click to select from TMDB</div>
-            {% if form.cover_image_url.errors %}<div class="status status--error">{{ form.cover_image_url.errors|striptags }}</div>{% endif %}
           </div>
         </div>
       </div>
