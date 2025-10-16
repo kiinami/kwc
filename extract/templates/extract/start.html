@@ -2,14 +2,14 @@
 {% load static naming %}
 {% block title %}Extract · KWC{% endblock %}
 {% block content %}
-<div style="min-height: 60vh; display: grid; place-items: center;">
-  <div style="width: 100%; max-width: 960px;">
-  <h1>New extraction</h1>
-  <form method="post" action="" novalidate>
+<div class="extract-page-shell">
+  <div class="extract-page-inner">
+    <h1>New extraction</h1>
+    <form method="post" action="" novalidate>
       {% csrf_token %}
       
-      <!-- Main form card -->
-      <div class="card">
+    <!-- Main form card -->
+    <div class="card extract-form-card">
         {% if form.non_field_errors %}
           <div class="status status--error">{{ form.non_field_errors }}</div>
         {% endif %}
@@ -40,7 +40,7 @@
               </div>
             </div>
 
-            <!-- Title and Year -->
+            <!-- Title, Year, Season, Episode -->
             <div class="form-row form-row-2col">
               <div class="form-field">
                 <div class="field-label">Title</div>
@@ -52,10 +52,6 @@
                 {{ form.year }}
                 {% if form.year.errors %}<div class="status status--error">{{ form.year.errors|striptags }}</div>{% endif %}
               </div>
-            </div>
-
-            <!-- Season and Episode -->
-            <div class="form-row form-row-2col">
               <div class="form-field">
                 <div class="field-label">Season</div>
                 {{ form.season }}
@@ -130,16 +126,21 @@
   const videoEl = document.getElementById('{{ form.video.auto_id }}');
   // Title input
   const titleEl = document.getElementById('{{ form.title.auto_id }}');
-  if (titleEl) { 
-    titleEl.classList.add('input'); 
-    titleEl.classList.add('input-narrow'); 
+  if (titleEl) {
+    titleEl.classList.add('input');
   }
   const yearEl = document.getElementById('{{ form.year.auto_id }}');
   const seasonEl = document.getElementById('{{ form.season.auto_id }}');
   const episodeEl = document.getElementById('{{ form.episode.auto_id }}');
-  if (yearEl) { yearEl.classList.add('input'); yearEl.style.maxWidth = '200px'; }
-  if (seasonEl) { seasonEl.classList.add('input'); seasonEl.style.maxWidth = '200px'; }
-  if (episodeEl) { episodeEl.classList.add('input'); episodeEl.classList.add('input-narrow'); }
+  if (yearEl) {
+    yearEl.classList.add('input');
+  }
+  if (seasonEl) {
+    seasonEl.classList.add('input');
+  }
+  if (episodeEl) {
+    episodeEl.classList.add('input');
+  }
   const namingPreview = document.getElementById('namingPreview');
   const folderPattern = "{{ folder_pattern|escapejs }}";
   const imagePattern = "{{ image_pattern|escapejs }}";
