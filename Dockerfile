@@ -44,8 +44,10 @@ RUN --mount=type=cache,target=/app/.cache/uv \
 
 # Copy only what's needed for Django management/collectstatic
 COPY kwc /app/kwc
+COPY common /app/common
 COPY choose /app/choose
 COPY extract /app/extract
+COPY gallery /app/gallery
 COPY templates /app/templates
 COPY manage.py /app/
 
@@ -84,8 +86,10 @@ EOT
 # Copy selectively from builder to optimize final image.
 COPY --link --from=builder /venv /venv
 COPY --link --from=builder /app/kwc /app/kwc
+COPY --link --from=builder /app/common /app/common
 COPY --link --from=builder /app/choose /app/choose
 COPY --link --from=builder /app/extract /app/extract
+COPY --link --from=builder /app/gallery /app/gallery
 COPY --link --from=builder /app/templates /app/templates
 COPY --link --from=builder /app/manage.py /app/manage.py
 

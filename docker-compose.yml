@@ -13,5 +13,6 @@ services:
       - "./data/db:/data"
       - "./data/static:/app/static"
       - "./data/wallpapers:/media/wallpapers"
+      - "./data/extractions:/media/extractions"
       - "${HOME}/tmp:/media/tmp"
     restart: unless-stopped
