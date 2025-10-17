@@ -42,7 +42,7 @@ When configured, the extract form will include a cover image field where you can
 
 Build and run the container exposing port 8080. Volumes mount the DB, static files, and wallpapers root.
 
-- Image builds use uv and install only prod dependencies.
+- Image builds use uv.
 - Entrypoint `deploy/run` migrates the DB and starts Gunicorn (`prod`) or Django dev server (`serve`).
 
 ## Development

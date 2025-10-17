@@ -40,7 +40,7 @@ RUN --mount=type=cache,target=/app/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock,readonly=false \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv venv $VIRTUAL_ENV && \
-    uv sync --group prod --frozen --no-install-project --no-editable
+    uv sync --frozen --no-install-project --no-editable
 
 # Copy only what's needed for Django management/collectstatic
 COPY kwc /app/kwc

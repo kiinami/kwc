@@ -7,7 +7,7 @@
 ## Environment Setup
 
 **Python 3.13 required** (lockfile pinned). The environment is automatically set up by the workflow at `.github/workflows/copilot-setup-steps.yml` before you start working. This includes:
-- Installing uv and dependencies (`uv sync --group prod`)
+- Installing uv and dependencies (`uv sync`)
 - Creating `.env` from `.env.example`
 - Running database migrations
 
@@ -31,11 +31,11 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 - `.github/workflows/publish.yml` - Docker build→GHCR (30min timeout, no linting/tests in CI)
 
 **Config files:**
-- `pyproject.toml` - Dependencies (base/dev/prod groups), pytest config
+- `pyproject.toml` - Dependencies (base/dev groups), pytest config
 - `.editorconfig` - 4 spaces (Python), 2 spaces (YAML/JS), tabs (HTML templates)
 - `.python-version` - `3.13`
 - `uv.lock` - Committed lockfile
-- `Dockerfile` - Multi-stage (uv 0.4.29, prod deps only)
+- `Dockerfile` - Multi-stage (uv 0.4.29)
 
 **Django settings (kwc/settings.py)** - All env-configurable:
 - `DJANGO_*`: SECRET_KEY, DEBUG, ALLOWED_HOSTS
@@ -61,7 +61,7 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 - New app: Add to `kwc/settings.py` INSTALLED_APPS
 - Static files: `kwc/static/` → `uv run manage.py collectstatic`
 - URLs: Root in `kwc/urls.py`, app-specific in `{app}/urls.py`
-- Dependencies: Edit `pyproject.toml` → `uv lock && uv sync --group prod`
+- Dependencies: Edit `pyproject.toml` → `uv lock && uv sync`
 
 **Critical rules:**
 1. **Never modify TODO.md**
@@ -72,6 +72,7 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 6. Docker Compose: non-root user via `KWC_UID`/`KWC_GID` env vars
 
 **Git:**
+- You can commit as you work
 - Write clear, concise commit messages summarizing changes
 - Use Conventional Commits style when possible (e.g., feat:, fix:, docs:, chore:)
 - In Conventional Commits, add scope if relevant (e.g., feat(extract): ...)
