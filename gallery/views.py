@@ -1,8 +1,10 @@
+import json
 import os
 
 from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 
 from choose.services import list_gallery_images
 from choose.utils import (
@@ -85,9 +87,9 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
     
     # Get image dimensions
     try:
-        from PIL import Image  # noqa: PLC0415
-        with Image.open(image_path) as img:
-            width, height = img.size
+        from PIL import Image as PILImage
+        with PILImage.open(image_path) as pil_img:
+            width, height = pil_img.size
     except Exception:
         width, height = 0, 0
     
@@ -119,6 +121,17 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
     else:
         episode_display = ""
     
+    # Serialize images for JavaScript - need to convert to JSON-safe format
+    images_for_js = []
+    for img in context.images:
+        images_for_js.append({
+            'name': img['name'],
+            'url': img['url'],
+            'thumb_url': img.get('thumb_url'),
+            'version_suffix': img.get('version_suffix', ''),
+            'versions': img.get('versions', []),
+        })
+    
     lightbox_context = {
         **context.to_dict(),
         'current_image': current_image,
@@ -135,6 +148,7 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
         'episode_display': episode_display,
         'counter': counter,
         'filepath': str(image_path.relative_to(root)),
+        'images_json': mark_safe(json.dumps(images_for_js)),
     }
     
     return render(request, 'gallery/lightbox.html', lightbox_context)

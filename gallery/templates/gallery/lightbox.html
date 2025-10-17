@@ -962,7 +962,7 @@
       
       const folder = "{{ folder|escapejs }}";
       let currentIndex = {{ current_index }};
-      const allImages = {{ images|safe }};
+      const allImages = {{ images_json }};
       let currentVersionIndex = 0;
       let currentVersions = {{ current_image.versions|safe }};
       updateMobileFilename(currentVersions.length ? currentVersions[0].name : "{{ current_image.name|escapejs }}");
