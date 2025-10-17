@@ -188,8 +188,11 @@ SECURE_HSTS_PRELOAD = _bool_env('SECURE_HSTS_PRELOAD', 'False')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Extract/Choose shared configuration via env vars
-# Final wallpapers root directory where extracted frames are stored and later curated.
+# Final wallpapers root directory where curated frames are stored.
 WALLPAPERS_FOLDER = os.getenv('KWC_WALLPAPERS_FOLDER', str(BASE_DIR / 'extracted'))
+
+# Extraction folder where frames are initially extracted before choosing.
+EXTRACT_FOLDER = os.getenv('KWC_EXTRACT_FOLDER', str(BASE_DIR / 'extractions'))
 
 
 # Folder pattern (relative to root). Supports Django template syntax and brace placeholders.

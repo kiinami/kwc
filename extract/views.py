@@ -57,20 +57,30 @@ def start(request: HttpRequest) -> HttpResponse:
 			params["trim_intervals"] = form.cleaned_data.get("trim_intervals", [])
 			params["cover_image_url"] = form.cleaned_data.get("cover_image_url", "")
 
-			root = Path(settings.WALLPAPERS_FOLDER)
-			folder_pattern = settings.EXTRACT_FOLDER_PATTERN
-			folder_rel = render_pattern(
-				folder_pattern,
-				{
-					"title": params.get("title", ""),
-					"year": params.get("year", ""),
-					"season": params.get("season", ""),
-					"episode": params.get("episode", ""),
-				},
-			).strip()
-			if not folder_rel:
-				folder_rel = params.get("title") or job_id
-			output_dir = root / folder_rel
+			# Use EXTRACT_FOLDER for new extraction staging area
+			root = Path(settings.EXTRACT_FOLDER)
+			
+			# Build folder name: title with season/episode (no counter/tilde)
+			title = params.get("title", "")
+			season = params.get("season", "")
+			episode = params.get("episode", "")
+			
+			# Folder name pattern: title [season] [episode]
+			folder_parts = [title] if title else []
+			if season:
+				folder_parts.append(f"S{str(season).zfill(2) if str(season).isdigit() else season}")
+			if episode:
+				# Handle special episode codes
+				episode_str = str(episode).upper()
+				if episode_str in ("IN", "OU"):
+					folder_parts.append(f"E{episode_str}")
+				elif str(episode).isdigit():
+					folder_parts.append(f"E{str(episode).zfill(2)}")
+				else:
+					folder_parts.append(f"E{episode}")
+			
+			folder_name = " ".join(folder_parts) if folder_parts else job_id
+			output_dir = root / folder_name
 			params["output_dir"] = str(output_dir)
 			params["image_pattern"] = settings.EXTRACT_IMAGE_PATTERN
 

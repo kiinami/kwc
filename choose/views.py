@@ -27,13 +27,47 @@ from .utils import (
 	parse_season_episode,
 	validate_folder_name,
 	wallpapers_root,
+	extract_root,
 )
 
 
 logger = logging.getLogger(__name__)
 def index(request: HttpRequest) -> HttpResponse:
-	"""Redirect to the home page."""
-	return redirect('home')
+	"""Choose home: list folders from extraction area for review."""
+	from .utils import list_extract_folders
+	from django.urls import reverse
+	
+	folders, root = list_extract_folders()
+	
+	enriched: list[dict] = []
+	for entry in folders:
+		# Build display text for season/episode
+		season_episode_text = ""
+		if entry['season'] and entry['episode']:
+			season_episode_text = f"S{entry['season']}E{entry['episode']}"
+		elif entry['season']:
+			season_episode_text = f"Season {entry['season']}"
+		elif entry['episode']:
+			episode_upper = entry['episode'].upper()
+			if episode_upper == "IN":
+				season_episode_text = "Intro"
+			elif episode_upper == "OU":
+				season_episode_text = "Outro"
+			else:
+				season_episode_text = f"Episode {entry['episode']}"
+		
+		enriched.append(
+			{
+				**entry,
+				'season_episode_text': season_episode_text,
+				'choose_url': reverse('choose:folder', kwargs={'folder': entry['name']}),
+			}
+		)
+	
+	return render(request, 'choose/index.html', {
+		'folders': enriched,
+		'root': str(root),
+	})
 
 
 def gallery(request: HttpRequest, folder: str) -> HttpResponse:
@@ -213,10 +247,17 @@ def thumbnail(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	if safe_filename != filename:
 		raise Http404("Invalid filename")
 
-	root = wallpapers_root()
-	source = root / folder / safe_filename
+	# Try wallpapers root first, then extract root
+	wallpapers_path = wallpapers_root()
+	source = wallpapers_path / folder / safe_filename
+	
 	if not source.exists() or not source.is_file():
-		raise Http404("Image not found")
+		# Try extract root
+		extract_path = extract_root()
+		source = extract_path / folder / safe_filename
+		
+		if not source.exists() or not source.is_file():
+			raise Http404("Image not found")
 
 	stat = source.stat()
 	width = _sanitize_dimension(request.GET.get('w'))

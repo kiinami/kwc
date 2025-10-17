@@ -86,22 +86,28 @@ def parse_decision_request(body: bytes) -> DecisionPayload:
 
 
 def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
-    """Apply queued decisions for a folder, mirroring legacy behaviour."""
+    """Apply queued decisions for a folder: move kept images to wallpapers folder, delete discarded ones.
+    
+    This works with the extraction staging area (extract_root) and moves kept images
+    to the final wallpapers directory with proper sequential naming.
+    """
 
     try:
         safe_name = validate_folder_name(folder)
     except ValueError as exc:
         raise APIError("invalid_folder", 400, str(exc)) from exc
 
-    root_path = wallpapers_root()
-
+    # Source: extraction staging area
+    from .utils import extract_root
+    extract_path = extract_root()
+    
     try:
-        target = get_folder_path(safe_name, root_path)
+        source_folder = get_folder_path(safe_name, extract_path)
     except FileNotFoundError as exc:
         raise APIError("not_found", 404, str(exc)) from exc
 
     try:
-        files = list_image_files(target)
+        files = list_image_files(source_folder)
     except PermissionError as exc:
         logger.warning("Permission denied scanning folder %s: %s", safe_name, exc)
         raise APIError("permission_denied", 403, str(exc)) from exc
@@ -111,317 +117,210 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
     )
     decision_map = {d.filename: d.decision for d in decisions}
 
-    indices_by_name = {name: idx for idx, name in enumerate(files)}
-    previous_progress = FolderProgress.objects.filter(folder=safe_name).first()
-    prev_keep_count = previous_progress.keep_count if previous_progress else 0
-
+    # Separate files into keep and delete
     to_delete = [name for name in files if decision_map.get(name) == ImageDecision.DECISION_DELETE]
-    remaining_names = [name for name in files if name not in to_delete]
-
-    ordered_decided_keeps: list[str] = []
-    seen_keeps: set[str] = set()
-    for decision in decisions:
-        if decision.decision != ImageDecision.DECISION_KEEP:
-            continue
-        name = decision.filename
-        if name in seen_keeps or name not in indices_by_name or name in to_delete:
-            continue
-        ordered_decided_keeps.append(name)
-        seen_keeps.add(name)
-
+    to_keep = [name for name in files if decision_map.get(name) == ImageDecision.DECISION_KEEP]
+    # Undecided images are treated as keep
+    undecided = [name for name in files if name not in to_delete and name not in to_keep]
+    to_keep.extend(undecided)
+    
+    # Parse folder name to extract title and season/episode info
+    # Folder format: "Title" or "Title S01" or "Title S01E03" or "Title E03"
+    season, episode = parse_season_episode(safe_name)
+    
+    # Extract title (everything before season/episode markers)
+    title = safe_name
+    if season or episode:
+        import re
+        pattern = r'\s+S\d+|\s+E[A-Z0-9]+|\s+S\d+E[A-Z0-9]+'
+        title = re.sub(pattern, '', safe_name, flags=re.IGNORECASE).strip()
+    
+    # Determine target folder in wallpapers directory
+    # Use EXTRACT_FOLDER_PATTERN to create the folder name (title with optional year)
+    wallpapers_path = wallpapers_root()
+    
+    # Try to find existing folder with matching title
+    target_folder_name = None
+    year_for_pattern = None
+    
+    if wallpapers_path.exists():
+        for entry in wallpapers_path.iterdir():
+            if not entry.is_dir() or entry.name.startswith('.'):
+                continue
+            
+            folder_title, folder_year = parse_title_year_from_folder(entry.name)
+            if folder_title == title:
+                target_folder_name = entry.name
+                year_for_pattern = folder_year
+                break
+    
+    # If no existing folder found, create new one (title without year by default)
+    if not target_folder_name:
+        target_folder_name = title
+    
+    target_folder = wallpapers_path / target_folder_name
+    target_folder.mkdir(parents=True, exist_ok=True)
+    
+    # Delete discarded images
     delete_errors: list[str] = []
     for name in to_delete:
-        path = target / name
+        path = source_folder / name
         try:
             if path.exists() and path.is_file():
                 safe_remove(path)
         except (OSError, IsADirectoryError) as exc:
             logger.warning("Failed to delete %s/%s: %s", safe_name, name, exc)
             delete_errors.append(f"{name}: {exc}")
-
-    base_title, parsed_year = parse_title_year_from_folder(safe_name)
-    pattern = settings.EXTRACT_IMAGE_PATTERN
-
-    tmp_map: dict[Path, Path] = {}
-
-    undecided_keeps = [name for name in remaining_names if name not in seen_keeps]
-
+    
     # Build suffix map and group files by their base name (without suffix)
     suffix_map: dict[str, str] = {}
-    base_name_map: dict[str, str] = {}  # Maps filename to its base (without suffix)
+    base_name_map: dict[str, str] = {}
     
-    for name in files:
+    for name in to_keep:
         valid_suffix, invalid_suffix = parse_version_suffix(name)
-        # If valid suffix exists, store it
         if valid_suffix:
             suffix_map[name] = valid_suffix
             base_name_map[name] = strip_version_suffix(name)
         else:
-            # No suffix or invalid suffix - treat as base
             suffix_map[name] = ""
             base_name_map[name] = name
-
-    tmp_counter = 0
-    plans_decided: list[tuple[Path, Path]] = []
-    for name in ordered_decided_keeps:
-        tmp_counter += 1
-        src = target / name
-        tmp = target / f".{tmp_counter:04d}.renametmp.{os.getpid()}_{tmp_counter}{src.suffix.lower()}"
-        try:
-            if src.exists():
-                safe_rename(src, tmp)
-                tmp_map[src] = tmp
-                plans_decided.append((src, tmp))
-        except (FileNotFoundError, OSError) as exc:
-            logger.error("Temp rename failed for %s/%s: %s", safe_name, src.name, exc)
-            _cleanup_temporary_files(tmp_map, restore=True)
-            raise APIError("temp_rename_failed", 500, str(exc)) from exc
-
-    preview_counters: dict[tuple[str, str], int] = {}
-    keep_dest_names: set[str] = set()
-    # Track which base names we've already assigned counters to (for preview)
-    preview_assigned_bases: dict[tuple[str, str], set[str]] = {}
     
-    for original_src, _tmp in plans_decided:
-        original_name = original_src.name
-        base_name_for_parsing = base_name_map.get(original_name, original_name)
+    # Find highest existing counter in target folder for this season/episode
+    pattern = settings.EXTRACT_IMAGE_PATTERN
+    existing_files = list_image_files(target_folder) if target_folder.exists() else []
+    
+    # Parse existing files to find highest counter for matching season/episode
+    counters: dict[tuple[str, str], int] = {}
+    for existing_name in existing_files:
+        base_name = base_name_map.get(existing_name, strip_version_suffix(existing_name))
+        base_stem = os.path.splitext(base_name)[0]
+        
+        match = SEASON_EPISODE_RE.search(base_stem)
+        file_season = match.group("season") if match else ""
+        file_episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
+        
+        # Extract counter
+        counter_match = re.search(r'(\d+)$', base_stem)
+        if counter_match:
+            try:
+                counter = int(counter_match.group(1))
+                key = (file_season, file_episode)
+                counters[key] = max(counters.get(key, 0), counter)
+            except ValueError:
+                pass
+    
+    # Move and rename kept images
+    move_errors: list[str] = []
+    moved_count = 0
+    
+    # Track which base names we've already processed
+    base_to_counter: dict[tuple[tuple[str, str], str], int] = {}
+    
+    for name in to_keep:
+        src = source_folder / name
+        if not src.exists():
+            continue
+        
+        # Parse season/episode from filename
+        base_name_for_parsing = base_name_map.get(name, name)
         base_stem = os.path.splitext(base_name_for_parsing)[0]
         
         match = SEASON_EPISODE_RE.search(base_stem)
-        season = match.group("season") if match else ""
-        # Episode can be in either "episode" group (when season present) or "ep_only" group
-        episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
-        key = (season, episode)
+        file_season = match.group("season") if match else ""
+        file_episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
+        key = (file_season, file_episode)
         
-        # Only increment counter if this is a new base image (not a version of one we've seen)
-        if key not in preview_assigned_bases:
-            preview_assigned_bases[key] = set()
-        
-        if base_name_for_parsing not in preview_assigned_bases[key]:
-            current = preview_counters.get(key, 0) + 1
-            preview_counters[key] = current
-            preview_assigned_bases[key].add(base_name_for_parsing)
+        # Check if we've already assigned a counter to this base image
+        lookup_key = (key, base_name_for_parsing)
+        if lookup_key in base_to_counter:
+            # Reuse the same counter for this version
+            counter = base_to_counter[lookup_key]
         else:
-            # This is a version of an image we've already counted
-            current = preview_counters[key]
+            # New base image - assign new counter
+            counter = counters.get(key, 0) + 1
+            counters[key] = counter
+            base_to_counter[lookup_key] = counter
         
+        # Build new filename
         values = {
-            "title": base_title,
-            "base_title": base_title,
-            "year": parsed_year or "",
-            "season": int(season) if season and season.isdigit() else season,
-            "episode": int(episode) if episode and episode.isdigit() else episode,
-            "counter": current,
+            "title": title,
+            "base_title": title,
+            "year": year_for_pattern or "",
+            "season": int(file_season) if file_season and file_season.isdigit() else file_season,
+            "episode": int(file_episode) if file_episode and file_episode.isdigit() else file_episode,
+            "counter": counter,
         }
-        new_base_name = render_pattern(pattern, values)
-        # Add both base and versioned names to the set
-        keep_dest_names.add(new_base_name)
-        if original_name in suffix_map and suffix_map[original_name]:
-            versioned_name = add_version_suffix(new_base_name, suffix_map[original_name])
-            keep_dest_names.add(versioned_name)
-
-    deferred_names = [name for name in undecided_keeps if name in keep_dest_names]
-    other_undecided = [name for name in undecided_keeps if name not in keep_dest_names]
-
-    plans_other: list[tuple[Path, Path]] = []
-    for name in other_undecided:
-        tmp_counter += 1
-        src = target / name
-        tmp = target / f".{tmp_counter:04d}.renametmp.{os.getpid()}_{tmp_counter}{src.suffix.lower()}"
+        
         try:
-            if src.exists():
-                safe_rename(src, tmp)
-                tmp_map[src] = tmp
-                plans_other.append((src, tmp))
-        except (FileNotFoundError, OSError) as exc:
-            logger.error("Temp rename failed for %s/%s: %s", safe_name, src.name, exc)
-            _cleanup_temporary_files(tmp_map, restore=True)
-            raise APIError("temp_rename_failed", 500, str(exc)) from exc
-
-    rename_errors: list[str] = []
-    counters: dict[tuple[str, str], int] = {}
-    final_keep_names: list[str] = []
-    # Track which base names we've already assigned counters to (for actual renames)
-    assigned_bases: dict[tuple[str, str], set[str]] = {}
-    # Map from base name to the counter it was assigned
-    base_to_counter: dict[tuple[tuple[str, str], str], int] = {}
-
-    def _finalise_renames(plans: list[tuple[Path, Path]]) -> bool:
-        for original_src, tmp in plans:
-            tmp_path = tmp_map.get(original_src)
-            if tmp_path is None or not tmp_path.exists():
-                continue
-
-            # Strip version suffix from original filename before parsing
-            original_name = original_src.name
-            base_name_for_parsing = base_name_map.get(original_name, original_name)
-            base_stem = os.path.splitext(base_name_for_parsing)[0]
-            
-            match = SEASON_EPISODE_RE.search(base_stem)
-            season = match.group("season") if match else ""
-            # Episode can be in either "episode" group (when season present) or "ep_only" group
-            episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
-            key = (season, episode)
-            
-            # Check if we've already assigned a counter to this base image
-            if key not in assigned_bases:
-                assigned_bases[key] = set()
-            
-            lookup_key = (key, base_name_for_parsing)
-            if lookup_key in base_to_counter:
-                # Reuse the same counter for this version
-                current = base_to_counter[lookup_key]
-            else:
-                # New base image - assign new counter
-                current = counters.get(key, 0) + 1
-                counters[key] = current
-                assigned_bases[key].add(base_name_for_parsing)
-                base_to_counter[lookup_key] = current
-
-            values = {
-                "title": base_title,
-                "base_title": base_title,
-                "year": parsed_year or "",
-                "season": int(season) if season and season.isdigit() else season,
-                "episode": int(episode) if episode and episode.isdigit() else episode,
-                "counter": current,
-            }
-
             new_name = render_pattern(pattern, values)
-            
-            # Re-apply version suffix if the original had one
-            if original_name in suffix_map and suffix_map[original_name]:
-                new_name = add_version_suffix(new_name, suffix_map[original_name])
-            
-            dest = target / new_name
-
-            try:
-                if dest.exists():
-                    try:
-                        safe_remove(dest)
-                    except (OSError, IsADirectoryError):
-                        stem, ext = os.path.splitext(new_name)
-                        # Build fallback suffix based on what info we have
-                        if season and episode:
-                            fallback_suffix = f" S{season}E{episode} #{current}"
-                        elif season:
-                            fallback_suffix = f" S{season} #{current}"
-                        elif episode:
-                            fallback_suffix = f" E{episode} #{current}"
-                        else:
-                            fallback_suffix = f" #{current}"
-                        dest = target / f"{stem}{fallback_suffix}{ext}"
-                safe_rename(tmp_path, dest)
-                tmp_map.pop(original_src, None)
-                final_keep_names.append(dest.name)
-            except (FileNotFoundError, OSError) as exc:
-                logger.error("Rename failed %s -> %s: %s", tmp, dest, exc)
-                rename_errors.append(f"{original_src.name} -> {dest.name}: {exc}")
-                return False
-        return True
-
-    if not _finalise_renames(plans_decided):
-        _cleanup_temporary_files(tmp_map, restore=True)
-        return ApplyResult(
-            payload={
-                "error": "rename_failed",
-                "details": rename_errors,
-                "delete_errors": delete_errors,
-            },
-            status=500,
-        )
-
-    if not _finalise_renames(plans_other):
-        _cleanup_temporary_files(tmp_map, restore=True)
-        return ApplyResult(
-            payload={
-                "error": "rename_failed",
-                "details": rename_errors,
-                "delete_errors": delete_errors,
-            },
-            status=500,
-        )
-
-    plans_deferred: list[tuple[Path, Path]] = []
-    for name in deferred_names:
-        tmp_counter += 1
-        src = target / name
-        tmp = target / f".{tmp_counter:04d}.renametmp.{os.getpid()}_{tmp_counter}{src.suffix.lower()}"
+        except Exception as e:
+            logger.warning(f"Failed to render pattern for {name}: {e}")
+            new_name = f"{title}_{counter:04d}.jpg"
+        
+        # Re-apply version suffix if the original had one
+        if name in suffix_map and suffix_map[name]:
+            new_name = add_version_suffix(new_name, suffix_map[name])
+        
+        dest = target_folder / new_name
+        
+        # Handle collisions
+        if dest.exists():
+            stem, ext = os.path.splitext(new_name)
+            collision_counter = 1
+            while dest.exists():
+                dest = target_folder / f"{stem}_dup{collision_counter}{ext}"
+                collision_counter += 1
+        
         try:
-            if src.exists():
-                safe_rename(src, tmp)
-                tmp_map[src] = tmp
-                plans_deferred.append((src, tmp))
-        except (FileNotFoundError, OSError) as exc:
-            logger.error("Temp rename failed for %s/%s: %s", safe_name, src.name, exc)
-            _cleanup_temporary_files(tmp_map, restore=True)
-            raise APIError("temp_rename_failed", 500, str(exc)) from exc
-
-    if not _finalise_renames(plans_deferred):
-        _cleanup_temporary_files(tmp_map, restore=True)
-        return ApplyResult(
-            payload={
-                "error": "rename_failed",
-                "details": rename_errors,
-                "delete_errors": delete_errors,
-            },
-            status=500,
-        )
-
-    if rename_errors:
-        _cleanup_temporary_files(tmp_map, restore=True)
-        return ApplyResult(
-            payload={
-                "error": "rename_failed",
-                "details": rename_errors,
-                "delete_errors": delete_errors,
-            },
-            status=500,
-        )
-
-    _cleanup_temporary_files(tmp_map)
-
-    remaining_prev_keep_count = sum(1 for name in files[:prev_keep_count] if name not in to_delete)
-    keep_names_beyond_prev = {
-        name
-        for name, decision in decision_map.items()
-        if decision == ImageDecision.DECISION_KEEP and indices_by_name.get(name, len(files)) >= prev_keep_count
-    }
-    new_processed_count = remaining_prev_keep_count + len(keep_names_beyond_prev)
-    if new_processed_count > len(final_keep_names):
-        new_processed_count = len(final_keep_names)
-
-    anchor_name = ""
-    if new_processed_count > 0 and final_keep_names:
-        anchor_index = min(new_processed_count - 1, len(final_keep_names) - 1)
-        anchor_name = final_keep_names[anchor_index]
-
-    last_original_name = (
-        decisions[-1].filename
-        if decisions
-        else (previous_progress.last_classified_original if previous_progress else "")
-    )
-
-    FolderProgress.objects.update_or_create(
-        folder=safe_name,
-        defaults={
-            "last_classified_name": anchor_name,
-            "last_classified_original": last_original_name,
-            "keep_count": new_processed_count,
-        },
-    )
-
+            import shutil
+            shutil.move(str(src), str(dest))
+            moved_count += 1
+        except (OSError, IOError) as exc:
+            logger.error("Move failed %s -> %s: %s", src, dest, exc)
+            move_errors.append(f"{name} -> {dest.name}: {exc}")
+    
+    # Copy cover file if it exists in the source
+    for cover_name in [".cover.jpg", ".cover.jpeg", ".cover.png", ".cover.webp"]:
+        cover_src = source_folder / cover_name
+        if cover_src.exists():
+            cover_dest = target_folder / cover_name
+            if not cover_dest.exists():
+                try:
+                    import shutil
+                    shutil.copy2(str(cover_src), str(cover_dest))
+                except Exception as e:
+                    logger.warning(f"Failed to copy cover: {e}")
+            break
+    
+    # Clean up: remove source folder if empty
+    try:
+        if not any(source_folder.iterdir()):
+            source_folder.rmdir()
+    except Exception as e:
+        logger.warning(f"Failed to remove empty extraction folder {source_folder}: {e}")
+    
+    # Clear decisions and progress for this folder
     ImageDecision.objects.filter(folder=safe_name).delete()
-
-    keep_decision_count = len(ordered_decided_keeps)
-    kept_total = keep_decision_count if keep_decision_count else len(remaining_names)
-
+    FolderProgress.objects.filter(folder=safe_name).delete()
+    
+    if move_errors:
+        return ApplyResult(
+            payload={
+                "error": "move_failed",
+                "details": move_errors,
+                "delete_errors": delete_errors,
+                "moved": moved_count,
+            },
+            status=500,
+        )
+    
     return ApplyResult(
         payload={
             "ok": True,
+            "moved": moved_count,
             "deleted": len(to_delete),
-            "kept": kept_total,
             "delete_errors": delete_errors,
+            "target_folder": target_folder_name,
         },
         status=200,
     )

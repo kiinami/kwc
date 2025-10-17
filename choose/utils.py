@@ -178,6 +178,14 @@ def wallpapers_root() -> Path:
     return Path(settings.WALLPAPERS_FOLDER)
 
 
+def extract_root() -> Path:
+    """Return the root directory where extracted frames are staged.
+
+    Configured via settings.EXTRACT_FOLDER and defaults to BASE_DIR / 'extractions'.
+    """
+    return Path(settings.EXTRACT_FOLDER)
+
+
 def parse_folder_name(folder_name: str) -> tuple[str, int | None]:
     """Parse a folder name like "Title (2020)" into (title, year|None).
 
@@ -229,8 +237,15 @@ def find_cover_filename(folder: Path, files: Iterable[str] | None = None) -> str
 
 def wallpaper_url(folder: str, filename: str, *, root: Path | None = None) -> str:
     """Return a cache-busted URL for a wallpaper image."""
-    base = f"/wallpapers/{quote(folder)}/{quote(filename)}"
     actual_root = root or wallpapers_root()
+    
+    # Determine URL prefix based on root path
+    extract_path = extract_root()
+    if actual_root == extract_path or str(actual_root).startswith(str(extract_path)):
+        base = f"/extractions/{quote(folder)}/{quote(filename)}"
+    else:
+        base = f"/wallpapers/{quote(folder)}/{quote(filename)}"
+    
     path = actual_root / folder / filename
     return f"{base}?v={cache_token(path)}"
 
@@ -361,4 +376,93 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
             pass
 
     entries.sort(key=lambda x: (x['year_sort'], x['mtime'], x['name'].lower()), reverse=True)
+    return entries, root_path
+
+
+class ExtractFolder(TypedDict):
+    """Metadata describing a folder in the extraction staging area."""
+    
+    name: str
+    title: str
+    season: str
+    episode: str
+    mtime: int
+    image_count: int
+    cover_filename: str | None
+    cover_url: str | None
+    cover_thumb_url: str | None
+
+
+def list_extract_folders(root: Path | None = None) -> tuple[list[ExtractFolder], Path]:
+    """Scan the extract root for folders containing extracted frames.
+    
+    Returns a tuple of (entries, root_path) where entries are sorted by recency.
+    """
+    
+    root_path = root or extract_root()
+    entries: list[ExtractFolder] = []
+    
+    if root_path.exists() and root_path.is_dir():
+        try:
+            with os.scandir(root_path) as it:
+                for entry in it:
+                    if not entry.is_dir():
+                        continue
+                    if entry.name.startswith('.'):
+                        continue
+                    
+                    folder_name = entry.name
+                    
+                    # Parse title, season, episode from folder name
+                    # Format: "Title" or "Title S01" or "Title S01E03" or "Title E03"
+                    season, episode = parse_season_episode(folder_name)
+                    
+                    # Extract title (everything before season/episode markers)
+                    title = folder_name
+                    if season or episode:
+                        # Remove season/episode part from title
+                        import re
+                        pattern = r'\s+S\d+|\s+E[A-Z0-9]+|\s+S\d+E[A-Z0-9]+'
+                        title = re.sub(pattern, '', folder_name, flags=re.IGNORECASE).strip()
+                    
+                    # Count images in the folder
+                    try:
+                        image_count = len(list_image_files(root_path / folder_name))
+                    except (PermissionError, FileNotFoundError):
+                        image_count = 0
+                    
+                    cover_filename = find_cover_filename(root_path / folder_name)
+                    cover_url = (
+                        wallpaper_url(folder_name, cover_filename, root=root_path)
+                        if cover_filename
+                        else None
+                    )
+                    cover_thumb_url = (
+                        thumbnail_url(folder_name, cover_filename, width=360, root=root_path)
+                        if cover_filename
+                        else None
+                    )
+                    
+                    try:
+                        mtime = entry.stat().st_mtime_ns
+                    except Exception:
+                        mtime = 0
+                    
+                    folder_entry: ExtractFolder = {
+                        'name': folder_name,
+                        'title': title,
+                        'season': season,
+                        'episode': episode,
+                        'mtime': mtime,
+                        'image_count': image_count,
+                        'cover_filename': cover_filename,
+                        'cover_url': cover_url,
+                        'cover_thumb_url': cover_thumb_url,
+                    }
+                    entries.append(folder_entry)
+        except PermissionError:
+            pass
+    
+    # Sort by most recent first
+    entries.sort(key=lambda x: (x['mtime'], x['name'].lower()), reverse=True)
     return entries, root_path

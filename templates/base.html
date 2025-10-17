@@ -484,6 +484,8 @@
         <div class="nav-controls">
           <nav class="nav">
             <a href="{% url 'extract:index' %}" class="{% if request.resolver_match.namespace == 'extract' %}active{% endif %}">Extract</a>
+            <a href="{% url 'choose:index' %}" class="{% if request.resolver_match.namespace == 'choose' and request.resolver_match.url_name == 'index' %}active{% endif %}">Choose</a>
+            <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">Gallery</a>
           </nav>
           <button class="install-btn" id="kwc-install" hidden>Install app</button>
         </div>

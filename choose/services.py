@@ -21,6 +21,7 @@ from .utils import (
     validate_folder_name,
     wallpaper_url,
     wallpapers_root,
+    extract_root,
 )
 
 
@@ -311,7 +312,7 @@ def load_folder_context(folder: str, season: str | None = None, episode: str | N
         FolderContext with images (optionally filtered by section)
     """
     safe_name = validate_folder_name(folder)
-    root_path = wallpapers_root()
+    root_path = extract_root()  # Use extract root for chooser
     target = get_folder_path(safe_name, root_path)
 
     try:

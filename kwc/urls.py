@@ -40,3 +40,10 @@ if _wall_root:
     urlpatterns += [
         re_path(r'^wallpapers/(?P<path>.+)$', static_serve, { 'document_root': _wall_root }),
     ]
+
+# Serve extraction staging images
+_extract_root = getattr(settings, 'EXTRACT_FOLDER', None)
+if _extract_root:
+    urlpatterns += [
+        re_path(r'^extractions/(?P<path>.+)$', static_serve, { 'document_root': _extract_root }),
+    ]

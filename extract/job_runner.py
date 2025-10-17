@@ -154,6 +154,9 @@ class JobRunner:
 			cover_image_url = params_data.get("cover_image_url", "").strip()
 			if cover_image_url:
 				self._download_cover_image(cover_image_url, output_dir)
+			else:
+				# Try to copy existing cover from wallpapers folder
+				self._copy_existing_cover(extract_params.title, output_dir)
 			
 			job.refresh_from_db()
 			job.total_frames = frame_count
@@ -204,6 +207,46 @@ class JobRunner:
 		except Exception as e:
 			logger.warning(f"Failed to download cover image: {e}")
 			# Don't fail the job if cover download fails
+
+	def _copy_existing_cover(self, title: str, output_dir: Path) -> None:
+		"""Copy existing cover from wallpapers folder if title matches."""
+		import shutil
+		from django.conf import settings
+		
+		if not title:
+			return
+		
+		try:
+			wallpapers_root = Path(settings.WALLPAPERS_FOLDER)
+			if not wallpapers_root.exists():
+				return
+			
+			# Look for folders with matching title (with or without year)
+			for entry in wallpapers_root.iterdir():
+				if not entry.is_dir() or entry.name.startswith('.'):
+					continue
+				
+				# Extract title from folder name (before year if present)
+				folder_title = entry.name
+				if folder_title.endswith(')'):
+					paren_idx = folder_title.rfind(' (')
+					if paren_idx != -1:
+						folder_title = folder_title[:paren_idx]
+				
+				# Check if titles match
+				if folder_title == title:
+					# Look for cover file
+					for cover_name in [".cover.jpg", ".cover.jpeg", ".cover.png", ".cover.webp"]:
+						cover_path = entry / cover_name
+						if cover_path.exists():
+							output_dir.mkdir(parents=True, exist_ok=True)
+							dest_path = output_dir / cover_name
+							shutil.copy2(cover_path, dest_path)
+							logger.info(f"Copied cover from {cover_path} to {dest_path}")
+							return
+		except Exception as e:
+			logger.warning(f"Failed to copy existing cover: {e}")
+			# Don't fail the job if cover copy fails
 
 	def _get_job(self, job_id: str) -> ExtractionJob | None:
 		try:
