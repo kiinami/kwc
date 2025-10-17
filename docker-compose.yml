@@ -12,6 +12,7 @@ services:
       # Use host bind mounts so permissions match your user
       - "./data/db:/data"
       - "./data/static:/app/static"
+      - "./data/extracted:/media/extracted"
       - "./data/wallpapers:/media/wallpapers"
       - "${HOME}/tmp:/media/tmp"
     restart: unless-stopped
