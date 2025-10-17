@@ -41,6 +41,9 @@ jobs:
       - name: Setup .env
         run: |
           cp .env.example .env
+
+      - name: Install pre-commit
+        run: uv run pre-commit install
       
       - name: Run migrations
         run: |

@@ -11,6 +11,8 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "pillow>=11.3.0",
     "tmdbsimple>=2.9.1",
+    "gunicorn>=23.0.0",
+    "whitenoise>=6.6.0",
 ]
 
 [dependency-groups]
@@ -19,8 +21,8 @@ dev = [
     "pytest>=8.3.3",
     "pytest-django>=4.9.0",
     "ruff>=0.4.4",
-    "gunicorn>=23.0.0",
-    "whitenoise>=6.6.0",
+    "pre-commit>=3.7.0",
+    "mypy>=1.10.0",
 ]
 
 [tool.pytest.ini_options]
