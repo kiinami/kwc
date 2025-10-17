@@ -286,9 +286,10 @@ def decide_api(request: HttpRequest, folder: str) -> JsonResponse:
 
 @require_POST
 def save_api(request: HttpRequest, folder: str) -> JsonResponse:
-	"""Apply decisions: delete 'delete' images, and rename kept images to close gaps using EXTRACT_IMAGE_PATTERN counter.
+	"""Apply decisions: delete 'delete' images, and rename kept images to close gaps.
 
-	Undecided images are treated as 'keep'. Files are not moved between folders, only renamed in-place.
+	Uses EXTRACT_IMAGE_PATTERN counter. Undecided images are treated as 'keep'.
+	Files are not moved between folders, only renamed in-place.
 	"""
 	content_type = request.headers.get("Content-Type", "")
 	payload = DecisionPayload()

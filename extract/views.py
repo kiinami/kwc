@@ -16,6 +16,8 @@ try:
 except Exception:  # pragma: no cover
 	_guessit = None
 
+import contextlib
+
 from .forms import ExtractStartForm
 from .job_runner import JobRunner, job_runner
 from .models import ExtractionJob
@@ -338,10 +340,8 @@ def tmdb_search_api(request: HttpRequest) -> JsonResponse:
 	year_str = request.GET.get("year", "").strip()
 	year = None
 	if year_str:
-		try:
+		with contextlib.suppress(ValueError):
 			year = int(year_str)
-		except ValueError:
-			pass
 
 	try:
 		tmdb.configure_api_key(settings.TMDB_API_KEY)

@@ -39,4 +39,6 @@ class ExtractConfig(AppConfig):
         )
 
         if interrupted_count:
-            logging.getLogger(__name__).warning("Marked %s extraction job(s) as interrupted during startup.", interrupted_count)
+            logging.getLogger(__name__).warning(
+                "Marked %s extraction job(s) as interrupted during startup.", interrupted_count
+            )

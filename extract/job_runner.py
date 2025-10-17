@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 class JobRunner:
 	"""Manage extraction job execution and lifecycle in background threads."""
 
-	FINISHED_STATUSES = frozenset({ExtractionJob.Status.DONE, ExtractionJob.Status.ERROR, ExtractionJob.Status.CANCELLED})
+	FINISHED_STATUSES = frozenset(
+		{ExtractionJob.Status.DONE, ExtractionJob.Status.ERROR, ExtractionJob.Status.CANCELLED}
+	)
 
 	def __init__(
 		self,
@@ -105,7 +107,9 @@ class JobRunner:
 		job.current_step = 0
 		job.total_steps = 0
 		job.total_frames = 0
-		job.save(update_fields=["status", "started_at", "error", "current_step", "total_steps", "total_frames", "updated_at"])
+		job.save(
+			update_fields=["status", "started_at", "error", "current_step", "total_steps", "total_frames", "updated_at"]
+		)
 
 		params_data = job.params or {}
 		video_path = Path(params_data["video"])
@@ -161,7 +165,9 @@ class JobRunner:
 			job.current_step = job.total_steps
 			job.status = self.model.Status.DONE
 			job.finished_at = timezone.now()
-			job.save(update_fields=["status", "finished_at", "total_frames", "current_step", "total_steps", "updated_at"])
+			job.save(
+				update_fields=["status", "finished_at", "total_frames", "current_step", "total_steps", "updated_at"]
+			)
 		except CancelledException:
 			logger.info("extract job %s cancelled", job_id)
 			self.model.objects.filter(pk=job_id).update(

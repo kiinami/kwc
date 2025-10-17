@@ -13,6 +13,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='extractionjob',
             name='status',
-            field=models.CharField(choices=[('pending', 'Pending'), ('running', 'Running'), ('cancelling', 'Cancelling'), ('done', 'Done'), ('error', 'Error'), ('cancelled', 'Cancelled')], default='pending', max_length=16),
+            field=models.CharField(choices=[('pending', 'Pending'), ('running', 'Running'), ('cancelling', 'Cancelling'), ('done', 'Done'), ('error', 'Error'), ('cancelled', 'Cancelled')], default='pending', max_length=16),  # noqa: E501
         ),
     ]

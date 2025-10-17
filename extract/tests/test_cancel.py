@@ -172,7 +172,7 @@ def test_job_runner_cancel_running_job(monkeypatch: pytest.MonkeyPatch) -> None:
 		on_progress(1, 3)
 		return 3
 
-	runner, manager = _configure_runner(job, fake_extract)
+	runner, _manager = _configure_runner(job, fake_extract)
 	
 	# Start the job - with ImmediateThread, it will execute synchronously
 	# The cancel token will be set and checked within the fake_extract function
@@ -213,7 +213,7 @@ def test_job_runner_cancel_sets_token(monkeypatch: pytest.MonkeyPatch) -> None:
 		on_progress(1, 1)
 		return 1
 
-	runner, manager = _configure_runner(job, fake_extract)
+	runner, _manager = _configure_runner(job, fake_extract)
 	
 	# Start the job
 	runner.start_job(job.id)

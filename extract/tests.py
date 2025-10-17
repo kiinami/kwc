@@ -44,8 +44,7 @@ class ExtractorWorkerSelectionTests(SimpleTestCase):
 			return executor
 
 		def as_completed(iterable: Iterable):
-			for item in iterable:
-				yield item
+			yield from iterable
 
 		with TemporaryDirectory() as tmpdir:
 			temp_path = Path(tmpdir)
@@ -58,7 +57,9 @@ class ExtractorWorkerSelectionTests(SimpleTestCase):
 			with override_settings(EXTRACT_MAX_WORKERS=override):
 				with patch("extract.extractor.get_iframe_timestamps", return_value=[0.0]):
 					with patch("extract.extractor.render_pattern", side_effect=lambda pattern, values: "frame.jpg"):
-						with patch("extract.extractor.concurrent.futures.ProcessPoolExecutor", side_effect=executor_factory):
+						with patch(
+							"extract.extractor.concurrent.futures.ProcessPoolExecutor", side_effect=executor_factory
+						):
 							with patch("extract.extractor.concurrent.futures.as_completed", side_effect=as_completed):
 								with patch("extract.extractor.os.cpu_count", return_value=cpu_count_value):
 									extract(params=params)

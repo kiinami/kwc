@@ -20,7 +20,7 @@ class TMDBServiceTests(TestCase):
     def test_is_available_returns_false_when_tmdb_not_installed(self):
         """Test that is_available returns False when tmdbsimple is not installed."""
         with patch.dict('sys.modules', {'tmdbsimple': None}):
-            result = tmdb.is_available()
+            tmdb.is_available()
         # Can't actually test this since we need tmdbsimple to load the module
 
     def test_configure_api_key_sets_key(self):

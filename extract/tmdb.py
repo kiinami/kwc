@@ -67,10 +67,7 @@ def search_multi(query: str, *, year: int | None = None) -> list[SearchResult]:
     
     try:
         # Use multi search to find both movies and TV shows
-        if year:
-            response = search.multi(query=query, year=year)
-        else:
-            response = search.multi(query=query)
+        response = search.multi(query=query, year=year) if year else search.multi(query=query)
     except APIKeyError:
         logger.error("Invalid TMDB API key")
         raise RuntimeError("Invalid TMDB API key")
@@ -123,10 +120,7 @@ def get_posters(media_type: str, media_id: int) -> list[PosterImage]:
         raise ValueError(f"Invalid media_type: {media_type}")
 
     try:
-        if media_type == 'movie':
-            media = tmdb.Movies(media_id)
-        else:
-            media = tmdb.TV(media_id)
+        media = tmdb.Movies(media_id) if media_type == 'movie' else tmdb.TV(media_id)
         
         response = media.images()
     except APIKeyError:

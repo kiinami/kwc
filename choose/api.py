@@ -151,7 +151,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
     base_name_map: dict[str, str] = {}  # Maps filename to its base (without suffix)
     
     for name in files:
-        valid_suffix, invalid_suffix = parse_version_suffix(name)
+        valid_suffix, _invalid_suffix = parse_version_suffix(name)
         # If valid suffix exists, store it
         if valid_suffix:
             suffix_map[name] = valid_suffix
