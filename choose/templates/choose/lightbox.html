@@ -367,6 +367,15 @@
       opacity: 0.4;
     }
     
+    .mobile-sheet-chrome,
+    .mobile-sheet-handle,
+    .mobile-sheet-toolbar,
+    .mobile-sheet-title,
+    .mobile-sheet-actions,
+    .mobile-action-button {
+      display: none;
+    }
+
     /* Action buttons */
     .action-buttons {
       display: flex;
@@ -472,28 +481,238 @@
     }
     
     @media (max-width: 900px) {
+      :root {
+        --lightbox-sheet-collapsed: 82px;
+      }
+
       .lightbox-layout {
-        grid-template-columns: 1fr;
+        display: block;
+        position: relative;
+        height: calc(100vh - var(--nav-height, 72px));
+        min-height: calc(100vh - var(--nav-height, 72px));
       }
-      
+
       .lightbox-sidebar {
-        order: 2;
-        max-height: 40vh;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: var(--sheet-expanded-height, 420px);
+        max-height: var(--sheet-expanded-height, 420px);
         border-right: none;
-        border-top: 1px solid rgba(255,255,255,0.08);
+        border-top: 1px solid rgba(255,255,255,0.12);
+        border-radius: 1.25rem 1.25rem 0 0;
+        box-shadow: 0 -24px 48px rgba(4,6,14,0.7);
+        background: rgba(12,16,28,0.98);
+        transform: translateY(var(--sheet-current-offset, 0px));
+        transition: transform .35s cubic-bezier(0.25, 0.8, 0.25, 1);
+        overflow: hidden;
+        backdrop-filter: blur(18px);
+        display: flex;
+        flex-direction: column;
+        z-index: 20;
       }
-      
+
+      .lightbox-layout.sidebar-hidden .lightbox-sidebar {
+        --sheet-current-offset: var(--sheet-collapse-offset, 0px);
+        transform: translateY(var(--sheet-current-offset, 0px));
+        position: fixed;
+        bottom: clamp(.6rem, 4vw, 1.2rem);
+      }
+
+      .lightbox-layout:not(.sidebar-hidden) .lightbox-sidebar {
+        --sheet-current-offset: 0px;
+        transform: translateY(var(--sheet-current-offset, 0px));
+        position: fixed;
+        bottom: 0;
+      }
+
+      .lightbox-sidebar.is-dragging {
+        transition: none !important;
+      }
+
+      .sidebar-scrollable {
+        padding: 0 clamp(1rem, 5vw, 1.75rem) clamp(1.5rem, 6vw, 2.5rem);
+        overflow-y: auto;
+        margin: 0;
+        flex: 1 1 auto;
+      }
+
+      .sidebar-section {
+        padding: clamp(1rem, 4vw, 1.35rem) 0;
+        margin: 0;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+      }
+
+      .sidebar-section:first-of-type {
+        padding-top: clamp(.6rem, 3vw, 1.1rem);
+      }
+
+      .sidebar-section:last-child {
+        border-bottom: none;
+      }
+
       .lightbox-viewer {
-        order: 1;
-        min-height: 50vh;
+        height: calc(100vh - var(--nav-height, 72px));
+        min-height: calc(100vh - var(--nav-height, 72px));
+        align-items: center;
+        justify-content: center;
+        padding-top: clamp(1rem, 5vw, 2.5rem);
+        padding-bottom: calc(clamp(1rem, 5vw, 2rem) + var(--sheet-visible-height, var(--lightbox-sheet-collapsed)));
       }
-      
-      .nav-prev, .nav-next {
+
+      .lightbox-viewer.sheet-active {
+        transition: padding-bottom .25s ease;
+      }
+
+      .nav-prev,
+      .nav-next {
         display: none;
       }
-      
-      .toggle-sidebar-btn {
+
+      .toggle-sidebar-btn,
+      .toggle-sidebar-btn--floating,
+      .sidebar-header,
+      .sidebar-fixed-bottom {
         display: none;
+      }
+
+      .mobile-sheet-chrome,
+      .mobile-sheet-handle,
+      .mobile-sheet-toolbar,
+      .mobile-sheet-title,
+      .mobile-sheet-actions,
+      .mobile-action-button {
+        display: initial;
+      }
+
+      .mobile-sheet-chrome {
+        display: flex;
+        flex-direction: column;
+        gap: .6rem;
+        padding: clamp(.6rem, 3vw, 1rem) clamp(1rem, 5vw, 1.75rem) clamp(.5rem, 3vw, .85rem);
+        flex: 0 0 auto;
+      }
+
+      .mobile-sheet-handle {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: transparent;
+        border: none;
+        padding: .5rem 0;
+        cursor: pointer;
+        touch-action: none;
+      }
+
+      .mobile-sheet-handle::before {
+        content: "";
+        width: 52px;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.22);
+      }
+
+      .mobile-sheet-toolbar {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: .9rem;
+        touch-action: none;
+      }
+
+      .mobile-sheet-back {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2.4rem;
+        height: 2.4rem;
+        border-radius: .75rem;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(26,32,56,0.85);
+        color: #fff;
+        font-size: 1.1rem;
+        transition: background .2s ease, border-color .2s ease;
+      }
+
+      .mobile-sheet-back:hover,
+      .mobile-sheet-back:focus-visible {
+        background: rgba(44,52,88,0.9);
+        border-color: rgba(255,255,255,0.35);
+      }
+
+      .mobile-sheet-title {
+        font-weight: 600;
+        font-size: 1rem;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .mobile-sheet-actions {
+        display: inline-flex;
+        align-items: center;
+        gap: .55rem;
+      }
+
+      .mobile-action-button {
+        width: 2.4rem;
+        height: 2.4rem;
+        border-radius: .7rem;
+        border: 1px solid rgba(255,255,255,0.18);
+        background: rgba(26,32,56,0.85);
+        color: #fff;
+        transition: background .15s ease, border-color .15s ease, transform .15s ease;
+      }
+
+      .mobile-action-button svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      .mobile-action-button:hover,
+      .mobile-action-button:focus-visible {
+        background: rgba(44,52,88,0.9);
+        border-color: rgba(255,255,255,0.35);
+        transform: translateY(-1px);
+      }
+
+      .mobile-action-button--download {
+        background: linear-gradient(135deg, rgba(76,139,245,0.22), rgba(124,76,245,0.32));
+        border-color: rgba(76,139,245,0.35);
+      }
+
+      .mobile-action-button--download:hover,
+      .mobile-action-button--download:focus-visible {
+        background: linear-gradient(135deg, rgba(76,139,245,0.35), rgba(124,76,245,0.45));
+        border-color: rgba(124,76,245,0.55);
+      }
+
+      .mobile-action-button--delete {
+        background: rgba(239,68,68,0.16);
+        border-color: rgba(239,68,68,0.62);
+      }
+
+      .mobile-action-button--delete:hover,
+      .mobile-action-button--delete:focus-visible {
+        background: rgba(239,68,68,0.24);
+        border-color: rgba(239,68,68,0.85);
+      }
+
+      .lightbox-sidebar::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -40px;
+        height: 40px;
+        background: linear-gradient(180deg, rgba(5,7,18,0) 0%, rgba(5,7,18,0.35) 100%);
+        pointer-events: none;
+      }
+
+      .sidebar-section--intro {
+        padding-top: clamp(.4rem, 2vw, .8rem);
       }
     }
     
@@ -515,6 +734,35 @@
   <div class="fullbleed">
     <div class="lightbox-layout" id="lightboxLayout">
       <aside class="lightbox-sidebar" id="lightboxSidebar">
+        <div class="mobile-sheet-chrome" id="mobileSheetChrome">
+          <button class="mobile-sheet-handle" id="mobileSheetHandle" type="button" aria-label="Expand image details"></button>
+          <div class="mobile-sheet-toolbar" id="mobileSheetHeader">
+            <a href="{% url 'choose:gallery' folder=folder %}" class="mobile-sheet-back" aria-label="Back to gallery">
+              <span aria-hidden="true">←</span>
+            </a>
+            <div class="mobile-sheet-title" id="mobileSheetTitle">{{ current_image.name }}</div>
+            <div class="mobile-sheet-actions">
+              <a class="mobile-action-button mobile-action-button--download" data-download-btn href="{{ current_image.url }}" download="{{ current_image.name }}" aria-label="Download image" title="Download image">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3v12" />
+                  <path d="m7 12 5 5 5-5" />
+                  <path d="M4 21h16" />
+                </svg>
+                <span class="sr-only">Download image</span>
+              </a>
+              <button class="mobile-action-button mobile-action-button--delete" data-delete-btn type="button" aria-label="Delete image" title="Delete image">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 6h18" />
+                  <path d="m8 6 .9-1.8A2 2 0 0 1 10.7 3h2.6a2 2 0 0 1 1.8 1.2L16 6" />
+                  <path d="M19 6v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                </svg>
+                <span class="sr-only">Delete image</span>
+              </button>
+            </div>
+          </div>
+        </div>
         <div class="sidebar-scrollable">
           <div class="sidebar-section sidebar-section--intro">
             <div class="sidebar-header">
@@ -604,7 +852,7 @@
         <div class="sidebar-fixed-bottom">
           <div class="sidebar-section">
             <div class="action-buttons">
-              <a class="action-button action-button--download" id="downloadBtn" href="{{ current_image.url }}" download="{{ current_image.name }}" aria-label="Download image" title="Download image">
+              <a class="action-button action-button--download" data-download-btn href="{{ current_image.url }}" download="{{ current_image.name }}" aria-label="Download image" title="Download image">
                 <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M12 3v12" />
                   <path d="m7 12 5 5 5-5" />
@@ -612,7 +860,7 @@
                 </svg>
                 <span class="sr-only">Download image</span>
               </a>
-              <button class="action-button action-button--delete" id="deleteBtn" type="button" aria-label="Delete image" title="Delete image">
+              <button class="action-button action-button--delete" data-delete-btn type="button" aria-label="Delete image" title="Delete image">
                 <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 6h18" />
                   <path d="m8 6 .9-1.8A2 2 0 0 1 10.7 3h2.6a2 2 0 0 1 1.8 1.2L16 6" />
@@ -666,9 +914,13 @@
       const sidebar = document.getElementById('lightboxSidebar');
       const viewer = document.getElementById('lightboxViewer');
       const viewerImg = document.getElementById('viewerImg');
-      const downloadBtn = document.getElementById('downloadBtn');
-      const deleteBtn = document.getElementById('deleteBtn');
-  const toggleSidebarButtons = document.querySelectorAll('[data-toggle-sidebar]');
+      const downloadButtons = Array.from(document.querySelectorAll('[data-download-btn]'));
+      const deleteButtons = Array.from(document.querySelectorAll('[data-delete-btn]'));
+      const toggleSidebarButtons = document.querySelectorAll('[data-toggle-sidebar]');
+      const mobileSheetHandle = document.getElementById('mobileSheetHandle');
+      const mobileSheetHeader = document.getElementById('mobileSheetHeader');
+      const mobileSheetTitle = document.getElementById('mobileSheetTitle');
+      const mediaQueryMobile = window.matchMedia('(max-width: 900px)');
       const prevBtn = document.getElementById('prevBtn');
       const nextBtn = document.getElementById('nextBtn');
       const deleteModal = document.getElementById('deleteModal');
@@ -684,8 +936,23 @@
       const allImages = {{ images|safe }};
       let currentVersionIndex = 0;
       let currentVersions = {{ current_image.versions|safe }};
+      updateMobileFilename(currentVersions.length ? currentVersions[0].name : "{{ current_image.name|escapejs }}");
       
-      // Sidebar toggle
+      const bottomSheet = {
+        collapsedHeight: 82,
+        expandedHeight: 0,
+        collapseOffset: 0,
+        currentTranslate: 0,
+        dragging: false,
+        dragMoved: false,
+        startY: 0,
+        startTranslate: 0,
+        startTime: 0,
+        pointerId: null,
+        enabled: false,
+        captureTarget: null,
+      };
+
       function isSidebarHidden() {
         return layout.classList.contains('sidebar-hidden');
       }
@@ -697,16 +964,108 @@
         });
       }
 
-      function toggleSidebar(forceHidden) {
-        if (forceHidden === true) {
-          layout.classList.add('sidebar-hidden');
-        } else if (forceHidden === false) {
-          layout.classList.remove('sidebar-hidden');
-        } else {
-          layout.classList.toggle('sidebar-hidden');
+      function updateViewerPadding() {
+        if (!bottomSheet.enabled) {
+          viewer.classList.remove('sheet-active');
+          viewer.style.removeProperty('--sheet-visible-height');
+          return;
         }
-        sessionStorage.setItem('kwcLightboxSidebarHidden', isSidebarHidden() ? '1' : '0');
+        const visibleHeight = Math.max(bottomSheet.expandedHeight - bottomSheet.currentTranslate, bottomSheet.collapsedHeight);
+        viewer.classList.add('sheet-active');
+        viewer.style.setProperty('--sheet-visible-height', `${visibleHeight}px`);
+      }
+
+      function setSheetOffset(value) {
+        if (!bottomSheet.enabled) {
+          return;
+        }
+        const clamped = Math.min(Math.max(value, 0), bottomSheet.collapseOffset);
+        bottomSheet.currentTranslate = clamped;
+        sidebar.style.setProperty('--sheet-current-offset', `${clamped}px`);
+        updateViewerPadding();
+      }
+
+      function refreshBottomSheetSizing() {
+        if (!mediaQueryMobile.matches) {
+          if (bottomSheet.enabled) {
+            bottomSheet.enabled = false;
+            bottomSheet.currentTranslate = 0;
+            sidebar.classList.remove('is-dragging');
+            sidebar.style.removeProperty('--sheet-expanded-height');
+            sidebar.style.removeProperty('--sheet-collapse-offset');
+            sidebar.style.removeProperty('--sheet-collapsed-height');
+            sidebar.style.removeProperty('--sheet-current-offset');
+            sidebar.style.removeProperty('height');
+            updateViewerPadding();
+          }
+          return;
+        }
+
+        bottomSheet.enabled = true;
+        const viewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const maxHeightFromViewport = Math.min(Math.max(viewportHeight * 0.66, bottomSheet.collapsedHeight + 140), viewportHeight - 28);
+        const previousHeight = sidebar.style.height;
+        sidebar.style.height = 'auto';
+        const naturalHeight = sidebar.scrollHeight + 24;
+        const expandedHeight = Math.round(Math.min(maxHeightFromViewport, Math.max(naturalHeight, bottomSheet.collapsedHeight + 140)));
+        sidebar.style.height = previousHeight;
+
+        bottomSheet.expandedHeight = expandedHeight;
+        bottomSheet.collapseOffset = Math.max(expandedHeight - bottomSheet.collapsedHeight, 0);
+
+        sidebar.style.height = `${expandedHeight}px`;
+        sidebar.style.setProperty('--sheet-expanded-height', `${expandedHeight}px`);
+        sidebar.style.setProperty('--sheet-collapse-offset', `${bottomSheet.collapseOffset}px`);
+        sidebar.style.setProperty('--sheet-collapsed-height', `${bottomSheet.collapsedHeight}px`);
+
+        const targetOffset = isSidebarHidden() ? bottomSheet.collapseOffset : 0;
+        setSheetOffset(targetOffset);
+      }
+
+      function updateSheetForState(collapsed, options = {}) {
+        if (!bottomSheet.enabled) {
+          return;
+        }
+        const immediate = options.immediate === true;
+        if (immediate) {
+          sidebar.classList.add('is-dragging');
+        } else {
+          sidebar.classList.remove('is-dragging');
+        }
+        const target = collapsed ? bottomSheet.collapseOffset : 0;
+        setSheetOffset(target);
+        if (immediate) {
+          requestAnimationFrame(function() {
+            sidebar.classList.remove('is-dragging');
+          });
+        }
+      }
+
+      function setSidebarCollapsed(collapsed, options = {}) {
+        if (collapsed) {
+          layout.classList.add('sidebar-hidden');
+        } else {
+          layout.classList.remove('sidebar-hidden');
+        }
+
+        if (!options.skipStorage) {
+          sessionStorage.setItem('kwcLightboxSidebarHidden', collapsed ? '1' : '0');
+        }
+
         updateSidebarToggleButtons();
+        updateSheetForState(collapsed, options);
+      }
+
+      function toggleSidebar(forceHidden) {
+        let shouldCollapse;
+        if (forceHidden === true) {
+          shouldCollapse = true;
+        } else if (forceHidden === false) {
+          shouldCollapse = false;
+        } else {
+          shouldCollapse = !isSidebarHidden();
+        }
+        setSidebarCollapsed(shouldCollapse);
       }
 
       toggleSidebarButtons.forEach(function(btn) {
@@ -715,11 +1074,131 @@
         });
       });
 
-      const storedSidebarState = sessionStorage.getItem('kwcLightboxSidebarHidden');
-      if (storedSidebarState === '1') {
+      const storedSidebarState = sessionStorage.getItem('kwcLightboxSidebarHidden') === '1';
+      if (storedSidebarState) {
         layout.classList.add('sidebar-hidden');
+      } else {
+        layout.classList.remove('sidebar-hidden');
       }
-      updateSidebarToggleButtons();
+
+      refreshBottomSheetSizing();
+      setSidebarCollapsed(storedSidebarState, { immediate: true, skipStorage: true });
+
+      function handleViewportChange() {
+        refreshBottomSheetSizing();
+        updateSheetForState(isSidebarHidden(), { immediate: true });
+      }
+
+      mediaQueryMobile.addEventListener('change', handleViewportChange);
+      window.addEventListener('resize', handleViewportChange);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', handleViewportChange);
+      }
+
+      function startSheetDrag(event) {
+        if (!bottomSheet.enabled) {
+          return;
+        }
+        if (event.type === 'pointerdown' && event.pointerType === 'mouse' && event.button !== 0) {
+          return;
+        }
+        bottomSheet.dragging = true;
+        bottomSheet.dragMoved = false;
+        bottomSheet.startY = event.clientY;
+        bottomSheet.startTranslate = bottomSheet.currentTranslate;
+        bottomSheet.startTime = performance.now();
+        bottomSheet.pointerId = event.pointerId;
+        bottomSheet.captureTarget = event.target;
+        sidebar.classList.add('is-dragging');
+        try {
+          if (bottomSheet.captureTarget && bottomSheet.captureTarget.setPointerCapture) {
+            bottomSheet.captureTarget.setPointerCapture(event.pointerId);
+          }
+        } catch (err) {
+          // Ignore pointer capture failures
+        }
+        window.addEventListener('pointermove', moveSheetDrag);
+        window.addEventListener('pointerup', endSheetDrag);
+        window.addEventListener('pointercancel', endSheetDrag);
+        event.preventDefault();
+      }
+
+      function moveSheetDrag(event) {
+        if (!bottomSheet.dragging) {
+          return;
+        }
+        const delta = event.clientY - bottomSheet.startY;
+        if (Math.abs(delta) > 4) {
+          bottomSheet.dragMoved = true;
+        }
+        const nextOffset = bottomSheet.startTranslate + delta;
+        setSheetOffset(nextOffset);
+      }
+
+      function endSheetDrag(event) {
+        if (!bottomSheet.dragging) {
+          return;
+        }
+        bottomSheet.dragging = false;
+        window.removeEventListener('pointermove', moveSheetDrag);
+        window.removeEventListener('pointerup', endSheetDrag);
+        window.removeEventListener('pointercancel', endSheetDrag);
+        if (bottomSheet.pointerId != null && bottomSheet.captureTarget && bottomSheet.captureTarget.releasePointerCapture) {
+          try {
+            bottomSheet.captureTarget.releasePointerCapture(bottomSheet.pointerId);
+          } catch (err) {
+            // Ignore release errors
+          }
+        }
+        bottomSheet.pointerId = null;
+        bottomSheet.captureTarget = null;
+        const delta = bottomSheet.currentTranslate - bottomSheet.startTranslate;
+        const elapsed = Math.max(performance.now() - bottomSheet.startTime, 1);
+        const velocity = delta / elapsed;
+        const threshold = bottomSheet.collapseOffset * 0.45;
+        let shouldCollapse;
+        if (Math.abs(velocity) > 0.6) {
+          shouldCollapse = velocity > 0;
+        } else if (Math.abs(delta) < 6) {
+          shouldCollapse = bottomSheet.startTranslate > bottomSheet.collapseOffset / 2;
+        } else {
+          shouldCollapse = bottomSheet.currentTranslate > threshold;
+        }
+        sidebar.classList.remove('is-dragging');
+        setSidebarCollapsed(shouldCollapse);
+        bottomSheet.dragMoved = false;
+      }
+
+      if (mobileSheetHandle) {
+        mobileSheetHandle.addEventListener('pointerdown', startSheetDrag);
+        mobileSheetHandle.addEventListener('click', function(event) {
+          if (bottomSheet.dragMoved) {
+            bottomSheet.dragMoved = false;
+            return;
+          }
+          toggleSidebar();
+        });
+      }
+
+      if (mobileSheetHeader) {
+        mobileSheetHeader.addEventListener('pointerdown', function(event) {
+          if (event.target.closest('.mobile-sheet-actions') || event.target.closest('.mobile-sheet-back')) {
+            return;
+          }
+          startSheetDrag(event);
+        });
+
+        mobileSheetHeader.addEventListener('click', function(event) {
+          if (event.target.closest('.mobile-sheet-actions') || event.target.closest('.mobile-sheet-back')) {
+            return;
+          }
+          if (bottomSheet.dragMoved) {
+            bottomSheet.dragMoved = false;
+            return;
+          }
+          toggleSidebar();
+        });
+      }
 
       requestAnimationFrame(function() {
         layout.classList.add('sidebar-transition-ready');
@@ -782,8 +1261,12 @@
         viewer.classList.add('is-loading');
         viewerImg.classList.remove('loaded');
         viewerImg.src = version.url;
-        downloadBtn.href = version.url;
-        downloadBtn.setAttribute('download', version.name);
+        downloadButtons.forEach(function(btn) {
+          if (btn.tagName === 'A') {
+            btn.href = version.url;
+            btn.setAttribute('download', version.name);
+          }
+        });
         
         // Update version label
         if (versionLabel) {
@@ -804,6 +1287,7 @@
         
         // Update file info (we'll load this via fetch to get accurate info)
         updateFileInfo(version.name);
+        refreshBottomSheetSizing();
       }
       
       function changeVersion(delta) {
@@ -812,6 +1296,25 @@
           switchToVersion(newIndex);
         }
       }
+
+      function formatDisplayName(fullName) {
+        if (!fullName) {
+          return '';
+        }
+        const segments = fullName.split('/');
+        const base = segments[segments.length - 1] || fullName;
+        const dotIndex = base.lastIndexOf('.');
+        return dotIndex > 0 ? base.slice(0, dotIndex) : base;
+      }
+
+      function updateMobileFilename(filename) {
+        if (!mobileSheetTitle) {
+          return;
+        }
+        const display = formatDisplayName(filename);
+        mobileSheetTitle.textContent = display;
+        mobileSheetTitle.title = filename || display;
+      }
       
       function updateFileInfo(filename) {
         // This is a simplified version - in production you might fetch this info
@@ -819,6 +1322,7 @@
         if (deleteImageName) {
           deleteImageName.textContent = filename;
         }
+        updateMobileFilename(filename);
       }
       
       // Image loading
@@ -856,11 +1360,11 @@
       }
       
       // Delete functionality
-      if (deleteBtn) {
-        deleteBtn.addEventListener('click', function() {
+      deleteButtons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
           deleteModal.classList.add('show');
         });
-      }
+      });
       
       if (btnCancelDelete) {
         btnCancelDelete.addEventListener('click', function() {
