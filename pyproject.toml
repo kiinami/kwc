@@ -43,3 +43,24 @@ lint.ignore = [
 fix = true
 line-length = 120
 indent-width = 4
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_any_generics = false
+exclude = [
+    "migrations",
+    ".venv",
+]
+
+[[tool.mypy.overrides]]
+module = [
+    "django.*",
+    "guessit.*",
+    "tmdbsimple.*",
+    "ffmpeg.*",
+    "requests.*",
+]
+ignore_missing_imports = true

@@ -127,7 +127,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
     try:
         files = list_image_files(target)
     except PermissionError:
-        files: list[str] = []
+        files: list[str] = []  # type: ignore[no-redef]
 
     title, year_int = parse_folder_name(safe_name)
     year_display = str(year_int) if year_int is not None else ""
@@ -204,7 +204,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
             "thumb_url": thumbnail_url(safe_name, primary_name, width=512, root=root_path),
             "version_suffix": primary_suffix,
             "base_name": strip_version_suffix(name) if (valid_suffix or not invalid_suffix) else name,
-            "versions": versions,
+            "versions": versions,  # type: ignore[typeddict-item]
             "versions_json": mark_safe(json.dumps(versions)),  # JSON-encoded for template
         }
         images_with_versions.append(image)
@@ -224,7 +224,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
     
     # Convert grouped dict to sorted list of sections
     # Sort order: General, Season X (or episode-only), Season X Intro, Season X Episodes, Season X Outro
-    def sort_key(item: tuple[tuple[str, str], list[GalleryImage]]) -> tuple:
+    def sort_key(item: tuple[tuple[str, str], list[GalleryImage]]) -> tuple:  # type: ignore[no-redef]
         season, episode = item[0]
         # Empty season/episode comes first (General section)
         if not season and not episode:
@@ -261,7 +261,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
             episode_str = episode_upper
             return (season_int, 4, episode_int, episode_str)
     
-    sorted_groups = sorted(grouped.items(), key=sort_key)
+    sorted_groups = sorted(grouped.items(), key=sort_key)  # type: ignore[arg-type]
     
     sections: list[GallerySection] = []
     for (season, episode), group_images in sorted_groups:

@@ -121,7 +121,7 @@ class JobRunner:
 			max_workers_value = None
 		else:
 			try:
-				max_workers_value = int(max_workers_value)
+				max_workers_value = int(max_workers_value)  # type: ignore[arg-type]
 			except (TypeError, ValueError):
 				max_workers_value = None
 
@@ -213,7 +213,7 @@ class JobRunner:
 
 	def _get_job(self, job_id: str) -> ExtractionJob | None:
 		try:
-			return self.model.objects.get(pk=job_id)
+			return self.model.objects.get(pk=job_id)  # type: ignore[no-any-return]
 		except self.model.DoesNotExist:
 			return None
 

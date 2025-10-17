@@ -165,7 +165,7 @@ def test_find_highest_counter_without_pad(tmp_path: Path) -> None:
 	(tmp_path / "output_25.jpg").touch()
 	
 	pattern = "output_{{ counter }}.jpg"
-	context = {}
+	context: dict[str, str | int] = {}
 	result = extractor._find_highest_counter(tmp_path, pattern, context)
 	assert result == 25
 

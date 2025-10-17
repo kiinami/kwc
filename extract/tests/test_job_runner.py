@@ -52,7 +52,7 @@ class FakeQuerySet:
 		for key, value in fields.items():
 			setattr(self._job, key, value)
 			if key == "status":
-				self._job.status_transitions.append(self._job.status)
+				self._job.status_transitions.append(self._job.status)  # type: ignore[arg-type]
 		self._job.updated_at = timezone.now()
 
 
@@ -97,7 +97,7 @@ class FakeJob:
 	def save(self, update_fields: list[str] | None = None) -> None:
 		self.saved_payloads.append(update_fields)
 		if update_fields and "status" in update_fields:
-			self.status_transitions.append(self.status)
+			self.status_transitions.append(self.status)  # type: ignore[arg-type]
 		self.updated_at = timezone.now()
 
 	def refresh_from_db(self) -> None:
@@ -105,14 +105,14 @@ class FakeJob:
 
 
 def _configure_runner(job: FakeJob, extractor: Callable[..., int]) -> tuple[JobRunner, FakeManager]:
-	FakeModel.objects = FakeManager(job)
-	manager = FakeModel.objects
-	runner = JobRunner(model=FakeModel, extractor=extractor)
+	FakeModel.objects = FakeManager(job)  # type: ignore[attr-defined]
+	manager = FakeModel.objects  # type: ignore[attr-defined]
+	runner = JobRunner(model=FakeModel, extractor=extractor)  # type: ignore[arg-type]
 
 	def thread_factory(target: Callable[[str], None], args: tuple[str, ...]) -> ImmediateThread:
 		return ImmediateThread(runner, target, args)
 
-	runner._thread_factory = thread_factory
+	runner._thread_factory = thread_factory  # type: ignore[assignment]
 	return runner, manager
 
 

@@ -5,7 +5,7 @@ import logging
 import os
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -56,7 +56,7 @@ def _get_retry_config() -> tuple[int, float]:
     return retries, backoff
 
 
-def _find_highest_counter(output_dir: Path, pattern: str, context: dict[str, object]) -> int:
+def _find_highest_counter(output_dir: Path, pattern: str, context: Mapping[str, str | int]) -> int:
     """
     Find the highest counter value in existing files that match the pattern.
     Returns 0 if no matching files are found or if the directory doesn't exist.

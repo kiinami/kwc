@@ -346,7 +346,7 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
                     except Exception:
                         mtime = 0
 
-                    entry: MediaFolder = {
+                    entry: MediaFolder = {  # type: ignore[no-redef]
                         'name': folder_name,
                         'title': title,
                         'year': str(year_int) if year_int is not None else '',
@@ -357,7 +357,7 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
                         'cover_url': cover_url,
                         'cover_thumb_url': cover_thumb_url,
                     }
-                    entries.append(entry)
+                    entries.append(entry)  # type: ignore[arg-type]
         except PermissionError:
             # If the process lacks permissions, surface an empty list instead of failing.
             pass
