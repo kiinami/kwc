@@ -63,12 +63,13 @@ class MediaLibraryViewsTests(TestCase):
 		self.assertIn('choose_url', sample)
 		self.assertTrue(sample['gallery_url'])
 
-	def test_choose_index_redirects_to_home(self) -> None:
-		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+	def test_choose_index_renders_extraction_folders(self) -> None:
+		"""Choose index now shows extraction folders from EXTRACT_FOLDER."""
+		with self.settings(EXTRACT_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
 			response = self.client.get(reverse('choose:index'))
 
-		self.assertEqual(response.status_code, 302)
-		self.assertEqual(response.url, reverse('home'))
+		self.assertEqual(response.status_code, 200)
+		self.assertIn(b'Choose wallpapers', response.content)
 
 	def test_gallery_view_renders_images_and_metadata(self) -> None:
 		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
@@ -102,31 +103,41 @@ class MediaLibraryViewsTests(TestCase):
 			self.assertLessEqual(image.width, 300)
 
 	def test_save_updates_progress_and_resumes_from_next_image(self) -> None:
+		"""Test that save API moves images from extract folder to wallpapers folder."""
 		folder_path = self.temp_dir / self.folder_name
 		for extra in ('frame03.jpg', 'frame04.jpg', 'frame05.jpg'):
 			(folder_path / extra).write_bytes(b'x')
 
-		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+		# Use EXTRACT_FOLDER for source folder
+		# Total files: frame01 (from setUp), frame02 (from setUp), frame03, frame04, frame05 = 5 files
+		wallpapers_dir = self.temp_dir / "wallpapers"
+		with self.settings(EXTRACT_FOLDER=self.temp_dir, WALLPAPERS_FOLDER=str(wallpapers_dir), MIDDLEWARE=self._middleware):
+			# Mark frame01 as keep, frame02 as delete
 			ImageDecision.objects.create(folder=self.folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP)
 			ImageDecision.objects.create(folder=self.folder_name, filename='frame02.jpg', decision=ImageDecision.DECISION_DELETE)
+			# frame03, frame04, frame05 are undecided -> treated as keep
 
 			response = self.client.post(reverse('choose:save_api', kwargs={'folder': self.folder_name}))
 			self.assertEqual(response.status_code, 200)
 			payload = response.json()
 			self.assertTrue(payload.get('ok'))
+			self.assertEqual(payload.get('moved'), 4)  # frame01, frame03, frame04, frame05 (4 kept)
+			self.assertEqual(payload.get('deleted'), 1)  # frame02 deleted
 
-		progress = FolderProgress.objects.get(folder=self.folder_name)
-		self.assertEqual(progress.keep_count, 1)
-		self.assertEqual(progress.last_classified_original, 'frame02.jpg')
-		self.assertTrue(progress.last_classified_name)
-
-		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
-			chooser_response = self.client.get(reverse('choose:folder', kwargs={'folder': self.folder_name}))
-
-		self.assertEqual(chooser_response.status_code, 200)
-		images = chooser_response.context['images']
-		self.assertGreaterEqual(len(images), 3)
-		self.assertEqual(chooser_response.context['selected_index'], 1)
+		# Check that files were moved to wallpapers folder with correct naming
+		wallpapers_path = self.temp_dir / "wallpapers"
+		self.assertTrue(wallpapers_path.exists())
+		
+		# The target folder should use the title from the folder name (removing year)
+		# "Movie (2024)" -> "Movie" as target folder
+		target_folder_name = payload.get('target_folder', 'Movie')
+		target_folder = wallpapers_path / target_folder_name
+		self.assertTrue(target_folder.exists(), f"Expected folder {target_folder} to exist. Contents: {list(wallpapers_path.iterdir())}")
+		
+		# Check that kept images are in the target folder
+		# Should have: 4 kept images + 1 cover file = 5 files total
+		kept_files = list(target_folder.glob("*.jpg"))
+		self.assertEqual(len(kept_files), 5)  # 4 images + .cover.jpg
 		self.assertEqual(images[0]['name'], progress.last_classified_name)
 
 	def test_unsaved_decisions_override_saved_progress(self) -> None:

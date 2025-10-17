@@ -18,6 +18,7 @@ from .models import FolderProgress, ImageDecision
 from .utils import (
     get_folder_path,
     list_image_files,
+    parse_season_episode,
     parse_title_year_from_folder,
     parse_version_suffix,
     strip_version_suffix,
