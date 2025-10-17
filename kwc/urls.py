@@ -22,12 +22,15 @@ from django.views.static import serve as static_serve
 
 from kwc import views as core_views
 from choose import views as choose_views
+from gallery import views as gallery_views
 
 urlpatterns = [
-    path('', core_views.HomeView.as_view(), name='home'),
+    # Gallery is the home page
+    path('', gallery_views.index, name='home'),
     path('admin/', admin.site.urls),
     path('choose/', include(('choose.urls', 'choose'), namespace='choose')),
     path('extract/', include(('extract.urls', 'extract'), namespace='extract')),
+    path('gallery/', include(('gallery.urls', 'gallery'), namespace='gallery')),
     path('wall-thumbs/<str:folder>/<path:filename>', choose_views.thumbnail, name='wallpaper-thumbnail'),
     path('offline/', TemplateView.as_view(template_name='offline.html'), name='offline'),
     path('manifest.webmanifest', core_views.ManifestView.as_view(), name='pwa-manifest'),

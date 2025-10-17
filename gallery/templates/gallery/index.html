@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Wallpaper library · KWC{% endblock %}
+{% block content %}
+  <style>
+    .library-wrapper {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 clamp(1rem, 4vw, 2rem) 2rem;
+      box-sizing: border-box;
+    }
+  </style>
+  <div class="library-wrapper">
+    {% include 'gallery/_library_grid.html' with folders=folders heading='Wallpaper library' intro='Explore your curated shows and films. Click a cover to browse its gallery.' %}
+  </div>
+{% endblock %}

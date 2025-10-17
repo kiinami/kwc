@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     # Project apps
     'choose',
     'extract',
+    'gallery',
 ]
 
 MIDDLEWARE = [

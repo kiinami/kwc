@@ -13,18 +13,21 @@ from django.conf import settings
 from extract.utils import render_pattern
 from kwc.utils.files import safe_remove, safe_rename
 
-from .constants import SEASON_EPISODE_PATTERN
 from .models import FolderProgress, ImageDecision
-from .utils import (
+from common.utils import (
+    SEASON_EPISODE_PATTERN,
+    extract_root,
     get_folder_path,
     list_image_files,
     parse_season_episode,
     parse_title_year_from_folder,
-    parse_version_suffix,
-    strip_version_suffix,
-    add_version_suffix,
     validate_folder_name,
     wallpapers_root,
+)
+from common.version_utils import (
+    add_version_suffix,
+    parse_version_suffix,
+    strip_version_suffix,
 )
 
 logger = logging.getLogger(__name__)
@@ -99,7 +102,6 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
         raise APIError("invalid_folder", 400, str(exc)) from exc
 
     # Source: extraction staging area
-    from .utils import extract_root
     extract_path = extract_root()
     
     try:
