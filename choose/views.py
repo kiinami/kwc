@@ -86,7 +86,7 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	
 	# Get image dimensions
 	try:
-		from PIL import Image
+		from PIL import Image  # noqa: PLC0415
 		with Image.open(image_path) as img:
 			width, height = img.size
 	except Exception:

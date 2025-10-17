@@ -187,10 +187,10 @@ class JobRunner:
 
 	def _download_cover_image(self, url: str, output_dir: Path) -> None:
 		"""Download a cover image from a URL and save it to the output directory."""
-		from io import BytesIO
+		from io import BytesIO  # noqa: PLC0415
 
-		import requests
-		from PIL import Image
+		import requests  # noqa: PLC0415
+		from PIL import Image  # noqa: PLC0415
 		
 		try:
 			# Create output directory if it doesn't exist

@@ -33,6 +33,6 @@ class FolderProgress(models.Model):
 	updated_at = models.DateTimeField(auto_now=True)
 
 	def __str__(self) -> str:
-		return f"{self.folder}: {self.keep_count} keeps (last={self.last_classified_name or '–'})"
+		return f"{self.folder}: {self.keep_count} keeps (last={self.last_classified_name or '-'})"
 
 # Create your models here.

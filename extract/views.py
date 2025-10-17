@@ -302,7 +302,7 @@ def folders_api(request: HttpRequest) -> JsonResponse:
 
 	Returns a list of folders that can be used for selection in the extract form.
 	"""
-	from choose.utils import list_media_folders
+	from choose.utils import list_media_folders  # noqa: PLC0415
 	folders, _ = list_media_folders()
 	# Return folder data including cover URLs for the dropdown
 	result = [
@@ -326,9 +326,9 @@ def tmdb_search_api(request: HttpRequest) -> JsonResponse:
 	- query: The title to search for (required)
 	- year: Optional year to filter results
 	"""
-	from django.conf import settings
+	from django.conf import settings  # noqa: PLC0415
 
-	from . import tmdb
+	from . import tmdb  # noqa: PLC0415
 
 	if not settings.TMDB_API_KEY:
 		return JsonResponse({"error": "tmdb_not_configured"}, status=500)
@@ -359,9 +359,9 @@ def tmdb_posters_api(request: HttpRequest) -> JsonResponse:
 	- media_type: Either "movie" or "tv" (required)
 	- media_id: The TMDB ID of the media (required)
 	"""
-	from django.conf import settings
+	from django.conf import settings  # noqa: PLC0415
 
-	from . import tmdb
+	from . import tmdb  # noqa: PLC0415
 
 	if not settings.TMDB_API_KEY:
 		return JsonResponse({"error": "tmdb_not_configured"}, status=500)

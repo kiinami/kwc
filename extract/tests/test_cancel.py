@@ -121,7 +121,7 @@ def test_cancellation_token_cancel() -> None:
 
 def test_cancellation_token_thread_safe() -> None:
 	"""Test that cancellation token is thread-safe."""
-	import threading
+	import threading  # noqa: PLC0415
 	token = CancellationToken()
 	
 	def cancel_in_thread():

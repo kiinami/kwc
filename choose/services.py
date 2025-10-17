@@ -267,7 +267,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
     for (season, episode), group_images in sorted_groups:
         # Build section-specific choose URL with query params for filtering
         # Always add query params to ensure proper filtering by section
-        from urllib.parse import urlencode
+        from urllib.parse import urlencode  # noqa: PLC0415
         params = {
             'season': season,
             'episode': episode,
