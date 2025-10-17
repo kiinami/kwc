@@ -10,6 +10,7 @@ from django.utils.safestring import mark_safe
 
 from .models import FolderProgress, ImageDecision
 from .utils import (
+    extract_root,
     find_cover_filename,
     get_folder_path,
     list_image_files,
@@ -311,7 +312,7 @@ def load_folder_context(folder: str, season: str | None = None, episode: str | N
         FolderContext with images (optionally filtered by section)
     """
     safe_name = validate_folder_name(folder)
-    root_path = wallpapers_root()
+    root_path = extract_root()
     target = get_folder_path(safe_name, root_path)
 
     try:

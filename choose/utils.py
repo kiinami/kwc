@@ -175,9 +175,17 @@ class MediaFolder(TypedDict):
 def wallpapers_root() -> Path:
     """Return the root directory where wallpapers are stored.
 
-    Configured via settings.WALLPAPERS_FOLDER and defaults to BASE_DIR / 'extracted'.
+    Configured via settings.WALLPAPERS_FOLDER and defaults to BASE_DIR / 'wallpapers'.
     """
     return Path(settings.WALLPAPERS_FOLDER)
+
+
+def extract_root() -> Path:
+    """Return the root directory where extracted frames are stored.
+
+    Configured via settings.EXTRACT_FOLDER and defaults to BASE_DIR / 'extracted'.
+    """
+    return Path(settings.EXTRACT_FOLDER)
 
 
 def parse_folder_name(folder_name: str) -> tuple[str, int | None]:
@@ -231,8 +239,14 @@ def find_cover_filename(folder: Path, files: Iterable[str] | None = None) -> str
 
 def wallpaper_url(folder: str, filename: str, *, root: Path | None = None) -> str:
     """Return a cache-busted URL for a wallpaper image."""
-    base = f"/wallpapers/{quote(folder)}/{quote(filename)}"
     actual_root = root or wallpapers_root()
+    
+    # Check if root is extract_root or wallpapers_root
+    if root and root == extract_root():
+        base = f"/extracted/{quote(folder)}/{quote(filename)}"
+    else:
+        base = f"/wallpapers/{quote(folder)}/{quote(filename)}"
+    
     path = actual_root / folder / filename
     return f"{base}?v={cache_token(path)}"
 
@@ -364,3 +378,14 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
 
     entries.sort(key=lambda x: (x['year_sort'], x['mtime'], x['name'].lower()), reverse=True)
     return entries, root_path
+
+
+def list_extracted_folders(root: Path | None = None) -> tuple[list[MediaFolder], Path]:
+    """Scan the extract root for folders containing extracted frames.
+
+    Returns a tuple of (entries, root_path) where entries are already sorted by
+    recency and year similar to list_media_folders.
+    """
+    root_path = root or extract_root()
+    return list_media_folders(root=root_path)
+

@@ -6,7 +6,7 @@ import pytest
 
 from choose.models import FolderProgress, ImageDecision
 from choose.services import list_gallery_images, load_folder_context
-from choose.utils import wallpapers_root
+from choose.utils import extract_root
 
 pytestmark = pytest.mark.django_db(transaction=True)
 
@@ -15,6 +15,14 @@ pytestmark = pytest.mark.django_db(transaction=True)
 def wallpapers_dir(tmp_path: Path, settings) -> Path:
 	settings.WALLPAPERS_FOLDER = tmp_path
 	return tmp_path
+
+
+@pytest.fixture()
+def extract_dir(tmp_path: Path, settings) -> Path:
+	extract_path = tmp_path / "extracted"
+	extract_path.mkdir()
+	settings.EXTRACT_FOLDER = extract_path
+	return extract_path
 
 
 def test_list_gallery_images_returns_metadata(wallpapers_dir: Path) -> None:
@@ -54,13 +62,13 @@ def test_list_gallery_images_handles_permission_error(monkeypatch: pytest.Monkey
 	assert context.images == []
 
 
-def test_load_folder_context_missing_folder(wallpapers_dir: Path) -> None:
+def test_load_folder_context_missing_folder(extract_dir: Path) -> None:
 	with pytest.raises(FileNotFoundError):
 		load_folder_context("Absent")
 
 
-def test_load_folder_context_permission_error(monkeypatch: pytest.MonkeyPatch, wallpapers_dir: Path) -> None:
-	folder = wallpapers_dir / "Clip"
+def test_load_folder_context_permission_error(monkeypatch: pytest.MonkeyPatch, extract_dir: Path) -> None:
+	folder = extract_dir / "Clip"
 	folder.mkdir()
 
 	from choose import services  # noqa: PLC0415
@@ -75,12 +83,12 @@ def test_load_folder_context_permission_error(monkeypatch: pytest.MonkeyPatch, w
 	assert context.images == []
 	assert context.selected_index == -1
 	assert context.selected_image_url == ""
-	assert context.root == str(wallpapers_dir)
+	assert context.root == str(extract_dir)
 	assert context.path == str(folder)
 
 
-def test_load_folder_context_resume_progress(wallpapers_dir: Path) -> None:
-	folder = wallpapers_dir / "Episode"
+def test_load_folder_context_resume_progress(extract_dir: Path) -> None:
+	folder = extract_dir / "Episode"
 	folder.mkdir()
 	for name in ("frame01.jpg", "frame02.jpg", "frame03.jpg"):
 		(folder / name).write_bytes(b"x")
@@ -105,8 +113,8 @@ def test_load_folder_context_resume_progress(wallpapers_dir: Path) -> None:
 	assert context.selected_image_url
 
 
-def test_load_folder_context_empty_folder(wallpapers_dir: Path) -> None:
-	folder = wallpapers_dir / "Empty"
+def test_load_folder_context_empty_folder(extract_dir: Path) -> None:
+	folder = extract_dir / "Empty"
 	folder.mkdir()
 
 	context = load_folder_context("Empty")
@@ -115,7 +123,7 @@ def test_load_folder_context_empty_folder(wallpapers_dir: Path) -> None:
 	assert context.selected_index == -1
 	assert context.selected_image_name == ""
 	assert context.selected_image_url == ""
-	assert context.root == str(wallpapers_root())
+	assert context.root == str(extract_root())
 
 
 def test_list_gallery_images_groups_series_by_season_episode(wallpapers_dir: Path) -> None:
@@ -193,8 +201,8 @@ def test_list_gallery_images_sections_have_season_episode_and_choose_url(wallpap
 	assert "episode=IN" in intro_section["choose_url"]
 
 
-def test_load_folder_context_filters_by_season(wallpapers_dir: Path) -> None:
-	folder = wallpapers_dir / "Series"
+def test_load_folder_context_filters_by_season(extract_dir: Path) -> None:
+	folder = extract_dir / "Series"
 	folder.mkdir()
 	(folder / "Series S01E01.jpg").write_bytes(b"a")
 	(folder / "Series S01E02.jpg").write_bytes(b"b")
@@ -209,8 +217,8 @@ def test_load_folder_context_filters_by_season(wallpapers_dir: Path) -> None:
 	assert context.images[1]["name"] == "Series S01E02.jpg"
 
 
-def test_load_folder_context_filters_by_season_and_episode(wallpapers_dir: Path) -> None:
-	folder = wallpapers_dir / "Series"
+def test_load_folder_context_filters_by_season_and_episode(extract_dir: Path) -> None:
+	folder = extract_dir / "Series"
 	folder.mkdir()
 	(folder / "Series S01E01.jpg").write_bytes(b"a")
 	(folder / "Series S01E02.jpg").write_bytes(b"b")
@@ -223,8 +231,8 @@ def test_load_folder_context_filters_by_season_and_episode(wallpapers_dir: Path)
 	assert context.images[0]["name"] == "Series S01E02.jpg"
 
 
-def test_load_folder_context_filters_general_section(wallpapers_dir: Path) -> None:
-	folder = wallpapers_dir / "Series"
+def test_load_folder_context_filters_general_section(extract_dir: Path) -> None:
+	folder = extract_dir / "Series"
 	folder.mkdir()
 	(folder / "Series S01E01.jpg").write_bytes(b"a")
 	(folder / "General.jpg").write_bytes(b"b")

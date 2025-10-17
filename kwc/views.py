@@ -7,34 +7,6 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.generic import TemplateView
 
-from choose.utils import list_media_folders
-
-
-class HomeView(TemplateView):
-    template_name = 'home.html'
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        folders, root = list_media_folders()
-
-        enriched: list[dict] = []
-        for entry in folders:
-            enriched.append(
-                {
-                    **entry,
-                    'gallery_url': reverse('choose:gallery', kwargs={'folder': entry['name']}),
-                    'choose_url': reverse('choose:folder', kwargs={'folder': entry['name']}),
-                }
-            )
-
-        context.update(
-            {
-                'folders': enriched,
-                'root': str(root),
-            }
-        )
-        return context
-
 
 class ManifestView(TemplateView):
     """Serve a dynamic web manifest so hashed static URLs stay accurate."""
@@ -86,6 +58,12 @@ class ManifestView(TemplateView):
                         'description': 'Review and keep your favorite frames',
                         'url': build_absolute(reverse('choose:index')),
                     },
+                    {
+                        'name': 'Gallery',
+                        'short_name': 'Gallery',
+                        'description': 'Browse your wallpaper collection',
+                        'url': build_absolute(reverse('gallery:index')),
+                    },
                 ],
             }
         )
@@ -108,7 +86,7 @@ class ServiceWorkerView(TemplateView):
         context = super().get_context_data(**kwargs)
 
         asset_urls = [
-            reverse('home'),
+            reverse('gallery:index'),
             reverse('offline'),
             reverse('extract:index'),
             reverse('choose:index'),

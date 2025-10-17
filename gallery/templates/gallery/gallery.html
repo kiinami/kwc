@@ -19,7 +19,6 @@
     .gallery-meta h1 { margin: 0; font-size: clamp(1.75rem, 3vw, 2.4rem); }
     .gallery-details { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; color: var(--muted); }
     .gallery-count { font-size: .95rem; padding: .25rem .6rem; border-radius: 999px; background: rgba(124,76,245,0.18); color: #d1c5ff; font-weight: 600; }
-  .gallery-actions { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: .5rem; }
   .gallery-section { margin-bottom: 1.75rem; transition: margin-bottom 0.2s ease; }
   .gallery-section.is-collapsed { margin-bottom: 0.85rem; }
   .gallery-section:last-child { margin-bottom: 0; }
@@ -28,8 +27,7 @@
   .gallery-section-header[aria-expanded="false"] { margin-bottom: 0; }
   .gallery-section-title { font-size: 1.15rem; font-weight: 600; flex: 1; text-align: left; }
   .gallery-section-count { font-size: 0.9rem; padding: 0.25rem 0.6rem; border-radius: 999px; background: rgba(124,76,245,0.18); color: #d1c5ff; font-weight: 600; }
-  .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.875rem; }
-  .gallery-section-arrow { font-size: 0.85rem; color: var(--muted); transition: transform 0.2s ease; }
+  .gallery-section-arrow { font-size: 0.85rem; color: var(--muted); transition: transform 0.2s ease; margin-left: auto; }
   .gallery-section-header[aria-expanded="false"] .gallery-section-arrow { transform: rotate(-90deg); }
   .gallery-section-content { overflow: hidden; transition: max-height 0.3s ease, opacity 0.2s ease; }
   .gallery-section-header[aria-expanded="false"] + .gallery-section-content { max-height: 0; opacity: 0; }
@@ -52,7 +50,6 @@
       .gallery-cover { width: clamp(160px, 45vw, 220px); justify-self: center; }
       .gallery-meta { text-align: center; }
       .gallery-details { justify-content: center; text-align: center; }
-      .gallery-actions { justify-content: center; }
     }
 
     @media (max-width: 640px) {
@@ -62,7 +59,7 @@
   </style>
 
   <div class="gallery-layout">
-    <a href="{% url 'home' %}" class="crumb-link">← Back to library</a>
+    <a href="{% url 'gallery:index' %}" class="crumb-link">← Back to gallery</a>
 
     <div class="gallery-header">
       <div class="gallery-cover">
@@ -78,12 +75,6 @@
           {% if year %}<span>{{ year }}</span>{% endif %}
           <span class="gallery-count">{{ images|length }} image{% if images|length != 1 %}s{% endif %}</span>
         </div>
-        {% if sections|length <= 1 %}
-          {# Only show global Choose button for non-series or single-section folders #}
-          <div class="gallery-actions">
-            <a class="btn btn-primary" href="{{ choose_url }}">Choose</a>
-          </div>
-        {% endif %}
       </div>
     </div>
 
@@ -95,14 +86,13 @@
             <button class="gallery-section-header" type="button" data-section-toggle aria-expanded="true">
               <span class="gallery-section-title">{{ section.title }}</span>
               <span class="gallery-section-count">{{ section.images|length }} image{% if section.images|length != 1 %}s{% endif %}</span>
-              <a class="btn btn-primary btn-sm" href="{{ section.choose_url }}" style="margin-left: auto; margin-right: 0.5rem;" onclick="event.stopPropagation();">Choose</a>
               <span class="gallery-section-arrow" aria-hidden="true">▼</span>
             </button>
             <div class="gallery-section-content" data-section-content>
               <div class="gallery-grid">
                 {% for image in section.images %}
                   <a class="gallery-thumb loading{% if image.versions|length > 1 %} has-versions{% endif %}" 
-                    href="{% url 'choose:lightbox' folder=folder filename=image.name %}"
+                    href="{% url 'gallery:lightbox' folder=folder filename=image.name %}"
                     aria-label="View {{ image.name }} full screen">
                     <div class="spinner" aria-hidden="true"></div>
                     <img class="gallery-thumb-img" src="{{ image.thumb_url|default:image.url }}" alt="{{ title }} – {{ image.name }}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.closest('.gallery-thumb')?.classList.remove('loading');" onerror="this.closest('.gallery-thumb')?.classList.remove('loading'); this.classList.add('loaded'); this.style.opacity='0.35';" />
@@ -120,7 +110,7 @@
         <div class="gallery-grid">
           {% for image in images %}
             <a class="gallery-thumb loading{% if image.versions|length > 1 %} has-versions{% endif %}" 
-              href="{% url 'choose:lightbox' folder=folder filename=image.name %}"
+              href="{% url 'gallery:lightbox' folder=folder filename=image.name %}"
               aria-label="View {{ image.name }} full screen">
               <div class="spinner" aria-hidden="true"></div>
               <img class="gallery-thumb-img" src="{{ image.thumb_url|default:image.url }}" alt="{{ title }} – {{ image.name }}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.closest('.gallery-thumb')?.classList.remove('loading');" onerror="this.closest('.gallery-thumb')?.classList.remove('loading'); this.classList.add('loaded'); this.style.opacity='0.35';" />
@@ -132,7 +122,7 @@
         </div>
       {% endif %}
     {% else %}
-      <p class="gallery-empty">No wallpapers were found in this folder. Try running a new extraction.</p>
+      <p class="gallery-empty">No wallpapers were found in this folder.</p>
     {% endif %}
   </div>
 

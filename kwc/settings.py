@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     # Project apps
     'choose',
     'extract',
+    'gallery',
 ]
 
 MIDDLEWARE = [
@@ -192,8 +193,11 @@ SECURE_HSTS_PRELOAD = _bool_env('SECURE_HSTS_PRELOAD', 'False')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Extract/Choose shared configuration via env vars
-# Final wallpapers root directory where extracted frames are stored and later curated.
-WALLPAPERS_FOLDER = os.getenv('KWC_WALLPAPERS_FOLDER', str(BASE_DIR / 'extracted'))
+# Directory where frames are initially extracted to (before curation in Choose)
+EXTRACT_FOLDER = os.getenv('KWC_EXTRACT_FOLDER', str(BASE_DIR / 'extracted'))
+
+# Final wallpapers root directory where curated frames are moved to after choosing
+WALLPAPERS_FOLDER = os.getenv('KWC_WALLPAPERS_FOLDER', str(BASE_DIR / 'wallpapers'))
 
 
 # Folder pattern (relative to root). Supports Django template syntax and brace placeholders.

@@ -24,7 +24,6 @@ from choose import views as choose_views
 from kwc import views as core_views
 
 urlpatterns = [
-    path('', core_views.HomeView.as_view(), name='home'),
     path('admin/', admin.site.urls),
     path('choose/', include(('choose.urls', 'choose'), namespace='choose')),
     path('extract/', include(('extract.urls', 'extract'), namespace='extract')),
@@ -32,6 +31,8 @@ urlpatterns = [
     path('offline/', TemplateView.as_view(template_name='offline.html'), name='offline'),
     path('manifest.webmanifest', core_views.ManifestView.as_view(), name='pwa-manifest'),
     path('service-worker.js', core_views.ServiceWorkerView.as_view(), name='service-worker'),
+    # Gallery at root (must be last to not capture other URLs)
+    path('', include(('gallery.urls', 'gallery'), namespace='gallery')),
 ]
 
 # Serve wallpaper images directly from disk. This is intended for internal/self-hosted use.
@@ -39,4 +40,11 @@ _wall_root = getattr(settings, 'WALLPAPERS_FOLDER', None)
 if _wall_root:
     urlpatterns += [
         re_path(r'^wallpapers/(?P<path>.+)$', static_serve, { 'document_root': _wall_root }),
+    ]
+
+# Serve extracted images from the extract folder
+_extract_root = getattr(settings, 'EXTRACT_FOLDER', None)
+if _extract_root:
+    urlpatterns += [
+        re_path(r'^extracted/(?P<path>.+)$', static_serve, { 'document_root': _extract_root }),
     ]

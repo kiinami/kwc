@@ -53,7 +53,7 @@ class MediaLibraryViewsTests(TestCase):
 
 	def test_home_view_lists_media_folders(self) -> None:
 		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
-			response = self.client.get(reverse('home'))
+			response = self.client.get(reverse('gallery:index'))
 
 		self.assertEqual(response.status_code, 200)
 		folders = response.context['folders']
@@ -64,19 +64,19 @@ class MediaLibraryViewsTests(TestCase):
 
 		sample = next(entry for entry in folders if entry['name'] == self.folder_name)
 		self.assertIn('gallery_url', sample)
-		self.assertIn('choose_url', sample)
 		self.assertTrue(sample['gallery_url'])
 
-	def test_choose_index_redirects_to_home(self) -> None:
-		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+	def test_choose_index_renders_extracted_folders(self) -> None:
+		with self.settings(EXTRACT_FOLDER=self.temp_dir):
 			response = self.client.get(reverse('choose:index'))
 
-		self.assertEqual(response.status_code, 302)
-		self.assertEqual(response.url, reverse('home'))
+		self.assertEqual(response.status_code, 200)
+		folders = response.context['folders']
+		self.assertGreaterEqual(len(folders), 2)
 
 	def test_gallery_view_renders_images_and_metadata(self) -> None:
 		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
-			response = self.client.get(reverse('choose:gallery', kwargs={'folder': self.folder_name}))
+			response = self.client.get(reverse('gallery:gallery', kwargs={'folder': self.folder_name}))
 
 		self.assertEqual(response.status_code, 200)
 		context_images = response.context['images']
@@ -110,7 +110,7 @@ class MediaLibraryViewsTests(TestCase):
 		for extra in ('frame03.jpg', 'frame04.jpg', 'frame05.jpg'):
 			(folder_path / extra).write_bytes(b'x')
 
-		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+		with self.settings(EXTRACT_FOLDER=self.temp_dir, WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
 			ImageDecision.objects.create(
 				folder=self.folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP
 			)
@@ -128,7 +128,7 @@ class MediaLibraryViewsTests(TestCase):
 		self.assertEqual(progress.last_classified_original, 'frame02.jpg')
 		self.assertTrue(progress.last_classified_name)
 
-		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+		with self.settings(EXTRACT_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
 			chooser_response = self.client.get(reverse('choose:folder', kwargs={'folder': self.folder_name}))
 
 		self.assertEqual(chooser_response.status_code, 200)
@@ -142,7 +142,7 @@ class MediaLibraryViewsTests(TestCase):
 		for extra in ('frame03.jpg', 'frame04.jpg'):
 			(folder_path / extra).write_bytes(b'y')
 
-		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+		with self.settings(EXTRACT_FOLDER=self.temp_dir, WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
 			ImageDecision.objects.create(
 				folder=self.folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP
 			)
@@ -163,7 +163,7 @@ class MediaLibraryViewsTests(TestCase):
 			folder=self.folder_name, filename=next_image_name, decision=ImageDecision.DECISION_KEEP
 		)
 
-		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
+		with self.settings(EXTRACT_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
 			chooser_response = self.client.get(reverse('choose:folder', kwargs={'folder': self.folder_name}))
 
 		self.assertEqual(chooser_response.status_code, 200)

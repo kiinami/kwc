@@ -476,7 +476,7 @@
   <body>
     <div class="navbar">
       <div class="container nav-inner">
-        <a class="brand" href="{% url 'home' %}" title="KWC">
+        <a class="brand" href="{% url 'gallery:index' %}" title="KWC">
           <img class="brand-logo" src="{% static 'kwc/icon.png' %}" alt="KWC logo" />
           <span>KWC</span>
         </a>
@@ -484,6 +484,8 @@
         <div class="nav-controls">
           <nav class="nav">
             <a href="{% url 'extract:index' %}" class="{% if request.resolver_match.namespace == 'extract' %}active{% endif %}">Extract</a>
+            <a href="{% url 'choose:index' %}" class="{% if request.resolver_match.namespace == 'choose' %}active{% endif %}">Choose</a>
+            <a href="{% url 'gallery:index' %}" class="{% if request.resolver_match.namespace == 'gallery' %}active{% endif %}">Gallery</a>
           </nav>
           <button class="install-btn" id="kwc-install" hidden>Install app</button>
         </div>

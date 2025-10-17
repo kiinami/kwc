@@ -755,7 +755,7 @@
         <div class="mobile-sheet-chrome" id="mobileSheetChrome">
           <button class="mobile-sheet-handle" id="mobileSheetHandle" type="button" aria-label="Expand image details"></button>
           <div class="mobile-sheet-toolbar" id="mobileSheetHeader">
-            <a href="{% url 'choose:gallery' folder=folder %}" class="mobile-sheet-back" aria-label="Back to gallery">
+            <a href="{% url 'gallery:gallery' folder=folder %}" class="mobile-sheet-back" aria-label="Back to gallery">
               <span aria-hidden="true">←</span>
             </a>
             <div class="mobile-sheet-title" id="mobileSheetTitle">{{ current_image.name }}</div>
@@ -788,7 +788,7 @@
         <div class="sidebar-scrollable">
           <div class="sidebar-section sidebar-section--intro">
             <div class="sidebar-header">
-              <a href="{% url 'choose:gallery' folder=folder %}" class="back-btn">← Back to gallery</a>
+              <a href="{% url 'gallery:gallery' folder=folder %}" class="back-btn">← Back to gallery</a>
             </div>
             <div class="metadata-title-group">
               <div class="metadata-title">{{ title }}</div>
