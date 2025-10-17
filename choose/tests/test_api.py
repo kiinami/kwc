@@ -13,9 +13,30 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 
 @pytest.fixture()
-def wallpapers_dir(tmp_path: Path, settings) -> Path:
-	settings.WALLPAPERS_FOLDER = tmp_path
-	return tmp_path
+def wallpapers_dir(tmp_path: Path, settings):
+	# Set both EXTRACT_FOLDER (source for chooser) and WALLPAPERS_FOLDER (destination)
+	extract_path = tmp_path / "extractions"
+	extract_path.mkdir(exist_ok=True)
+	settings.EXTRACT_FOLDER = str(extract_path)
+	
+	wallpapers_path = tmp_path / "wallpapers"
+	wallpapers_path.mkdir(exist_ok=True)
+	settings.WALLPAPERS_FOLDER = str(wallpapers_path)
+	
+	# Return a dict with both paths for tests that need both
+	class Paths:
+		def __init__(self):
+			self.extract = extract_path
+			self.wallpapers = wallpapers_path
+		
+		# For backwards compatibility, act like a Path for tests that only use one
+		def __truediv__(self, other):
+			return self.extract / other
+		
+		def __str__(self):
+			return str(self.extract)
+	
+	return Paths()
 
 
 def test_decide_api_invalid_json(client) -> None:
@@ -91,7 +112,7 @@ def test_save_api_reports_delete_errors(client, wallpapers_dir: Path, monkeypatc
 	payload = response.json()
 	assert payload['ok'] is True
 	assert payload['deleted'] == 1
-	assert payload['kept'] == 0
+	assert payload['moved'] == 0
 	assert payload['delete_errors']
 	assert 'disk error' in payload['delete_errors'][0]
 	assert (folder / 'frame01.jpg').exists()
@@ -124,7 +145,7 @@ def test_save_api_rename_collision_fallback(client, wallpapers_dir: Path, monkey
 	assert response.status_code == 200
 	payload = response.json()
 	assert payload['ok'] is True
-	assert payload['kept'] == 2
+	assert payload['moved'] == 2
 	files_after = {p.name for p in folder.iterdir()}
 	assert 'frame01.jpg' not in files_after
 	assert 'frame02.jpg' not in files_after
@@ -203,7 +224,7 @@ def test_save_api_episode_only_preserves_episode_number(client, wallpapers_dir: 
 	assert response.status_code == 200
 	payload = response.json()
 	assert payload['ok'] is True
-	assert payload['kept'] == 3
+	assert payload['moved'] == 3
 
 	# Check the renamed files - they should preserve episode numbers
 	files_after = sorted(p.name for p in folder.iterdir())
@@ -227,10 +248,10 @@ def test_save_api_episode_only_preserves_episode_number(client, wallpapers_dir: 
 	assert len(general_files) == 0, f"Files without episode numbers found: {general_files}"
 
 
-def test_save_api_preserves_version_suffixes(client, wallpapers_dir: Path) -> None:
+def test_save_api_preserves_version_suffixes(client, wallpapers_dir) -> None:
 	"""Test that version suffixes (U, M, P, etc.) are preserved during rename."""
 	folder_name = 'Movie (2024)'
-	folder = wallpapers_dir / folder_name
+	folder = wallpapers_dir.extract / folder_name
 	folder.mkdir()
 
 	# Create files with version suffixes
@@ -252,9 +273,11 @@ def test_save_api_preserves_version_suffixes(client, wallpapers_dir: Path) -> No
 	assert response.status_code == 200
 	payload = response.json()
 	assert payload['ok'] is True
-	assert payload['kept'] == 5
+	assert payload['moved'] == 5
 
-	files_after = {p.name for p in folder.iterdir()}
+	# Check the wallpapers folder (destination), not extract folder (source)
+	target_folder = wallpapers_dir.wallpapers / "Movie"  # Title without year
+	files_after = {p.name for p in target_folder.iterdir()}
 	
 	# Verify base images and their versions are renamed with the same counter
 	# frame01 variants should all become 0001
@@ -293,7 +316,7 @@ def test_save_api_removes_invalid_suffixes(client, wallpapers_dir: Path) -> None
 	assert response.status_code == 200
 	payload = response.json()
 	assert payload['ok'] is True
-	assert payload['kept'] == 3
+	assert payload['moved'] == 3
 
 	files_after = {p.name for p in folder.iterdir()}
 	

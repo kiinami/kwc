@@ -13,7 +13,10 @@ pytestmark = pytest.mark.django_db(transaction=True)
 
 @pytest.fixture()
 def wallpapers_dir(tmp_path: Path, settings) -> Path:
+	# Gallery functions use WALLPAPERS_FOLDER
 	settings.WALLPAPERS_FOLDER = tmp_path
+	# Chooser functions use EXTRACT_FOLDER
+	settings.EXTRACT_FOLDER = tmp_path
 	return tmp_path
 
 
