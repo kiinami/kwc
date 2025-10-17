@@ -82,7 +82,7 @@ class ExtractStartForm(forms.Form):
         try:
             items = json.loads(value)
         except Exception:
-            raise forms.ValidationError("Invalid trim intervals data.")
+            raise forms.ValidationError("Invalid trim intervals data.") from None
         if not isinstance(items, list):
             raise forms.ValidationError("Trim intervals must be a list.")
 

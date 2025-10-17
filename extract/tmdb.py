@@ -70,10 +70,10 @@ def search_multi(query: str, *, year: int | None = None) -> list[SearchResult]:
         response = search.multi(query=query, year=year) if year else search.multi(query=query)
     except APIKeyError:
         logger.error("Invalid TMDB API key")
-        raise RuntimeError("Invalid TMDB API key")
+        raise RuntimeError("Invalid TMDB API key") from None
     except Exception as e:
         logger.error(f"TMDB search failed: {e}")
-        raise RuntimeError(f"TMDB search failed: {e}")
+        raise RuntimeError(f"TMDB search failed: {e}") from e
 
     results: list[SearchResult] = []
     for item in response.get('results', []):
@@ -125,10 +125,10 @@ def get_posters(media_type: str, media_id: int) -> list[PosterImage]:
         response = media.images()
     except APIKeyError:
         logger.error("Invalid TMDB API key")
-        raise RuntimeError("Invalid TMDB API key")
+        raise RuntimeError("Invalid TMDB API key") from None
     except Exception as e:
         logger.error(f"TMDB get posters failed: {e}")
-        raise RuntimeError(f"TMDB get posters failed: {e}")
+        raise RuntimeError(f"TMDB get posters failed: {e}") from e
 
     posters: list[PosterImage] = []
     base_url = "https://image.tmdb.org/t/p/original"

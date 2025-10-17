@@ -40,7 +40,7 @@ def gallery(request: HttpRequest, folder: str) -> HttpResponse:
 	try:
 		context = list_gallery_images(folder)
 	except (ValueError, FileNotFoundError):
-		raise Http404("Folder not found")
+		raise Http404("Folder not found") from None
 
 	return render(request, 'choose/gallery.html', context.to_dict())
 
@@ -50,13 +50,13 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	try:
 		context = list_gallery_images(folder)
 	except (ValueError, FileNotFoundError):
-		raise Http404("Folder not found")
+		raise Http404("Folder not found") from None
 	
 	# Find the image in the gallery
 	try:
 		safe_name = validate_folder_name(folder)
 	except ValueError:
-		raise Http404("Invalid folder")
+		raise Http404("Invalid folder") from None
 	
 	safe_filename = os.path.basename(filename)
 	if safe_filename != filename:
@@ -151,7 +151,7 @@ def folder(request: HttpRequest, folder: str) -> HttpResponse:
 	try:
 		context = load_folder_context(folder, season=season, episode=episode)
 	except (ValueError, FileNotFoundError):
-		raise Http404("Folder not found")
+		raise Http404("Folder not found") from None
 
 	return render(request, 'choose/folder.html', context.to_dict())
 
@@ -204,7 +204,7 @@ def thumbnail(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	try:
 		validate_folder_name(folder)
 	except ValueError:
-		raise Http404("Invalid folder")
+		raise Http404("Invalid folder") from None
 	
 	safe_filename = os.path.basename(filename)
 	if safe_filename != filename:
@@ -224,7 +224,7 @@ def thumbnail(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	try:
 		result = _render_thumbnail_cached(str(source), width, height, stat.st_mtime_ns)
 	except OSError:
-		raise Http404("Unable to generate thumbnail")
+		raise Http404("Unable to generate thumbnail") from None
 
 	etag = f'W/"thumb-{stat.st_mtime_ns:x}-{width}-{height}"'
 	if request.headers.get('If-None-Match') == etag:
