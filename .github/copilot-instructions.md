@@ -4,29 +4,21 @@
 
 **KWC**: Django 5.2.7 app for extracting video keyframes (FFmpeg) and curating wallpapers. Two apps: **Extract** (video→images) and **Choose** (review/rename). Small codebase, Python 3.13 only, Docker deployment.
 
-## Environment Setup (CRITICAL ORDER)
+## Environment Setup
 
-**Python 3.13 required** (lockfile pinned). Setup sequence:
-
-```bash
-pip install uv==0.4.29
-uv venv
-uv sync --group prod        # MUST include --group prod (tests need whitenoise/gunicorn)
-cp .env.example .env        # Required for Django settings
-source .venv/bin/activate
-python manage.py migrate    # Always before dev server or tests
-```
+**Python 3.13 required** (lockfile pinned). The environment is automatically set up by the workflow at `.github/workflows/copilot-setup-steps.yml` before you start working. This includes:
+- Installing uv and dependencies (`uv sync --group prod`)
+- Creating `.env` from `.env.example`
+- Running database migrations
 
 Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER` (default: ./extracted)
 
 ## Development Workflow
 
-**Dev server**: `python manage.py runserver` → http://127.0.0.1:8000/  
-**Tests**: `python -m pytest -v` → 36 tests pass (~1s), 8 warnings normal (missing /static/)  
-**Static files**: `python manage.py collectstatic --noinput` (WhiteNoise compression)  
+**Dev server**: `uv run python manage.py runserver` → http://127.0.0.1:8000/  
+**Tests**: `uv run python -m pytest -v` → comprehensive tests pass (~1-2s), warnings normal (missing /static/)  
+**Static files**: `uv run python manage.py collectstatic --noinput` (WhiteNoise compression)  
 **Docker**: `docker build -t kwc-web .` (~2-3min), `docker-compose up` (port 8080)
-
-**Common error**: Tests fail with "ModuleNotFoundError: No module named 'whitenoise'" → run `uv sync --group prod`
 
 ## Project Structure
 
@@ -55,7 +47,7 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 
 ## Key Patterns & Guidelines
 
-**Testing**: Despite README saying "No tests by design", there ARE 36 comprehensive tests. Always run `python -m pytest -v` before/after changes (fast, ~1s).
+**Testing**: Despite README saying "No tests by design", there ARE comprehensive tests. Always run `uv run python -m pytest -v` before/after changes (fast, ~1-2s).
 
 **Templates**: Pure Django syntax (no Jinja2). Custom filters in `extract/templatetags/` (e.g., `pad` for zero-padding).
 
@@ -67,7 +59,7 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 
 **File changes:**
 - New app: Add to `kwc/settings.py` INSTALLED_APPS
-- Static files: `kwc/static/` → `python manage.py collectstatic`
+- Static files: `kwc/static/` → `uv run python manage.py collectstatic`
 - URLs: Root in `kwc/urls.py`, app-specific in `{app}/urls.py`
 - Dependencies: Edit `pyproject.toml` → `uv lock && uv sync --group prod`
 
