@@ -161,7 +161,21 @@ def list_gallery_images(folder: str) -> GalleryContext:
     processed_files: set[str] = set()
     images_with_versions: list[GalleryImage] = []
     
-    for base_name, version_files in version_groups.items():
+    # Maintain original file order by iterating through sorted files
+    # and processing each version group only once (when we see its first member)
+    for name in files:
+        if name in processed_files:
+            continue
+            
+        valid_suffix, invalid_suffix = parse_version_suffix(name)
+        if valid_suffix or not invalid_suffix:
+            # Valid suffix or no suffix - find its version group
+            base_name = strip_version_suffix(name)
+            version_files = version_groups[base_name]
+        else:
+            # Invalid suffix - treat as separate image
+            version_files = version_groups[name]
+        
         # Sort so base image (no suffix) comes first, then alphabetically by suffix
         def sort_key(filename: str) -> tuple[int, str]:
             suffix, _ = parse_version_suffix(filename)
@@ -189,7 +203,7 @@ def list_gallery_images(folder: str) -> GalleryContext:
             "url": wallpaper_url(safe_name, primary_name, root=root_path),
             "thumb_url": thumbnail_url(safe_name, primary_name, width=512, root=root_path),
             "version_suffix": primary_suffix,
-            "base_name": base_name,
+            "base_name": strip_version_suffix(name) if (valid_suffix or not invalid_suffix) else name,
             "versions": versions,
             "versions_json": mark_safe(json.dumps(versions)),  # JSON-encoded for template
         }

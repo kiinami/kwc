@@ -18,14 +18,16 @@
       max-width: 100vw;
       box-sizing: border-box; /* include padding in width to avoid overflow */
       overflow-x: hidden; /* guard against sub-pixel overflow */
-      padding-left: .75rem;  /* small horizontal padding */
-      padding-right: .75rem;
+      padding-left: 0;
+      padding-right: 0;
     }
     @media (min-width: 1024px) {
-      .fullbleed { padding-left: 1rem; padding-right: 1rem; }
+      .fullbleed { padding-left: 0; padding-right: 0; }
     }
   .chooser-layout { display: grid; grid-template-columns: 300px 1fr; gap: 0; height: calc(100vh - var(--nav-height, 72px)); min-height: calc(100vh - var(--nav-height, 72px)); overflow: hidden; }
-  .chooser-sidebar { border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; overflow: hidden; }
+  .chooser-layout.sidebar-hidden { grid-template-columns: 1fr; }
+  .chooser-sidebar { border-right: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; overflow: hidden; transition: transform 0.3s ease; }
+  .chooser-layout.sidebar-hidden .chooser-sidebar { transform: translateX(-100%); position: absolute; z-index: 10; }
   .sidebar-header { display: grid; gap: .25rem; padding: .6rem .6rem; border-bottom: 1px solid rgba(255,255,255,0.08); flex: 0 0 auto; }
   .sidebar-title { font-weight: 700; line-height: 1.25; white-space: normal; overflow: visible; text-overflow: initial; word-break: break-word; }
   .sidebar-count { color: var(--muted); font-size: .9rem; }
@@ -46,9 +48,13 @@
     .thumb:not(.loading) .spinner { display: none; }
     .spinner::before { content: ""; width: 20px; height: 20px; border-radius: 999px; border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff; animation: spin 0.9s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-  .viewport-inner { width: 100%; height: calc(100% - 46px); display: grid; place-items: center; box-sizing: border-box; padding: .75rem; }
-  .viewport-img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; opacity: 0; transition: opacity .25s ease; border-radius: .6rem; }
+  .viewport-inner { width: 100%; height: calc(100% - 46px); display: flex; align-items: center; justify-content: center; box-sizing: border-box; padding: 0; }
+  .viewport-img { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; opacity: 0; transition: opacity .25s ease; border-radius: .6rem; }
     .viewport-img.loaded { opacity: 1; }
+  
+  .toggle-sidebar-btn { position: absolute; top: 1rem; left: 1rem; width: 2.5rem; height: 2.5rem; border-radius: .5rem; border: 1px solid rgba(255,255,255,0.18); background: rgba(26,32,56,0.85); color: #fff; display: grid; place-items: center; font-size: 1.2rem; cursor: pointer; transition: all 0.15s ease; z-index: 5; }
+  .toggle-sidebar-btn:hover { background: rgba(44,52,88,0.9); border-color: rgba(255,255,255,0.35); }
+  
   .mobile-swipe-hint,
   .mobile-decision-badge,
   .mobile-save,
@@ -57,6 +63,7 @@
       .chooser-layout { grid-template-columns: 1fr; height: calc(100vh - var(--nav-height, 72px)); min-height: calc(100vh - var(--nav-height, 72px)); }
       .chooser-sidebar { order: 2; max-height: 40vh; }
       .chooser-viewport { order: 1; min-height: 50vh; }
+      .toggle-sidebar-btn { display: none; }
     }
     @media (max-width: 768px) {
       .fullbleed { padding-left: 0; padding-right: 0; }
@@ -65,6 +72,7 @@
       .chooser-viewport { height: calc(100vh - var(--nav-height, 72px)); }
       .viewport-inner { height: 100%; padding: 0; }
       .desktop-controls { display: none !important; }
+      .toggle-sidebar-btn { display: none; }
   .mobile-save { display: inline-flex; position: absolute; top: 1rem; right: 1rem; z-index: 5; }
   .mobile-undo { display: inline-flex; position: absolute; top: 1rem; left: 1rem; z-index: 5; }
       .mobile-swipe-hint { display: flex; position: absolute; bottom: 1.4rem; left: 50%; transform: translateX(-50%); gap: .75rem; background: rgba(10,10,10,0.65); border-radius: 999px; padding: .55rem 1.2rem; font-size: .9rem; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: .05em; transition: opacity .3s ease; z-index: 4; }
@@ -126,6 +134,7 @@
         {% endif %}
       </div>
       {% if images %}
+      <button id="toggleSidebarBtn" class="toggle-sidebar-btn" type="button" aria-label="Toggle sidebar" title="Toggle sidebar (S)">☰</button>
       <button id="btnUndoMobile" class="btn btn-ghost mobile-undo" type="button" aria-label="Undo last decision">Undo</button>
       <button id="btnOpenSaveMobile" class="btn btn-primary mobile-save" type="button" aria-label="Apply decisions and rename">Save…</button>
       <div id="mobileDecisionBadge" class="mobile-decision-badge" aria-hidden="true"></div>
@@ -165,6 +174,8 @@
       const thumbs = Array.from(document.querySelectorAll('.thumb'));
       const main = document.getElementById('mainImage');
       const sidebar = document.querySelector('.sidebar-list');
+      const chooserLayout = document.querySelector('.chooser-layout');
+      const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
       const btnKeep = document.getElementById('btnKeep');
       const btnDelete = document.getElementById('btnDelete');
       const btnOpenSave = document.getElementById('btnOpenSave');
@@ -226,6 +237,13 @@
       }
 
       updateUndoState();
+
+      // Sidebar toggle
+      if (toggleSidebarBtn && chooserLayout) {
+        toggleSidebarBtn.addEventListener('click', function() {
+          chooserLayout.classList.toggle('sidebar-hidden');
+        });
+      }
 
       function activateThumb(el) {
         if (!el) return;
@@ -308,6 +326,15 @@
 
       // Keyboard navigation: ArrowUp / ArrowDown
       window.addEventListener('keydown', (e) => {
+        if (saveModal && saveModal.classList.contains('show')) {
+          // Don't handle shortcuts when modal is open
+          return;
+        }
+        if (e.key === 's' || e.key === 'S') {
+          e.preventDefault();
+          if (chooserLayout) chooserLayout.classList.toggle('sidebar-hidden');
+          return;
+        }
         if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
         e.preventDefault();
         const current = document.querySelector('.thumb.active');
@@ -382,6 +409,10 @@
       btnKeep?.addEventListener('click', () => decide('keep'));
       btnDelete?.addEventListener('click', () => decide('delete'));
       window.addEventListener('keydown', (e) => {
+        if (saveModal && saveModal.classList.contains('show')) {
+          // Don't handle shortcuts when modal is open
+          return;
+        }
         if (e.key === 'k' || e.key === 'K') { e.preventDefault(); decide('keep'); }
         if (e.key === 'd' || e.key === 'D') { e.preventDefault(); decide('delete'); }
         if (e.key === 'u' || e.key === 'U') { e.preventDefault(); undoDecision(); }

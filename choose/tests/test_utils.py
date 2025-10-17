@@ -8,6 +8,7 @@ from choose.utils import (
 	MediaFolder,
 	add_version_suffix,
 	list_media_folders,
+	parse_counter,
 	parse_folder_name,
 	parse_season_episode,
 	parse_title_year_from_folder,
@@ -155,6 +156,18 @@ def test_parse_season_episode_episode_only_outro() -> None:
 	season, episode = parse_season_episode("Show EOU ~ 0001.jpg")
 	assert season == ""
 	assert episode == "OU"
+
+
+def test_parse_counter_standard_filename() -> None:
+	assert parse_counter("Movie 〜 0005.jpg") == "0005"
+
+
+def test_parse_counter_with_suffix() -> None:
+	assert parse_counter("Show 〜 0210U.jpg") == "0210"
+
+
+def test_parse_counter_missing() -> None:
+	assert parse_counter("Random.jpg") == ""
 
 
 def test_format_section_title_general() -> None:
