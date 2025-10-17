@@ -1237,6 +1237,64 @@
         }
       });
       
+      // Touch swipe gestures for mobile
+      (function() {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchEndX = 0;
+        let touchEndY = 0;
+        const minSwipeDistance = 50; // Minimum distance for a swipe to register
+        
+        viewer.addEventListener('touchstart', function(event) {
+          if (deleteModal.classList.contains('show')) {
+            return;
+          }
+          touchStartX = event.changedTouches[0].screenX;
+          touchStartY = event.changedTouches[0].screenY;
+        }, { passive: true });
+        
+        viewer.addEventListener('touchend', function(event) {
+          if (deleteModal.classList.contains('show')) {
+            return;
+          }
+          touchEndX = event.changedTouches[0].screenX;
+          touchEndY = event.changedTouches[0].screenY;
+          handleSwipe();
+        }, { passive: true });
+        
+        function handleSwipe() {
+          const deltaX = touchEndX - touchStartX;
+          const deltaY = touchEndY - touchStartY;
+          const absDeltaX = Math.abs(deltaX);
+          const absDeltaY = Math.abs(deltaY);
+          
+          // Determine if it's a horizontal or vertical swipe
+          if (absDeltaX > absDeltaY && absDeltaX > minSwipeDistance) {
+            // Horizontal swipe - navigate between images
+            if (deltaX > 0) {
+              // Swipe right - go to previous image
+              if (prevBtn && !prevBtn.disabled) {
+                prevBtn.click();
+              }
+            } else {
+              // Swipe left - go to next image
+              if (nextBtn && !nextBtn.disabled) {
+                nextBtn.click();
+              }
+            }
+          } else if (absDeltaY > absDeltaX && absDeltaY > minSwipeDistance) {
+            // Vertical swipe - switch between versions
+            if (deltaY > 0) {
+              // Swipe down - go to next version
+              changeVersion(1);
+            } else {
+              // Swipe up - go to previous version
+              changeVersion(-1);
+            }
+          }
+        }
+      })();
+      
       // Version switching
       const versionThumbs = document.querySelectorAll('.version-thumb');
       versionThumbs.forEach(function(thumb) {
