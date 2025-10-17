@@ -10,8 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
-from pathlib import Path
 import os
+from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -30,7 +30,11 @@ except Exception:
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # Prefer DJANGO_SECRET_KEY or SECRET_KEY from env; fall back to the dev key (not for real prod).
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY') or os.getenv('SECRET_KEY') or 'django-insecure-c=ph*e1er)+jkkg6@+u9m=t2fc6mapv3+3byy)2eob$n41r4po'
+SECRET_KEY = (
+	os.getenv('DJANGO_SECRET_KEY')
+	or os.getenv('SECRET_KEY')
+	or 'django-insecure-c=ph*e1er)+jkkg6@+u9m=t2fc6mapv3+3byy)2eob$n41r4po'
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Accept DJANGO_DEBUG or fallback to DEBUG
@@ -204,7 +208,8 @@ EXTRACT_FOLDER_PATTERN = os.getenv(
 # Space before E when there's no season ensures episode-only files can be parsed back.
 EXTRACT_IMAGE_PATTERN = os.getenv(
     'KWC_IMAGE_PATTERN',
-    '{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}{% if episode %}{% if not season %} {% endif %}E{{ episode|pad:2 }}{% endif %} 〜 {{ counter|pad:4 }}.jpg'
+    '{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}'
+    '{% if episode %}{% if not season %} {% endif %}E{{ episode|pad:2 }}{% endif %} 〜 {{ counter|pad:4 }}.jpg'
 )
 
 

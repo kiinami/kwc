@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
                 ('id', models.CharField(editable=False, max_length=32, primary_key=True, serialize=False)),
                 ('params', models.JSONField()),
                 ('output_dir', models.CharField(max_length=1024)),
-                ('status', models.CharField(choices=[('pending', 'Pending'), ('running', 'Running'), ('done', 'Done'), ('error', 'Error')], default='pending', max_length=16)),
+                ('status', models.CharField(choices=[('pending', 'Pending'), ('running', 'Running'), ('done', 'Done'), ('error', 'Error')], default='pending', max_length=16)),  # noqa: E501
                 ('error', models.TextField(blank=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('started_at', models.DateTimeField(blank=True, null=True)),

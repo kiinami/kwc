@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, TypedDict
+from typing import TypedDict
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
 
-from .constants import IMAGE_EXTS, SEASON_EPISODE_PATTERN
 from kwc.utils.files import cache_token
+
+from .constants import IMAGE_EXTS, SEASON_EPISODE_PATTERN
 
 
 def parse_version_suffix(filename: str) -> tuple[str, str]:
@@ -344,7 +346,7 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
                     except Exception:
                         mtime = 0
 
-                    entry: MediaFolder = {
+                    entry: MediaFolder = {  # type: ignore[no-redef]
                         'name': folder_name,
                         'title': title,
                         'year': str(year_int) if year_int is not None else '',
@@ -355,7 +357,7 @@ def list_media_folders(root: Path | None = None) -> tuple[list[MediaFolder], Pat
                         'cover_url': cover_url,
                         'cover_thumb_url': cover_thumb_url,
                     }
-                    entries.append(entry)
+                    entries.append(entry)  # type: ignore[arg-type]
         except PermissionError:
             # If the process lacks permissions, surface an empty list instead of failing.
             pass

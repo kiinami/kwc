@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable
 
 from django.db import close_old_connections
 from django.utils import timezone
@@ -12,14 +12,15 @@ from django.utils import timezone
 from .extractor import CancellationToken, CancelledException, ExtractParams, extract
 from .models import ExtractionJob
 
-
 logger = logging.getLogger(__name__)
 
 
 class JobRunner:
 	"""Manage extraction job execution and lifecycle in background threads."""
 
-	FINISHED_STATUSES = frozenset({ExtractionJob.Status.DONE, ExtractionJob.Status.ERROR, ExtractionJob.Status.CANCELLED})
+	FINISHED_STATUSES = frozenset(
+		{ExtractionJob.Status.DONE, ExtractionJob.Status.ERROR, ExtractionJob.Status.CANCELLED}
+	)
 
 	def __init__(
 		self,
@@ -106,7 +107,9 @@ class JobRunner:
 		job.current_step = 0
 		job.total_steps = 0
 		job.total_frames = 0
-		job.save(update_fields=["status", "started_at", "error", "current_step", "total_steps", "total_frames", "updated_at"])
+		job.save(
+			update_fields=["status", "started_at", "error", "current_step", "total_steps", "total_frames", "updated_at"]
+		)
 
 		params_data = job.params or {}
 		video_path = Path(params_data["video"])
@@ -118,7 +121,7 @@ class JobRunner:
 			max_workers_value = None
 		else:
 			try:
-				max_workers_value = int(max_workers_value)
+				max_workers_value = int(max_workers_value)  # type: ignore[arg-type]
 			except (TypeError, ValueError):
 				max_workers_value = None
 
@@ -162,7 +165,9 @@ class JobRunner:
 			job.current_step = job.total_steps
 			job.status = self.model.Status.DONE
 			job.finished_at = timezone.now()
-			job.save(update_fields=["status", "finished_at", "total_frames", "current_step", "total_steps", "updated_at"])
+			job.save(
+				update_fields=["status", "finished_at", "total_frames", "current_step", "total_steps", "updated_at"]
+			)
 		except CancelledException:
 			logger.info("extract job %s cancelled", job_id)
 			self.model.objects.filter(pk=job_id).update(
@@ -182,9 +187,10 @@ class JobRunner:
 
 	def _download_cover_image(self, url: str, output_dir: Path) -> None:
 		"""Download a cover image from a URL and save it to the output directory."""
-		import requests
-		from PIL import Image
-		from io import BytesIO
+		from io import BytesIO  # noqa: PLC0415
+
+		import requests  # noqa: PLC0415
+		from PIL import Image  # noqa: PLC0415
 		
 		try:
 			# Create output directory if it doesn't exist
@@ -207,7 +213,7 @@ class JobRunner:
 
 	def _get_job(self, job_id: str) -> ExtractionJob | None:
 		try:
-			return self.model.objects.get(pk=job_id)
+			return self.model.objects.get(pk=job_id)  # type: ignore[no-any-return]
 		except self.model.DoesNotExist:
 			return None
 

@@ -5,8 +5,8 @@ import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
+from django.template import Context, Engine
 from ffmpeg import FFmpeg
-from django.template import Engine, Context
 
 logger = logging.getLogger(__name__)
 
@@ -103,4 +103,4 @@ def render_pattern(pattern: str, values: dict[str, object]) -> str:
     and the custom filter "pad" from extract.templatetags.naming, for example: {{ counter|pad:4 }}.
     """
     tpl = PATTERN_ENGINE.from_string(pattern)
-    return tpl.render(Context(values))
+    return tpl.render(Context(values))  # type: ignore[no-any-return]

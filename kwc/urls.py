@@ -20,8 +20,8 @@ from django.urls import include, path, re_path
 from django.views.generic import TemplateView
 from django.views.static import serve as static_serve
 
-from kwc import views as core_views
 from choose import views as choose_views
+from kwc import views as core_views
 
 urlpatterns = [
     path('', core_views.HomeView.as_view(), name='home'),

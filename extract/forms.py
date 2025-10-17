@@ -1,10 +1,9 @@
 import json
+import os
 import re
 from datetime import timedelta
 
 from django import forms
-import os
-
 
 TIME_RANGE_RE = re.compile(r"^\d{2}:\d{2}:\d{2}-\d{2}:\d{2}:\d{2}$")
 
@@ -83,7 +82,7 @@ class ExtractStartForm(forms.Form):
         try:
             items = json.loads(value)
         except Exception:
-            raise forms.ValidationError("Invalid trim intervals data.")
+            raise forms.ValidationError("Invalid trim intervals data.") from None
         if not isinstance(items, list):
             raise forms.ValidationError("Trim intervals must be a list.")
 

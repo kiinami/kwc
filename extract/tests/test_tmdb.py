@@ -1,8 +1,9 @@
 """Tests for TMDB integration."""
 
-import pytest
 from unittest.mock import MagicMock, patch
-from django.test import TestCase, override_settings
+
+import pytest
+from django.test import TestCase
 
 from extract import tmdb
 
@@ -19,7 +20,7 @@ class TMDBServiceTests(TestCase):
     def test_is_available_returns_false_when_tmdb_not_installed(self):
         """Test that is_available returns False when tmdbsimple is not installed."""
         with patch.dict('sys.modules', {'tmdbsimple': None}):
-            result = tmdb.is_available()
+            tmdb.is_available()
         # Can't actually test this since we need tmdbsimple to load the module
 
     def test_configure_api_key_sets_key(self):
@@ -28,8 +29,8 @@ class TMDBServiceTests(TestCase):
         tmdb.configure_api_key(test_key)
         
         # Verify the key was set by checking the module
-        import tmdbsimple
-        assert tmdbsimple.API_KEY == test_key
+        import tmdbsimple  # noqa: PLC0415
+        assert test_key == tmdbsimple.API_KEY
 
     @patch('extract.tmdb.tmdb.Search')
     def test_search_multi_returns_results(self, mock_search_class):
@@ -106,7 +107,7 @@ class TMDBServiceTests(TestCase):
     def test_search_multi_raises_error_without_api_key(self):
         """Test that search_multi raises error when API key is not configured."""
         # Clear API key
-        import tmdbsimple
+        import tmdbsimple  # noqa: PLC0415
         tmdbsimple.API_KEY = ''
         
         # Execute and verify

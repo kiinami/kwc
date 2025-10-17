@@ -1,4 +1,11 @@
-from django.shortcuts import render, redirect
+import logging
+import os
+from functools import lru_cache
+from io import BytesIO
+from pathlib import Path
+from typing import NamedTuple
+
+from django.db import transaction
 from django.http import (
 	Http404,
 	HttpRequest,
@@ -6,29 +13,21 @@ from django.http import (
 	HttpResponseNotModified,
 	JsonResponse,
 )
+from django.shortcuts import redirect, render
 from django.utils.http import http_date, parse_http_date
 from django.views.decorators.http import require_GET, require_POST
-from django.db import transaction
-from functools import lru_cache
-from io import BytesIO
-from pathlib import Path
-from typing import NamedTuple
-import logging
-import os
-
 from PIL import Image, ImageOps
 
 from .api import APIError, DecisionPayload, apply_decisions, parse_decision_request
+from .constants import THUMB_CACHE_SIZE, THUMB_MAX_DIMENSION
 from .models import ImageDecision
-from .constants import THUMB_MAX_DIMENSION, THUMB_CACHE_SIZE
-from .services import load_folder_context, list_gallery_images
+from .services import list_gallery_images, load_folder_context
 from .utils import (
 	parse_counter,
 	parse_season_episode,
 	validate_folder_name,
 	wallpapers_root,
 )
-
 
 logger = logging.getLogger(__name__)
 def index(request: HttpRequest) -> HttpResponse:
@@ -41,7 +40,7 @@ def gallery(request: HttpRequest, folder: str) -> HttpResponse:
 	try:
 		context = list_gallery_images(folder)
 	except (ValueError, FileNotFoundError):
-		raise Http404("Folder not found")
+		raise Http404("Folder not found") from None
 
 	return render(request, 'choose/gallery.html', context.to_dict())
 
@@ -51,13 +50,13 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	try:
 		context = list_gallery_images(folder)
 	except (ValueError, FileNotFoundError):
-		raise Http404("Folder not found")
+		raise Http404("Folder not found") from None
 	
 	# Find the image in the gallery
 	try:
 		safe_name = validate_folder_name(folder)
 	except ValueError:
-		raise Http404("Invalid folder")
+		raise Http404("Invalid folder") from None
 	
 	safe_filename = os.path.basename(filename)
 	if safe_filename != filename:
@@ -87,7 +86,7 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	
 	# Get image dimensions
 	try:
-		from PIL import Image
+		from PIL import Image  # noqa: PLC0415
 		with Image.open(image_path) as img:
 			width, height = img.size
 	except Exception:
@@ -152,7 +151,7 @@ def folder(request: HttpRequest, folder: str) -> HttpResponse:
 	try:
 		context = load_folder_context(folder, season=season, episode=episode)
 	except (ValueError, FileNotFoundError):
-		raise Http404("Folder not found")
+		raise Http404("Folder not found") from None
 
 	return render(request, 'choose/folder.html', context.to_dict())
 
@@ -191,9 +190,7 @@ def _render_thumbnail_cached(path_str: str, width: int, height: int, mtime_ns: i
 			img.save(buffer, "PNG", optimize=True)
 			content_type = "image/png"
 		else:
-			if img.mode not in ("RGB", "L"):
-				img = img.convert("RGB")
-			elif img.mode == "L":
+			if img.mode not in ("RGB", "L") or img.mode == "L":
 				img = img.convert("RGB")
 			img.save(buffer, "JPEG", quality=82, optimize=True, progressive=True)
 			content_type = "image/jpeg"
@@ -207,7 +204,7 @@ def thumbnail(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	try:
 		validate_folder_name(folder)
 	except ValueError:
-		raise Http404("Invalid folder")
+		raise Http404("Invalid folder") from None
 	
 	safe_filename = os.path.basename(filename)
 	if safe_filename != filename:
@@ -227,7 +224,7 @@ def thumbnail(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	try:
 		result = _render_thumbnail_cached(str(source), width, height, stat.st_mtime_ns)
 	except OSError:
-		raise Http404("Unable to generate thumbnail")
+		raise Http404("Unable to generate thumbnail") from None
 
 	etag = f'W/"thumb-{stat.st_mtime_ns:x}-{width}-{height}"'
 	if request.headers.get('If-None-Match') == etag:
@@ -266,7 +263,7 @@ def decide_api(request: HttpRequest, folder: str) -> JsonResponse:
 		payload = parse_decision_request(request.body)
 	except APIError as exc:
 		return JsonResponse({"error": exc.code}, status=exc.status)
-	except Exception as exc:  # pragma: no cover - defensive
+	except Exception:  # pragma: no cover - defensive
 		logger.exception("Unexpected error parsing decision payload for %s", folder)
 		return JsonResponse({"error": "invalid_json"}, status=400)
 
@@ -289,9 +286,10 @@ def decide_api(request: HttpRequest, folder: str) -> JsonResponse:
 
 @require_POST
 def save_api(request: HttpRequest, folder: str) -> JsonResponse:
-	"""Apply decisions: delete 'delete' images, and rename kept images to close gaps using EXTRACT_IMAGE_PATTERN counter.
+	"""Apply decisions: delete 'delete' images, and rename kept images to close gaps.
 
-	Undecided images are treated as 'keep'. Files are not moved between folders, only renamed in-place.
+	Uses EXTRACT_IMAGE_PATTERN counter. Undecided images are treated as 'keep'.
+	Files are not moved between folders, only renamed in-place.
 	"""
 	content_type = request.headers.get("Content-Type", "")
 	payload = DecisionPayload()
@@ -300,7 +298,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 			payload = parse_decision_request(request.body)
 		except APIError as exc:
 			return JsonResponse({"error": exc.code}, status=exc.status)
-		except Exception as exc:  # pragma: no cover - defensive
+		except Exception:  # pragma: no cover - defensive
 			logger.exception("Unexpected error parsing request body for save_api on %s", folder)
 			return JsonResponse({"error": "invalid_json"}, status=400)
 	elif request.body:
@@ -315,7 +313,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 			result = apply_decisions(folder, payload)
 	except APIError as exc:
 		return JsonResponse({"error": exc.code}, status=exc.status)
-	except Exception as exc:  # pragma: no cover - defensive
+	except Exception:  # pragma: no cover - defensive
 		logger.exception("Unexpected error applying decisions for %s", folder)
 		return JsonResponse({"error": "unexpected_error"}, status=500)
 

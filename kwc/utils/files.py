@@ -6,7 +6,7 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["safe_remove", "safe_rename", "cache_token"]
+__all__ = ["cache_token", "safe_remove", "safe_rename"]
 
 
 def safe_remove(path: Path) -> None:

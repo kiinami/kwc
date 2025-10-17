@@ -1,10 +1,12 @@
+from typing import ClassVar
+
 from django.db import models
 
 
 class ImageDecision(models.Model):
 	DECISION_KEEP = 'keep'
 	DECISION_DELETE = 'delete'
-	DECISIONS = [
+	DECISIONS: ClassVar = [
 		(DECISION_KEEP, 'Keep'),
 		(DECISION_DELETE, 'Delete'),
 	]
@@ -16,7 +18,7 @@ class ImageDecision(models.Model):
 
 	class Meta:
 		unique_together = ('folder', 'filename')
-		indexes = [
+		indexes: ClassVar = [
 			models.Index(fields=['folder']),
 		]
 
@@ -31,6 +33,6 @@ class FolderProgress(models.Model):
 	updated_at = models.DateTimeField(auto_now=True)
 
 	def __str__(self) -> str:
-		return f"{self.folder}: {self.keep_count} keeps (last={self.last_classified_name or '–'})"
+		return f"{self.folder}: {self.keep_count} keeps (last={self.last_classified_name or '-'})"
 
 # Create your models here.

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from django.urls import reverse
 
-import choose.api as api
+from choose import api
 from choose.models import FolderProgress, ImageDecision
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -161,7 +161,9 @@ def test_save_api_rename_failure_rolls_back(client, wallpapers_dir: Path, monkey
 	assert progress.keep_count == 0
 
 
-def test_save_api_transaction_rolls_back_on_error(client, wallpapers_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_save_api_transaction_rolls_back_on_error(
+    client, wallpapers_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
 	folder_name = 'Clip2'
 	folder = wallpapers_dir / folder_name
 	folder.mkdir()
@@ -194,9 +196,15 @@ def test_save_api_episode_only_preserves_episode_number(client, wallpapers_dir: 
 	(folder / 'Show E02 ~ 0001.jpg').write_bytes(b'c')
 
 	# Mark all files as keep
-	ImageDecision.objects.create(folder=folder_name, filename='Show E01 ~ 0001.jpg', decision=ImageDecision.DECISION_KEEP)
-	ImageDecision.objects.create(folder=folder_name, filename='Show E01 ~ 0002.jpg', decision=ImageDecision.DECISION_KEEP)
-	ImageDecision.objects.create(folder=folder_name, filename='Show E02 ~ 0001.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(
+		folder=folder_name, filename='Show E01 ~ 0001.jpg', decision=ImageDecision.DECISION_KEEP
+	)
+	ImageDecision.objects.create(
+		folder=folder_name, filename='Show E01 ~ 0002.jpg', decision=ImageDecision.DECISION_KEEP
+	)
+	ImageDecision.objects.create(
+		folder=folder_name, filename='Show E02 ~ 0001.jpg', decision=ImageDecision.DECISION_KEEP
+	)
 
 	response = client.post(reverse('choose:save_api', kwargs={'folder': folder_name}))
 

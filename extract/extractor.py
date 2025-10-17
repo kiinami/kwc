@@ -3,13 +3,11 @@ from __future__ import annotations
 import concurrent.futures
 import logging
 import os
-import re
-import signal
 import threading
 import time
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from django.conf import settings
 from ffmpeg import FFmpeg
@@ -52,14 +50,13 @@ def _get_retry_config() -> tuple[int, float]:
         backoff = float(backoff)
     except (TypeError, ValueError):
         backoff = 0.5
-    if retries < 0:
-        retries = 0
+    retries = max(retries, 0)
     if backoff < 0:
         backoff = 0.0
     return retries, backoff
 
 
-def _find_highest_counter(output_dir: Path, pattern: str, context: dict[str, object]) -> int:
+def _find_highest_counter(output_dir: Path, pattern: str, context: Mapping[str, str | int]) -> int:
     """
     Find the highest counter value in existing files that match the pattern.
     Returns 0 if no matching files are found or if the directory doesn't exist.

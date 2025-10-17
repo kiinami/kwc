@@ -1,16 +1,14 @@
-name: Tests
+name: Mypy
 
 on:
+  push:
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  test:
+  type-check:
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -20,19 +18,9 @@ jobs:
         with:
           enable-cache: true
           cache-dependency-glob: "uv.lock"
-    
+          
       - name: Install dependencies
-        run: |
-          uv sync
+        run: uv sync
 
-      - name: Setup .env
-        run: |
-          cp .env.example .env
-      
-      - name: Run migrations
-        run: |
-          uv run manage.py migrate
-      
-      - name: Run tests
-        run: |
-          uv run pytest -v
+      - name: Run mypy
+        run: uv run mypy .

@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 
+
 class ExtractionJob(models.Model):
 	class Status(models.TextChoices):
 		PENDING = "pending", "Pending"
@@ -42,7 +43,7 @@ class ExtractionJob(models.Model):
 		if not start:
 			return 0.0
 		end = self.finished_at or timezone.now()
-		return max(0.0, (end - start).total_seconds())
+		return max(0.0, (end - start).total_seconds())  # type: ignore[no-any-return]
 
 	def status_css(self) -> str:
 		return {

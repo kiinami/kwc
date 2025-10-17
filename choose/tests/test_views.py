@@ -13,7 +13,6 @@ from PIL import Image
 
 from ..models import FolderProgress, ImageDecision
 
-
 pytestmark = pytest.mark.django_db(transaction=True)
 
 
@@ -42,7 +41,12 @@ class MediaLibraryViewsTests(TestCase):
 			if mw != 'whitenoise.middleware.WhiteNoiseMiddleware'
 		]
 
-	def _write_image(self, path: Path, size: tuple[int, int] = (640, 360), color: tuple[int, int, int] = (80, 80, 80)) -> None:
+	def _write_image(
+		self,
+		path: Path,
+		size: tuple[int, int] = (640, 360),
+		color: tuple[int, int, int] = (80, 80, 80),
+	) -> None:
 		path.parent.mkdir(parents=True, exist_ok=True)
 		img = Image.new('RGB', size, color)
 		img.save(path, format='JPEG', quality=90)
@@ -107,8 +111,12 @@ class MediaLibraryViewsTests(TestCase):
 			(folder_path / extra).write_bytes(b'x')
 
 		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
-			ImageDecision.objects.create(folder=self.folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP)
-			ImageDecision.objects.create(folder=self.folder_name, filename='frame02.jpg', decision=ImageDecision.DECISION_DELETE)
+			ImageDecision.objects.create(
+				folder=self.folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP
+			)
+			ImageDecision.objects.create(
+				folder=self.folder_name, filename='frame02.jpg', decision=ImageDecision.DECISION_DELETE
+			)
 
 			response = self.client.post(reverse('choose:save_api', kwargs={'folder': self.folder_name}))
 			self.assertEqual(response.status_code, 200)
@@ -135,8 +143,12 @@ class MediaLibraryViewsTests(TestCase):
 			(folder_path / extra).write_bytes(b'y')
 
 		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
-			ImageDecision.objects.create(folder=self.folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP)
-			ImageDecision.objects.create(folder=self.folder_name, filename='frame02.jpg', decision=ImageDecision.DECISION_DELETE)
+			ImageDecision.objects.create(
+				folder=self.folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP
+			)
+			ImageDecision.objects.create(
+				folder=self.folder_name, filename='frame02.jpg', decision=ImageDecision.DECISION_DELETE
+			)
 			self.client.post(reverse('choose:save_api', kwargs={'folder': self.folder_name}))
 
 		FolderProgress.objects.get(folder=self.folder_name)
@@ -147,7 +159,9 @@ class MediaLibraryViewsTests(TestCase):
 		self.assertGreaterEqual(len(folder_files), 3)
 
 		next_image_name = folder_files[1]
-		ImageDecision.objects.create(folder=self.folder_name, filename=next_image_name, decision=ImageDecision.DECISION_KEEP)
+		ImageDecision.objects.create(
+			folder=self.folder_name, filename=next_image_name, decision=ImageDecision.DECISION_KEEP
+		)
 
 		with self.settings(WALLPAPERS_FOLDER=self.temp_dir, MIDDLEWARE=self._middleware):
 			chooser_response = self.client.get(reverse('choose:folder', kwargs={'folder': self.folder_name}))

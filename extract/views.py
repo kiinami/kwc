@@ -1,5 +1,3 @@
-import json
-import logging
 import os
 import uuid
 from pathlib import Path
@@ -18,11 +16,12 @@ try:
 except Exception:  # pragma: no cover
 	_guessit = None
 
+import contextlib
+
 from .forms import ExtractStartForm
+from .job_runner import JobRunner, job_runner
 from .models import ExtractionJob
 from .utils import render_pattern
-from .job_runner import JobRunner, job_runner
-
 
 FINISHED_STATUSES = JobRunner.FINISHED_STATUSES
 
@@ -303,7 +302,7 @@ def folders_api(request: HttpRequest) -> JsonResponse:
 
 	Returns a list of folders that can be used for selection in the extract form.
 	"""
-	from choose.utils import list_media_folders
+	from choose.utils import list_media_folders  # noqa: PLC0415
 	folders, _ = list_media_folders()
 	# Return folder data including cover URLs for the dropdown
 	result = [
@@ -327,8 +326,9 @@ def tmdb_search_api(request: HttpRequest) -> JsonResponse:
 	- query: The title to search for (required)
 	- year: Optional year to filter results
 	"""
-	from django.conf import settings
-	from . import tmdb
+	from django.conf import settings  # noqa: PLC0415
+
+	from . import tmdb  # noqa: PLC0415
 
 	if not settings.TMDB_API_KEY:
 		return JsonResponse({"error": "tmdb_not_configured"}, status=500)
@@ -340,10 +340,8 @@ def tmdb_search_api(request: HttpRequest) -> JsonResponse:
 	year_str = request.GET.get("year", "").strip()
 	year = None
 	if year_str:
-		try:
+		with contextlib.suppress(ValueError):
 			year = int(year_str)
-		except ValueError:
-			pass
 
 	try:
 		tmdb.configure_api_key(settings.TMDB_API_KEY)
@@ -361,8 +359,9 @@ def tmdb_posters_api(request: HttpRequest) -> JsonResponse:
 	- media_type: Either "movie" or "tv" (required)
 	- media_id: The TMDB ID of the media (required)
 	"""
-	from django.conf import settings
-	from . import tmdb
+	from django.conf import settings  # noqa: PLC0415
+
+	from . import tmdb  # noqa: PLC0415
 
 	if not settings.TMDB_API_KEY:
 		return JsonResponse({"error": "tmdb_not_configured"}, status=500)

@@ -150,7 +150,10 @@ def test_find_highest_counter_with_season_episode(tmp_path: Path) -> None:
 	(tmp_path / "Test S01E01 ~ 0001.jpg").touch()
 	(tmp_path / "Test S01E01 ~ 0020.jpg").touch()
 	
-	pattern = "{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}{% if episode %}E{{ episode|pad:2 }}{% endif %} ~ {{ counter|pad:4 }}.jpg"
+	pattern = (
+		"{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}"
+		"{% if episode %}E{{ episode|pad:2 }}{% endif %} ~ {{ counter|pad:4 }}.jpg"
+	)
 	context = {"title": "Test", "season": "01", "episode": "01"}
 	result = extractor._find_highest_counter(tmp_path, pattern, context)
 	assert result == 20
@@ -162,7 +165,7 @@ def test_find_highest_counter_without_pad(tmp_path: Path) -> None:
 	(tmp_path / "output_25.jpg").touch()
 	
 	pattern = "output_{{ counter }}.jpg"
-	context = {}
+	context: dict[str, str | int] = {}
 	result = extractor._find_highest_counter(tmp_path, pattern, context)
 	assert result == 25
 

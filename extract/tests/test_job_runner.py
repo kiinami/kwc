@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 from django.utils import timezone
 
 from extract import job_runner as job_runner_module
-from extract.job_runner import JobRunner
 from extract.extractor import ExtractParams
+from extract.job_runner import JobRunner
 from extract.models import ExtractionJob
 
 
@@ -28,21 +29,21 @@ class ImmediateThread:
 
 
 class FakeManager:
-	def __init__(self, job: "FakeJob") -> None:
+	def __init__(self, job: FakeJob) -> None:
 		self.job = job
 		self.update_calls: list[dict[str, Any]] = []
 
-	def get(self, pk: str) -> "FakeJob":
+	def get(self, pk: str) -> FakeJob:
 		if pk != self.job.id:
 			raise FakeModel.DoesNotExist
 		return self.job
 
-	def filter(self, pk: str) -> "FakeQuerySet":
+	def filter(self, pk: str) -> FakeQuerySet:
 		return FakeQuerySet(self.job, self.update_calls)
 
 
 class FakeQuerySet:
-	def __init__(self, job: "FakeJob", updates: list[dict[str, Any]]) -> None:
+	def __init__(self, job: FakeJob, updates: list[dict[str, Any]]) -> None:
 		self._job = job
 		self._updates = updates
 
@@ -51,7 +52,7 @@ class FakeQuerySet:
 		for key, value in fields.items():
 			setattr(self._job, key, value)
 			if key == "status":
-				self._job.status_transitions.append(self._job.status)
+				self._job.status_transitions.append(self._job.status)  # type: ignore[arg-type]
 		self._job.updated_at = timezone.now()
 
 
@@ -60,7 +61,7 @@ class FakeModel:
 	DoesNotExist = type("DoesNotExist", (Exception,), {})
 
 
-def make_fake_job(job_id: str = "job123") -> "FakeJob":
+def make_fake_job(job_id: str = "job123") -> FakeJob:
 	return FakeJob(job_id)
 
 
@@ -96,7 +97,7 @@ class FakeJob:
 	def save(self, update_fields: list[str] | None = None) -> None:
 		self.saved_payloads.append(update_fields)
 		if update_fields and "status" in update_fields:
-			self.status_transitions.append(self.status)
+			self.status_transitions.append(self.status)  # type: ignore[arg-type]
 		self.updated_at = timezone.now()
 
 	def refresh_from_db(self) -> None:
@@ -104,14 +105,14 @@ class FakeJob:
 
 
 def _configure_runner(job: FakeJob, extractor: Callable[..., int]) -> tuple[JobRunner, FakeManager]:
-	FakeModel.objects = FakeManager(job)
-	manager = FakeModel.objects
-	runner = JobRunner(model=FakeModel, extractor=extractor)
+	FakeModel.objects = FakeManager(job)  # type: ignore[attr-defined]
+	manager = FakeModel.objects  # type: ignore[attr-defined]
+	runner = JobRunner(model=FakeModel, extractor=extractor)  # type: ignore[arg-type]
 
 	def thread_factory(target: Callable[[str], None], args: tuple[str, ...]) -> ImmediateThread:
 		return ImmediateThread(runner, target, args)
 
-	runner._thread_factory = thread_factory
+	runner._thread_factory = thread_factory  # type: ignore[assignment]
 	return runner, manager
 
 
