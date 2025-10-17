@@ -304,10 +304,6 @@
       flex: 1;
     }
 
-    .sidebar-header .toggle-sidebar-btn {
-      flex-shrink: 0;
-    }
-
     .toggle-sidebar-btn {
       position: relative;
       width: 2.5rem;
@@ -331,8 +327,8 @@
 
     .toggle-sidebar-btn--floating {
       position: absolute;
-      top: clamp(1rem, 4vh, 1.5rem);
       left: clamp(1rem, 4vw, 1.5rem);
+      bottom: clamp(1rem, 4vh, 1.75rem);
       opacity: 0;
       pointer-events: none;
       z-index: 6;
@@ -380,8 +376,7 @@
     .action-buttons {
       display: flex;
       gap: .75rem;
-      align-items: flex-end;
-      justify-content: flex-start;
+      align-items: center;
     }
 
     .action-button {
@@ -432,6 +427,15 @@
     .action-button--delete:hover {
       background: rgba(239,68,68,0.22);
       border-color: rgba(239,68,68,0.85);
+    }
+
+    .action-button--sidebar {
+      margin-left: auto;
+      font-size: 1.1rem;
+    }
+
+    .action-button--sidebar span[aria-hidden="true"] {
+      line-height: 1;
     }
 
     .btn-delete {
@@ -615,7 +619,7 @@
 
       .mobile-sheet-toolbar {
         display: grid;
-        grid-template-columns: auto 1fr auto;
+        grid-template-columns: auto 1fr minmax(0, 1fr);
         align-items: center;
         gap: .9rem;
         touch-action: none;
@@ -651,8 +655,10 @@
       }
 
       .mobile-sheet-actions {
-        display: inline-flex;
+        display: flex;
         align-items: center;
+        justify-self: stretch;
+        width: 100%;
         gap: .55rem;
       }
 
@@ -701,6 +707,15 @@
       .mobile-action-button--delete:focus-visible {
         background: rgba(239,68,68,0.24);
         border-color: rgba(239,68,68,0.85);
+      }
+
+      .mobile-action-button--sidebar {
+        margin-left: auto;
+        font-size: 1.2rem;
+      }
+
+      .mobile-action-button--sidebar span[aria-hidden="true"] {
+        line-height: 1;
       }
 
       .lightbox-sidebar::after {
@@ -763,6 +778,10 @@
                 </svg>
                 <span class="sr-only">Delete image</span>
               </button>
+              <button class="mobile-action-button mobile-action-button--sidebar" type="button" data-toggle-sidebar aria-label="Toggle sidebar" title="Toggle sidebar">
+                <span aria-hidden="true">⇤</span>
+                <span class="sr-only">Toggle sidebar</span>
+              </button>
             </div>
           </div>
         </div>
@@ -770,24 +789,27 @@
           <div class="sidebar-section sidebar-section--intro">
             <div class="sidebar-header">
               <a href="{% url 'choose:gallery' folder=folder %}" class="back-btn">← Back to gallery</a>
-              <button class="toggle-sidebar-btn" type="button" data-toggle-sidebar aria-label="Hide sidebar" title="Hide sidebar">⇤</button>
             </div>
             <div class="metadata-title-group">
               <div class="metadata-title">{{ title }}</div>
               {% if year %}<div class="metadata-year">{{ year }}</div>{% endif %}
             </div>
-            {% if season or episode %}
+            {% if season_display %}
               <div class="metadata-row">
-                <span class="metadata-label">Section</span>
-                <span class="metadata-value">
-                  {% if season %}Season {{ season }}{% endif %}
-                  {% if season and episode %} · {% endif %}
-                  {% if episode %}
-                    {% if episode == 'IN' %}Intro
-                    {% elif episode == 'OU' %}Outro
-                    {% else %}Episode {{ episode }}{% endif %}
-                  {% endif %}
-                </span>
+              <span class="metadata-label">Season</span>
+              <span class="metadata-value">{{ season_display }}</span>
+              </div>
+            {% endif %}
+            {% if episode_display %}
+              <div class="metadata-row">
+              <span class="metadata-label">Episode</span>
+              <span class="metadata-value">{{ episode_display }}</span>
+              </div>
+            {% endif %}
+            {% if counter %}
+              <div class="metadata-row">
+              <span class="metadata-label">Counter</span>
+              <span class="metadata-value">{{ counter }}</span>
               </div>
             {% endif %}
             {% if current_image.version_suffix %}
@@ -872,6 +894,10 @@
                   <path d="M14 11v6" />
                 </svg>
                 <span class="sr-only">Delete image</span>
+              </button>
+              <button class="action-button action-button--sidebar" type="button" data-toggle-sidebar aria-label="Toggle sidebar" title="Toggle sidebar">
+                <span aria-hidden="true">⇤</span>
+                <span class="sr-only">Toggle sidebar</span>
               </button>
             </div>
           </div>

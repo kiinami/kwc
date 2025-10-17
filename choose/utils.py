@@ -266,6 +266,25 @@ def thumbnail_url(
     return f"{base}?{query}" if query else base
 
 
+def parse_counter(filename: str) -> str:
+    """Extract the numeric counter from a wallpaper filename.
+
+    Args:
+        filename: The filename to parse (e.g., "Title 〜 0001.jpg", "Title 〜 0001U.jpg").
+
+    Returns:
+        The counter portion as a string (including any padding) or an empty string if
+        no counter could be identified.
+    """
+
+    # Remove any valid/invalid version suffix to keep only the base name and counter
+    base_name = strip_version_suffix(filename)
+    stem, _ = os.path.splitext(base_name)
+
+    match = re.search(r"(\d+)$", stem)
+    return match.group(1) if match else ""
+
+
 def parse_season_episode(filename: str) -> tuple[str, str]:
     """Parse season and episode from a filename.
     

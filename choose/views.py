@@ -23,8 +23,10 @@ from .models import ImageDecision
 from .constants import THUMB_MAX_DIMENSION, THUMB_CACHE_SIZE
 from .services import load_folder_context, list_gallery_images
 from .utils import (
-	wallpapers_root,
+	parse_counter,
+	parse_season_episode,
 	validate_folder_name,
+	wallpapers_root,
 )
 
 
@@ -91,9 +93,33 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 	except Exception:
 		width, height = 0, 0
 	
-	# Parse season/episode from filename
-	from .utils import parse_season_episode
+	# Parse season/episode/counter metadata from filename
 	season, episode = parse_season_episode(safe_filename)
+	counter = parse_counter(safe_filename)
+
+	def _normalize_number(token: str) -> str:
+		if not token:
+			return ""
+		try:
+			return str(int(token))
+		except (ValueError, TypeError):
+			return token
+
+	season_display = _normalize_number(season) if season else ""
+	if season and not season_display:
+		season_display = season
+
+	if episode:
+		upper_episode = episode.upper()
+		if upper_episode == "IN":
+			episode_display = "Intro"
+		elif upper_episode == "OU":
+			episode_display = "Outro"
+		else:
+			normalized_episode = _normalize_number(episode)
+			episode_display = normalized_episode or episode
+	else:
+		episode_display = ""
 	
 	lightbox_context = {
 		**context.to_dict(),
@@ -106,7 +132,10 @@ def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:
 		'image_width': width,
 		'image_height': height,
 		'season': season,
+		'season_display': season_display,
 		'episode': episode,
+		'episode_display': episode_display,
+		'counter': counter,
 		'filepath': str(image_path.relative_to(root)),
 	}
 	
