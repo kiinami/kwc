@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Iterable
+from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
-from unittest.mock import patch
 
 from .extractor import ExtractParams, extract
 
@@ -27,7 +27,7 @@ class ExtractorWorkerSelectionTests(SimpleTestCase):
 			def __init__(self, *, max_workers: int | None = None):
 				self.max_workers = max_workers
 
-			def __enter__(self) -> "FakeExecutor":
+			def __enter__(self) -> FakeExecutor:
 				return self
 
 			def __exit__(self, exc_type, exc, tb) -> None:

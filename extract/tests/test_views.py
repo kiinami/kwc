@@ -1,7 +1,7 @@
+
 import pytest
-from django.test import Client, override_settings
+from django.test import Client
 from django.urls import reverse
-from unittest.mock import patch, MagicMock
 
 from extract.models import ExtractionJob
 

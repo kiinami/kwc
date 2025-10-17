@@ -1,4 +1,11 @@
-from django.shortcuts import render, redirect
+import logging
+import os
+from functools import lru_cache
+from io import BytesIO
+from pathlib import Path
+from typing import NamedTuple
+
+from django.db import transaction
 from django.http import (
 	Http404,
 	HttpRequest,
@@ -6,29 +13,21 @@ from django.http import (
 	HttpResponseNotModified,
 	JsonResponse,
 )
+from django.shortcuts import redirect, render
 from django.utils.http import http_date, parse_http_date
 from django.views.decorators.http import require_GET, require_POST
-from django.db import transaction
-from functools import lru_cache
-from io import BytesIO
-from pathlib import Path
-from typing import NamedTuple
-import logging
-import os
-
 from PIL import Image, ImageOps
 
 from .api import APIError, DecisionPayload, apply_decisions, parse_decision_request
+from .constants import THUMB_CACHE_SIZE, THUMB_MAX_DIMENSION
 from .models import ImageDecision
-from .constants import THUMB_MAX_DIMENSION, THUMB_CACHE_SIZE
-from .services import load_folder_context, list_gallery_images
+from .services import list_gallery_images, load_folder_context
 from .utils import (
 	parse_counter,
 	parse_season_episode,
 	validate_folder_name,
 	wallpapers_root,
 )
-
 
 logger = logging.getLogger(__name__)
 def index(request: HttpRequest) -> HttpResponse:
@@ -191,9 +190,7 @@ def _render_thumbnail_cached(path_str: str, width: int, height: int, mtime_ns: i
 			img.save(buffer, "PNG", optimize=True)
 			content_type = "image/png"
 		else:
-			if img.mode not in ("RGB", "L"):
-				img = img.convert("RGB")
-			elif img.mode == "L":
+			if img.mode not in ("RGB", "L") or img.mode == "L":
 				img = img.convert("RGB")
 			img.save(buffer, "JPEG", quality=82, optimize=True, progressive=True)
 			content_type = "image/jpeg"
@@ -266,7 +263,7 @@ def decide_api(request: HttpRequest, folder: str) -> JsonResponse:
 		payload = parse_decision_request(request.body)
 	except APIError as exc:
 		return JsonResponse({"error": exc.code}, status=exc.status)
-	except Exception as exc:  # pragma: no cover - defensive
+	except Exception:  # pragma: no cover - defensive
 		logger.exception("Unexpected error parsing decision payload for %s", folder)
 		return JsonResponse({"error": "invalid_json"}, status=400)
 
@@ -300,7 +297,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 			payload = parse_decision_request(request.body)
 		except APIError as exc:
 			return JsonResponse({"error": exc.code}, status=exc.status)
-		except Exception as exc:  # pragma: no cover - defensive
+		except Exception:  # pragma: no cover - defensive
 			logger.exception("Unexpected error parsing request body for save_api on %s", folder)
 			return JsonResponse({"error": "invalid_json"}, status=400)
 	elif request.body:
@@ -315,7 +312,7 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
 			result = apply_decisions(folder, payload)
 	except APIError as exc:
 		return JsonResponse({"error": exc.code}, status=exc.status)
-	except Exception as exc:  # pragma: no cover - defensive
+	except Exception:  # pragma: no cover - defensive
 		logger.exception("Unexpected error applying decisions for %s", folder)
 		return JsonResponse({"error": "unexpected_error"}, status=500)
 

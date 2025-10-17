@@ -363,8 +363,7 @@ def load_folder_context(folder: str, season: str | None = None, episode: str | N
     if images:
         if start_index >= len(images):
             start_index = len(images) - 1
-        if start_index < 0:
-            start_index = 0
+        start_index = max(start_index, 0)
         for idx in range(start_index, len(images)):
             if not images[idx].get("decision"):
                 selected_index = idx

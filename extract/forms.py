@@ -1,10 +1,9 @@
 import json
+import os
 import re
 from datetime import timedelta
 
 from django import forms
-import os
-
 
 TIME_RANGE_RE = re.compile(r"^\d{2}:\d{2}:\d{2}-\d{2}:\d{2}:\d{2}$")
 

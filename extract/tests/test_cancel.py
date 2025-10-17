@@ -1,8 +1,9 @@
 """Tests for job cancellation functionality."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import pytest
 from django.utils import timezone
@@ -30,21 +31,21 @@ class ImmediateThread:
 
 
 class FakeManager:
-	def __init__(self, job: "FakeJob") -> None:
+	def __init__(self, job: FakeJob) -> None:
 		self.job = job
 		self.update_calls: list[dict[str, Any]] = []
 
-	def get(self, pk: str) -> "FakeJob":
+	def get(self, pk: str) -> FakeJob:
 		if pk != self.job.id:
 			raise FakeModel.DoesNotExist
 		return self.job
 
-	def filter(self, pk: str) -> "FakeQuerySet":
+	def filter(self, pk: str) -> FakeQuerySet:
 		return FakeQuerySet(self.job, self.update_calls)
 
 
 class FakeQuerySet:
-	def __init__(self, job: "FakeJob", updates: list[dict[str, Any]]) -> None:
+	def __init__(self, job: FakeJob, updates: list[dict[str, Any]]) -> None:
 		self._job = job
 		self._updates = updates
 
@@ -62,7 +63,7 @@ class FakeModel:
 	DoesNotExist = type("DoesNotExist", (Exception,), {})
 
 
-def make_fake_job(job_id: str = "job123") -> "FakeJob":
+def make_fake_job(job_id: str = "job123") -> FakeJob:
 	return FakeJob(job_id)
 
 

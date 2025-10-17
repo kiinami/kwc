@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from choose.models import FolderProgress, ImageDecision
-from choose.services import load_folder_context, list_gallery_images
+from choose.services import list_gallery_images, load_folder_context
 from choose.utils import wallpapers_root
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -42,7 +42,7 @@ def test_list_gallery_images_handles_permission_error(monkeypatch: pytest.Monkey
 	folder = wallpapers_dir / "Show"
 	folder.mkdir()
 
-	import choose.services as services
+	from choose import services
 
 	def deny(_path: Path) -> list[str]:
 		raise PermissionError("denied")
@@ -63,7 +63,7 @@ def test_load_folder_context_permission_error(monkeypatch: pytest.MonkeyPatch, w
 	folder = wallpapers_dir / "Clip"
 	folder.mkdir()
 
-	import choose.services as services
+	from choose import services
 
 	def deny(_path: Path) -> list[str]:
 		raise PermissionError("nope")

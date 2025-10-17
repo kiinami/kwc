@@ -13,7 +13,6 @@ from PIL import Image
 
 from ..models import FolderProgress, ImageDecision
 
-
 pytestmark = pytest.mark.django_db(transaction=True)
 
 

@@ -2,16 +2,15 @@ from __future__ import annotations
 
 import logging
 import threading
+from collections.abc import Callable
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Callable
 
 from django.db import close_old_connections
 from django.utils import timezone
 
 from .extractor import CancellationToken, CancelledException, ExtractParams, extract
 from .models import ExtractionJob
-
 
 logger = logging.getLogger(__name__)
 
@@ -182,9 +181,10 @@ class JobRunner:
 
 	def _download_cover_image(self, url: str, output_dir: Path) -> None:
 		"""Download a cover image from a URL and save it to the output directory."""
+		from io import BytesIO
+
 		import requests
 		from PIL import Image
-		from io import BytesIO
 		
 		try:
 			# Create output directory if it doesn't exist

@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
 
+
 class ExtractionJob(models.Model):
 	class Status(models.TextChoices):
 		PENDING = "pending", "Pending"

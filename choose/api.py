@@ -16,12 +16,12 @@ from kwc.utils.files import safe_remove, safe_rename
 from .constants import SEASON_EPISODE_PATTERN
 from .models import FolderProgress, ImageDecision
 from .utils import (
+    add_version_suffix,
     get_folder_path,
     list_image_files,
     parse_title_year_from_folder,
     parse_version_suffix,
     strip_version_suffix,
-    add_version_suffix,
     validate_folder_name,
     wallpapers_root,
 )
@@ -216,7 +216,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
         new_base_name = render_pattern(pattern, values)
         # Add both base and versioned names to the set
         keep_dest_names.add(new_base_name)
-        if original_name in suffix_map and suffix_map[original_name]:
+        if suffix_map.get(original_name):
             versioned_name = add_version_suffix(new_base_name, suffix_map[original_name])
             keep_dest_names.add(versioned_name)
 
@@ -290,7 +290,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
             new_name = render_pattern(pattern, values)
             
             # Re-apply version suffix if the original had one
-            if original_name in suffix_map and suffix_map[original_name]:
+            if suffix_map.get(original_name):
                 new_name = add_version_suffix(new_name, suffix_map[original_name])
             
             dest = target / new_name
@@ -388,8 +388,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
         if decision == ImageDecision.DECISION_KEEP and indices_by_name.get(name, len(files)) >= prev_keep_count
     }
     new_processed_count = remaining_prev_keep_count + len(keep_names_beyond_prev)
-    if new_processed_count > len(final_keep_names):
-        new_processed_count = len(final_keep_names)
+    new_processed_count = min(new_processed_count, len(final_keep_names))
 
     anchor_name = ""
     if new_processed_count > 0 and final_keep_names:

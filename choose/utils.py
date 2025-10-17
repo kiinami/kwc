@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, TypedDict
+from typing import TypedDict
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
 
-from .constants import IMAGE_EXTS, SEASON_EPISODE_PATTERN
 from kwc.utils.files import cache_token
+
+from .constants import IMAGE_EXTS, SEASON_EPISODE_PATTERN
 
 
 def parse_version_suffix(filename: str) -> tuple[str, str]:

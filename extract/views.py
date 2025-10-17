@@ -1,5 +1,3 @@
-import json
-import logging
 import os
 import uuid
 from pathlib import Path
@@ -19,10 +17,9 @@ except Exception:  # pragma: no cover
 	_guessit = None
 
 from .forms import ExtractStartForm
+from .job_runner import JobRunner, job_runner
 from .models import ExtractionJob
 from .utils import render_pattern
-from .job_runner import JobRunner, job_runner
-
 
 FINISHED_STATUSES = JobRunner.FINISHED_STATUSES
 
@@ -328,6 +325,7 @@ def tmdb_search_api(request: HttpRequest) -> JsonResponse:
 	- year: Optional year to filter results
 	"""
 	from django.conf import settings
+
 	from . import tmdb
 
 	if not settings.TMDB_API_KEY:
@@ -362,6 +360,7 @@ def tmdb_posters_api(request: HttpRequest) -> JsonResponse:
 	- media_id: The TMDB ID of the media (required)
 	"""
 	from django.conf import settings
+
 	from . import tmdb
 
 	if not settings.TMDB_API_KEY:

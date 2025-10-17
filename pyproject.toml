@@ -30,8 +30,7 @@ DJANGO_SETTINGS_MODULE = "kwc.settings"
 python_files = ["tests.py", "test_*.py", "*_tests.py"]
 
 [tool.ruff]
-select = ["E", "F", "I", "UP", "B", "C4", "T20", "SIM", "PL", "RUF"]
-ignore = ["E501"] # Ignore line length for now
+lint.select = ["E", "F", "I", "UP", "B", "C4", "T20", "SIM", "PL", "RUF"]
 fix = true
 line-length = 120
 indent-width = 4

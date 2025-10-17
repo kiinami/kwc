@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from django.urls import reverse
 
-import choose.api as api
+from choose import api
 from choose.models import FolderProgress, ImageDecision
 
 pytestmark = pytest.mark.django_db(transaction=True)

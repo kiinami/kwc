@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from choose.services import format_section_title
 from choose.utils import (
 	MediaFolder,
 	add_version_suffix,
@@ -16,7 +17,6 @@ from choose.utils import (
 	strip_version_suffix,
 	validate_folder_name,
 )
-from choose.services import format_section_title
 from kwc.utils.files import cache_token
 
 

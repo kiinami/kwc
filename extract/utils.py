@@ -5,8 +5,8 @@ import logging
 from pathlib import Path
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 
+from django.template import Context, Engine
 from ffmpeg import FFmpeg
-from django.template import Engine, Context
 
 logger = logging.getLogger(__name__)
 

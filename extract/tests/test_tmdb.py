@@ -1,8 +1,9 @@
 """Tests for TMDB integration."""
 
-import pytest
 from unittest.mock import MagicMock, patch
-from django.test import TestCase, override_settings
+
+import pytest
+from django.test import TestCase
 
 from extract import tmdb
 
@@ -29,7 +30,7 @@ class TMDBServiceTests(TestCase):
         
         # Verify the key was set by checking the module
         import tmdbsimple
-        assert tmdbsimple.API_KEY == test_key
+        assert test_key == tmdbsimple.API_KEY
 
     @patch('extract.tmdb.tmdb.Search')
     def test_search_multi_returns_results(self, mock_search_class):
