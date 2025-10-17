@@ -1,4 +1,4 @@
-name: Mypy type checking
+name: Mypy
 
 on:
   push:
