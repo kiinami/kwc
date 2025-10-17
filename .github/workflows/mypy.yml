@@ -1,4 +1,4 @@
-name: Mypy Type Check
+name: Mypy type checking
 
 on:
   push:
@@ -10,14 +10,17 @@ jobs:
   type-check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Install uv and set the python version
+        uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d # v7
         with:
-          python-version: '3.13'
-      - name: Install uv
-        run: pip install uv
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          
       - name: Install dependencies
         run: uv sync
+
       - name: Run mypy
         run: uv run mypy .

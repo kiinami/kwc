@@ -33,6 +33,7 @@
 - `.github/workflows/publish.yml` - Docker build→GHCR (30min timeout, no linting/tests in CI)
 - `.github/workflows/test.yml` - Test workflow (uv sync, pytest)
 - `.github/workflows/ruff.yml` - Ruff linter workflow
+- `.github/workflows/mypy.yml` - Mypy type checking workflow
 
 ## Environment Setup
 
@@ -95,12 +96,12 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
    - Format: `uv run ruff format .`
    - Check: `uv run ruff check .`
    - Fix: `uv run ruff check . --fix`
-   - Will run when committing after pre-commit is set up
+   - Will run automatically when committing after pre-commit is set up
 
 3. Typing
    - Check: `uv run mypy .`
    - Fix typing issues before committing
-   - Will run when committing after pre-commit is set up
+   - Will run automatically when committing after pre-commit is set up
 
 **File operations:**
 - Delete unused or obsolete files when your changes make them irrelevant (refactors, feature removals, etc.)
