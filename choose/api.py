@@ -125,16 +125,17 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
     undecided = [name for name in files if name not in to_delete and name not in to_keep]
     to_keep.extend(undecided)
     
-    # Parse folder name to extract title and season/episode info
-    # Folder format: "Title" or "Title S01" or "Title S01E03" or "Title E03"
+    # Parse folder name to extract title, optional year, and season/episode
+    # Examples: "Title", "Title (2024)", "Title S01", "Title S01E03", "Title E03"
     season, episode = parse_season_episode(safe_name)
-    
-    # Extract title (everything before season/episode markers)
-    title = safe_name
+
+    # Parse title and optional year first so that "Movie (2024)" -> ("Movie", 2024)
+    title, parsed_year = parse_title_year_from_folder(safe_name)
+
+    # Remove season/episode markers from the title if present
     if season or episode:
-        import re
         pattern = r'\s+S\d+|\s+E[A-Z0-9]+|\s+S\d+E[A-Z0-9]+'
-        title = re.sub(pattern, '', safe_name, flags=re.IGNORECASE).strip()
+        title = re.sub(pattern, '', title, flags=re.IGNORECASE).strip()
     
     # Determine target folder in wallpapers directory
     # Use EXTRACT_FOLDER_PATTERN to create the folder name (title with optional year)
@@ -237,9 +238,13 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
             # Reuse the same counter for this version
             counter = base_to_counter[lookup_key]
         else:
-            # New base image - assign new counter
-            counter = counters.get(key, 0) + 1
-            counters[key] = counter
+            # New base image - prefer to reuse the existing highest counter if present
+            # This allows creating a _dup fallback when an existing file uses that counter,
+            # and then increment for subsequent images.
+            current_high = counters.get(key, 0)
+            counter = current_high if current_high > 0 else 1
+            # Advance the stored counter so the next new base gets the next number
+            counters[key] = counter + 1
             base_to_counter[lookup_key] = counter
         
         # Build new filename
