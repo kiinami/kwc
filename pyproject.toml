@@ -31,6 +31,15 @@ python_files = ["tests.py", "test_*.py", "*_tests.py"]
 
 [tool.ruff]
 lint.select = ["E", "F", "I", "UP", "B", "C4", "T20", "SIM", "PL", "RUF"]
+lint.ignore = [
+    "PLR2004",  # magic-value-comparison - common pattern in Django
+    "PLR0911",  # too-many-return-statements - style preference
+    "PLR0912",  # too-many-branches - style preference
+    "PLR0915",  # too-many-statements - style preference
+    "PLW2901",  # redefined-loop-name - intentional in some cases
+    "RUF012",   # mutable-class-default - mostly in auto-generated migrations
+    "SIM117",   # multiple-with-statements - style preference
+]
 fix = true
 line-length = 120
 indent-width = 4
