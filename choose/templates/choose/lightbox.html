@@ -1490,11 +1490,16 @@
             });
             
             // Apply decisions (which will delete the file and rename others)
+            // Pass immediate_delete flag to permanently delete from lightbox
             const response = await fetch(`/choose/${encodeURIComponent(folder)}/save`, {
               method: 'POST',
               headers: {
+                'Content-Type': 'application/json',
                 'X-CSRFToken': csrfToken,
               },
+              body: JSON.stringify({
+                immediate_delete: true,
+              }),
             });
             
             if (!response.ok) {

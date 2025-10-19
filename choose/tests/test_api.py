@@ -18,6 +18,13 @@ def wallpapers_dir(tmp_path: Path, settings) -> Path:
 	return tmp_path
 
 
+@pytest.fixture()
+def discards_dir(tmp_path: Path, settings) -> Path:
+	discards = tmp_path / 'discards'
+	settings.DISCARDS_FOLDER = str(discards)
+	return discards
+
+
 def test_decide_api_invalid_json(client) -> None:
 	response = client.post(
 		reverse('choose:decide', kwargs={'folder': 'Movie'}),
@@ -306,4 +313,146 @@ def test_save_api_removes_invalid_suffixes(client, wallpapers_dir: Path) -> None
 	assert not any('e.jpg' in f for f in files_after if not f.startswith('.'))
 	assert not any('EE.jpg' in f for f in files_after if not f.startswith('.'))
 	assert not any('EPU.jpg' in f for f in files_after if not f.startswith('.'))
+
+
+def test_save_api_moves_discarded_to_folder(client, wallpapers_dir: Path, discards_dir: Path) -> None:
+	"""Test that discarded images are moved to the discards folder with sequential naming."""
+	folder_name = 'Show (2024)'
+	folder = wallpapers_dir / folder_name
+	folder.mkdir()
+	
+	# Create test files
+	(folder / 'frame01.jpg').write_bytes(b'image1')
+	(folder / 'frame02.jpg').write_bytes(b'image2')
+	(folder / 'frame03.jpg').write_bytes(b'image3')
+	
+	# Mark some as keep, some as delete
+	ImageDecision.objects.create(folder=folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_KEEP)
+	ImageDecision.objects.create(folder=folder_name, filename='frame02.jpg', decision=ImageDecision.DECISION_DELETE)
+	ImageDecision.objects.create(folder=folder_name, filename='frame03.jpg', decision=ImageDecision.DECISION_DELETE)
+	
+	response = client.post(reverse('choose:save_api', kwargs={'folder': folder_name}))
+	
+	assert response.status_code == 200
+	payload = response.json()
+	assert payload['ok'] is True
+	assert payload['deleted'] == 2
+	assert payload['kept'] == 1
+	
+	# Check that kept file remains in wallpapers folder
+	files_after = {p.name for p in folder.iterdir()}
+	assert 'Show 〜 0001.jpg' in files_after
+	assert 'frame02.jpg' not in files_after
+	assert 'frame03.jpg' not in files_after
+	
+	# Check that discarded files are in discards folder with sequential naming
+	assert discards_dir.exists()
+	discarded_files = sorted(p.name for p in discards_dir.iterdir())
+	assert len(discarded_files) == 2
+	assert 'frame000001.jpg' in discarded_files
+	assert 'frame000002.jpg' in discarded_files
+	
+	# Verify content was preserved
+	assert (discards_dir / 'frame000001.jpg').read_bytes() == b'image2'
+	assert (discards_dir / 'frame000002.jpg').read_bytes() == b'image3'
+
+
+def test_save_api_immediate_delete_permanently_deletes(client, wallpapers_dir: Path, discards_dir: Path) -> None:
+	"""Test that immediate_delete flag causes permanent deletion instead of moving to discards."""
+	folder_name = 'Movie'
+	folder = wallpapers_dir / folder_name
+	folder.mkdir()
+	
+	# Create test file
+	(folder / 'scene01.jpg').write_bytes(b'image1')
+	
+	# Mark as delete
+	ImageDecision.objects.create(folder=folder_name, filename='scene01.jpg', decision=ImageDecision.DECISION_DELETE)
+	
+	# Call with immediate_delete flag (simulating lightbox delete)
+	payload = json.dumps({'immediate_delete': True})
+	response = client.post(
+		reverse('choose:save_api', kwargs={'folder': folder_name}),
+		data=payload,
+		content_type='application/json',
+	)
+	
+	assert response.status_code == 200
+	result = response.json()
+	assert result['ok'] is True
+	assert result['deleted'] == 1
+	
+	# File should be permanently deleted, not moved to discards
+	assert not (folder / 'scene01.jpg').exists()
+	assert not discards_dir.exists() or len(list(discards_dir.iterdir())) == 0
+
+
+def test_save_api_no_discards_folder_deletes_permanently(client, wallpapers_dir: Path, settings) -> None:
+	"""Test that when DISCARDS_FOLDER is not set, files are permanently deleted."""
+	# Clear the discards folder setting
+	settings.DISCARDS_FOLDER = ''
+	
+	folder_name = 'Series'
+	folder = wallpapers_dir / folder_name
+	folder.mkdir()
+	
+	# Create test files
+	(folder / 'ep01.jpg').write_bytes(b'image1')
+	(folder / 'ep02.jpg').write_bytes(b'image2')
+	
+	# Mark one as delete
+	ImageDecision.objects.create(folder=folder_name, filename='ep02.jpg', decision=ImageDecision.DECISION_DELETE)
+	
+	response = client.post(reverse('choose:save_api', kwargs={'folder': folder_name}))
+	
+	assert response.status_code == 200
+	payload = response.json()
+	assert payload['ok'] is True
+	assert payload['deleted'] == 1
+	
+	# File should be permanently deleted
+	assert not (folder / 'ep02.jpg').exists()
+
+
+def test_save_api_sequential_counter_across_multiple_saves(client, wallpapers_dir: Path, discards_dir: Path) -> None:
+	"""Test that discarded files get sequential counters across multiple save operations."""
+	folder_name = 'Show'
+	folder = wallpapers_dir / folder_name
+	folder.mkdir()
+	
+	# First batch
+	(folder / 'frame01.jpg').write_bytes(b'batch1_img1')
+	(folder / 'frame02.jpg').write_bytes(b'batch1_img2')
+	ImageDecision.objects.create(folder=folder_name, filename='frame01.jpg', decision=ImageDecision.DECISION_DELETE)
+	ImageDecision.objects.create(folder=folder_name, filename='frame02.jpg', decision=ImageDecision.DECISION_DELETE)
+	
+	response = client.post(reverse('choose:save_api', kwargs={'folder': folder_name}))
+	assert response.status_code == 200
+	
+	# Check first batch
+	discarded_files = sorted(p.name for p in discards_dir.iterdir())
+	assert len(discarded_files) == 2
+	assert 'frame000001.jpg' in discarded_files
+	assert 'frame000002.jpg' in discarded_files
+	
+	# Second batch - create new files and discard them
+	(folder / 'frame03.jpg').write_bytes(b'batch2_img1')
+	(folder / 'frame04.jpg').write_bytes(b'batch2_img2')
+	ImageDecision.objects.create(folder=folder_name, filename='frame03.jpg', decision=ImageDecision.DECISION_DELETE)
+	ImageDecision.objects.create(folder=folder_name, filename='frame04.jpg', decision=ImageDecision.DECISION_DELETE)
+	
+	response = client.post(reverse('choose:save_api', kwargs={'folder': folder_name}))
+	assert response.status_code == 200
+	
+	# Check that counters continue sequentially
+	discarded_files = sorted(p.name for p in discards_dir.iterdir())
+	assert len(discarded_files) == 4
+	assert 'frame000001.jpg' in discarded_files
+	assert 'frame000002.jpg' in discarded_files
+	assert 'frame000003.jpg' in discarded_files
+	assert 'frame000004.jpg' in discarded_files
+	
+	# Verify content
+	assert (discards_dir / 'frame000003.jpg').read_bytes() == b'batch2_img1'
+	assert (discards_dir / 'frame000004.jpg').read_bytes() == b'batch2_img2'
 

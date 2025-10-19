@@ -191,6 +191,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Final wallpapers root directory where extracted frames are stored and later curated.
 WALLPAPERS_FOLDER = os.getenv('KWC_WALLPAPERS_FOLDER', str(BASE_DIR / 'extracted'))
 
+# Directory to store discarded images for model training (optional)
+# If not set or empty, discarded images will be permanently deleted
+DISCARDS_FOLDER = os.getenv('KWC_DISCARDS_FOLDER', '')
+
 
 # Folder pattern (relative to root). Supports Django template syntax and brace placeholders.
 # Example default includes year only when present.

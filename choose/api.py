@@ -29,10 +29,64 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
+def _move_to_discards(source_path: Path, discards_folder: str) -> tuple[bool, str | None]:
+    """Move a file to the discards folder with sequential naming (frame000001.jpg, etc.).
+    
+    Args:
+        source_path: Path to the source file
+        discards_folder: Path to the discards folder
+        
+    Returns:
+        Tuple of (success, error_message)
+    """
+    if not discards_folder:
+        # No discards folder configured, delete permanently
+        try:
+            safe_remove(source_path)
+            return (True, None)
+        except (OSError, IsADirectoryError) as exc:
+            return (False, str(exc))
+    
+    discards_path = Path(discards_folder)
+    
+    # Create discards folder if it doesn't exist
+    try:
+        discards_path.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        logger.error("Failed to create discards folder %s: %s", discards_folder, exc)
+        return (False, f"Failed to create discards folder: {exc}")
+    
+    # Find the next available frame number
+    existing_files = sorted(discards_path.glob("frame*.jpg"))
+    next_counter = 1
+    if existing_files:
+        # Extract counter from last file (e.g., frame000042.jpg -> 42)
+        last_file = existing_files[-1].stem
+        try:
+            last_counter = int(last_file.replace("frame", ""))
+            next_counter = last_counter + 1
+        except ValueError:
+            # If we can't parse, start from the number of files + 1
+            next_counter = len(existing_files) + 1
+    
+    # Generate destination filename with zero-padded counter
+    dest_filename = f"frame{next_counter:06d}.jpg"
+    dest_path = discards_path / dest_filename
+    
+    # Move the file
+    try:
+        safe_rename(source_path, dest_path)
+        return (True, None)
+    except (OSError, FileNotFoundError) as exc:
+        logger.error("Failed to move %s to %s: %s", source_path, dest_path, exc)
+        return (False, str(exc))
+
+
 @dataclass(slots=True, frozen=True)
 class DecisionPayload:
     filename: str = ""
     decision: str = ""
+    immediate_delete: bool = False
 
 
 @dataclass(slots=True, frozen=True)
@@ -81,8 +135,9 @@ def parse_decision_request(body: bytes) -> DecisionPayload:
 
     filename = str(data.get("filename", "")).strip()
     decision = str(data.get("decision", "")).strip()
+    immediate_delete = bool(data.get("immediate_delete", False))
 
-    return DecisionPayload(filename=filename, decision=decision)
+    return DecisionPayload(filename=filename, decision=decision, immediate_delete=immediate_delete)
 
 
 def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
@@ -130,14 +185,19 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
         seen_keeps.add(name)
 
     delete_errors: list[str] = []
+    
+    # Determine if we should move to discards or delete permanently
+    # If immediate_delete is True (lightbox delete), always delete permanently
+    # Otherwise, use discards folder if configured
+    discards_folder = settings.DISCARDS_FOLDER if not payload.immediate_delete else ""
+    
     for name in to_delete:
         path = target / name
-        try:
-            if path.exists() and path.is_file():
-                safe_remove(path)
-        except (OSError, IsADirectoryError) as exc:
-            logger.warning("Failed to delete %s/%s: %s", safe_name, name, exc)
-            delete_errors.append(f"{name}: {exc}")
+        if path.exists() and path.is_file():
+            success, error = _move_to_discards(path, discards_folder)
+            if not success:
+                logger.warning("Failed to handle discarded file %s/%s: %s", safe_name, name, error)
+                delete_errors.append(f"{name}: {error}")
 
     base_title, parsed_year = parse_title_year_from_folder(safe_name)
     pattern = settings.EXTRACT_IMAGE_PATTERN
