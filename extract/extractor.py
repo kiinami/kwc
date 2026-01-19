@@ -12,7 +12,7 @@ from pathlib import Path
 from django.conf import settings
 from ffmpeg import FFmpeg
 
-from .utils import cut_video, get_iframe_timestamps, render_pattern
+from .utils import cut_video, get_iframe_timestamps, render_pattern, check_is_hdr
 
 logger = logging.getLogger(__name__)
 _sleep = time.sleep
@@ -128,13 +128,21 @@ def _find_highest_counter(output_dir: Path, pattern: str, context: Mapping[str, 
     return highest
 
 
-def _extract_frame(args: tuple[Path, float, Path]) -> Path:
-    video, ts, output_file = args
+def _extract_frame(args: tuple[Path, float, Path, bool]) -> Path:
+    video, ts, output_file, is_hdr = args
     retries, backoff = _get_retry_config()
     attempt = 0
     while True:
         try:
-            ffmpeg = FFmpeg().option("y").input(str(video), ss=ts).output(str(output_file), frames="1", q="2")
+            ffmpeg = FFmpeg().option("y").input(str(video), ss=ts)
+            if is_hdr:
+                # HDR to SDR tone mapping using zscale and hable
+                # Note: This requires ffmpeg with libzimg support, which is standard in many builds including Debian's
+                vf = "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
+                ffmpeg = ffmpeg.output(str(output_file), frames="1", q="2", vf=vf)
+            else:
+                ffmpeg = ffmpeg.output(str(output_file), frames="1", q="2")
+            
             ffmpeg.execute()
             return output_file
         except Exception as exc:  # propagate so parent marks job as error
@@ -202,6 +210,11 @@ def extract(
     if params.cancel_token and params.cancel_token.is_cancelled():
         raise CancelledException("Extraction cancelled")
 
+    # Check for HDR content
+    is_hdr = check_is_hdr(video)
+    if is_hdr:
+        logger.info("HDR video detected: enabling tone mapping for %s", video.name)
+
     timestamps = get_iframe_timestamps(video)
     logger.debug("Found %d keyframes", len(timestamps))
 
@@ -218,7 +231,7 @@ def extract(
     start_counter = _find_highest_counter(output_dir, pattern, context_for_pattern) + 1
     logger.debug("Starting counter at %d (appending to existing files)", start_counter)
     
-    frame_args: list[tuple[Path, float, Path]] = []
+    frame_args: list[tuple[Path, float, Path, bool]] = []
     for idx, ts in enumerate(timestamps, start_counter):
         try:
             name = render_pattern(
@@ -234,7 +247,7 @@ def extract(
         except Exception:
             # Fallback in case of unexpected error
             name = f"output_{idx:04d}.jpg"
-        frame_args.append((video, ts, output_dir / name))
+        frame_args.append((video, ts, output_dir / name, is_hdr))
 
     total = len(frame_args)
     done = 0

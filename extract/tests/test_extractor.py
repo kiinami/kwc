@@ -27,8 +27,8 @@ class StubFFmpeg:
 
 
 # Module-level mock function that can be pickled for multiprocessing
-def _mock_extract_frame_with_file_creation(args: tuple[Path, float, Path]) -> Path:
-	_video, _ts, output_file = args
+def _mock_extract_frame_with_file_creation(args: tuple[Path, float, Path, bool]) -> Path:
+	_video, _ts, output_file, _is_hdr = args
 	output_file.touch()  # Create the file
 	return output_file
 
@@ -47,7 +47,7 @@ def test_extract_frame_retries_success(monkeypatch: pytest.MonkeyPatch, settings
 	monkeypatch.setattr(extractor, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(behaviour))
 	monkeypatch.setattr(extractor, "_sleep", lambda _delay: None)
 
-	result = extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg")))
+	result = extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), False))
 	assert result == Path("/tmp/frame.jpg")
 	assert attempts == ["fail", "success"]
 
@@ -66,13 +66,13 @@ def test_extract_frame_retries_exhaust(monkeypatch: pytest.MonkeyPatch, settings
 	monkeypatch.setattr(extractor, "_sleep", lambda _delay: None)
 
 	with pytest.raises(RuntimeError):
-		extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg")))
+		extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), False))
 	assert attempts == 2
 
 
 def test_extract_frame_args_are_picklable() -> None:
 	"""Test that _extract_frame arguments can be pickled for multiprocessing."""
-	args = (Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"))
+	args = (Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), False)
 	# This should not raise an exception
 	pickled = pickle.dumps(args)
 	unpickled = pickle.loads(pickled)
@@ -192,6 +192,7 @@ def test_extract_appends_to_existing_files(tmp_path: Path, monkeypatch: pytest.M
 	# Use module-level mock function that can be pickled
 	monkeypatch.setattr(extractor, "_extract_frame", _mock_extract_frame_with_file_creation)
 	monkeypatch.setattr(extractor, "get_iframe_timestamps", lambda _video: [1.0, 2.0, 3.0])
+	monkeypatch.setattr(extractor, "check_is_hdr", lambda _video: False)
 	
 	params = extractor.ExtractParams(
 		video=Path("/tmp/test.mp4"),
@@ -223,6 +224,7 @@ def test_extract_with_cancellation_token(tmp_path: Path, monkeypatch: pytest.Mon
 	# Use module-level mock function that can be pickled
 	monkeypatch.setattr(extractor, "_extract_frame", _mock_extract_frame_with_file_creation)
 	monkeypatch.setattr(extractor, "get_iframe_timestamps", lambda _video: [1.0, 2.0])
+	monkeypatch.setattr(extractor, "check_is_hdr", lambda _video: False)
 	
 	# Create a cancellation token
 	cancel_token = extractor.CancellationToken()

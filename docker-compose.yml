@@ -1,6 +1,8 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      network: host
     image: kwc-web:latest
     # Run the app as your host user to avoid root-owned files on bind mounts
     user: "${KWC_UID:-1000}:${KWC_GID:-1000}"
