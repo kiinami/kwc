@@ -142,7 +142,6 @@ def _extract_frame(args: tuple[Path, float, Path, bool]) -> Path:
                 ffmpeg = ffmpeg.output(str(output_file), frames="1", q="2", vf=vf)
             else:
                 ffmpeg = ffmpeg.output(str(output_file), frames="1", q="2")
-            
             ffmpeg.execute()
             return output_file
         except Exception as exc:  # propagate so parent marks job as error
