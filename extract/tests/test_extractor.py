@@ -23,7 +23,7 @@ class StubFFmpeg:
 		return self
 
 	def execute(self):
-		self._execute_behaviour()
+		return self._execute_behaviour()
 
 
 # Module-level mock function that can be pickled for multiprocessing
@@ -90,6 +90,75 @@ def test_get_iframe_timestamps_logs_failure(monkeypatch: pytest.MonkeyPatch, cap
 	assert result == []
 	assert "ffprobe failed" in caplog.text
 	assert "nonexistent.mp4" in caplog.text
+
+
+def test_check_is_hdr_detects_smpte2084(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that HDR video with smpte2084 transfer is detected."""
+	def hdr_execute() -> str:
+		return '{"streams": [{"color_transfer": "smpte2084"}]}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(hdr_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/hdr_video.mp4"))
+	assert result is True
+
+
+def test_check_is_hdr_detects_arib_std_b67(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that HDR video with arib-std-b67 transfer is detected."""
+	def hdr_execute() -> str:
+		return '{"streams": [{"color_transfer": "arib-std-b67"}]}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(hdr_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/hlg_video.mp4"))
+	assert result is True
+
+
+def test_check_is_hdr_rejects_non_hdr(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that non-HDR video is correctly identified."""
+	def sdr_execute() -> str:
+		return '{"streams": [{"color_transfer": "bt709"}]}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(sdr_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/sdr_video.mp4"))
+	assert result is False
+
+
+def test_check_is_hdr_handles_missing_transfer(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that video without color_transfer metadata is treated as non-HDR."""
+	def no_transfer_execute() -> str:
+		return '{"streams": [{}]}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(no_transfer_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/unknown_video.mp4"))
+	assert result is False
+
+
+def test_check_is_hdr_handles_empty_streams(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that video with no streams is treated as non-HDR."""
+	def empty_streams_execute() -> str:
+		return '{"streams": []}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(empty_streams_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/no_streams.mp4"))
+	assert result is False
+
+
+def test_check_is_hdr_handles_ffprobe_failure(monkeypatch: pytest.MonkeyPatch, caplog) -> None:
+	"""Test that ffprobe failure is handled gracefully."""
+	def failing_execute() -> None:
+		raise RuntimeError("ffprobe crashed")
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(failing_execute))
+	caplog.set_level("WARNING", logger="extract.utils")
+
+	result = extract_utils.check_is_hdr(Path("/tmp/broken_video.mp4"))
+	assert result is False
+	assert "ffprobe failed" in caplog.text
+	assert "broken_video.mp4" in caplog.text
 
 
 def test_find_highest_counter_empty_directory(tmp_path: Path) -> None:
