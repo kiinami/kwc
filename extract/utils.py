@@ -125,17 +125,16 @@ def check_is_hdr(video: Path) -> bool:
         streams = data.get("streams", [])
         if not streams:
             return False
-        
+
         stream = streams[0]
         # Common HDR transfer characteristics
         # smpte2084 is PQ (perceptual quantizer) -> HDR10 / Dolby Vision
         # arib-std-b67 is HLG (hybrid log-gamma)
         hdr_transfers = {"smpte2084", "arib-std-b67"}
-        
+
         transfer = stream.get("color_transfer")
-        
+
         return transfer in hdr_transfers
-        
     except Exception as exc:
         logger.warning("ffprobe failed extracting video metadata for %s: %s", video, exc)
         return False
