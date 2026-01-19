@@ -138,7 +138,14 @@ def _extract_frame(args: tuple[Path, float, Path, bool]) -> Path:
             if is_hdr:
                 # HDR to SDR tone mapping using zscale and hable
                 # Note: This requires ffmpeg with libzimg support, which is standard in many builds including Debian's
-                vf = "zscale=t=linear:npl=100,format=gbrpf32le,zscale=p=bt709,tonemap=tonemap=hable:desat=0,zscale=t=bt709:m=bt709:r=tv,format=yuv420p"
+                vf = (
+                    "zscale=t=linear:npl=100,"
+                    "format=gbrpf32le,"
+                    "zscale=p=bt709,"
+                    "tonemap=tonemap=hable:desat=0,"
+                    "zscale=t=bt709:m=bt709:r=tv,"
+                    "format=yuv420p"
+                )
                 ffmpeg = ffmpeg.output(str(output_file), frames="1", q="2", vf=vf)
             else:
                 ffmpeg = ffmpeg.output(str(output_file), frames="1", q="2")
