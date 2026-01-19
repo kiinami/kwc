@@ -23,12 +23,12 @@ class StubFFmpeg:
 		return self
 
 	def execute(self):
-		self._execute_behaviour()
+		return self._execute_behaviour()
 
 
 # Module-level mock function that can be pickled for multiprocessing
-def _mock_extract_frame_with_file_creation(args: tuple[Path, float, Path]) -> Path:
-	_video, _ts, output_file = args
+def _mock_extract_frame_with_file_creation(args: tuple[Path, float, Path, bool]) -> Path:
+	_video, _ts, output_file, _is_hdr = args
 	output_file.touch()  # Create the file
 	return output_file
 
@@ -47,7 +47,7 @@ def test_extract_frame_retries_success(monkeypatch: pytest.MonkeyPatch, settings
 	monkeypatch.setattr(extractor, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(behaviour))
 	monkeypatch.setattr(extractor, "_sleep", lambda _delay: None)
 
-	result = extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg")))
+	result = extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), False))
 	assert result == Path("/tmp/frame.jpg")
 	assert attempts == ["fail", "success"]
 
@@ -66,13 +66,13 @@ def test_extract_frame_retries_exhaust(monkeypatch: pytest.MonkeyPatch, settings
 	monkeypatch.setattr(extractor, "_sleep", lambda _delay: None)
 
 	with pytest.raises(RuntimeError):
-		extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg")))
+		extractor._extract_frame((Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), False))
 	assert attempts == 2
 
 
 def test_extract_frame_args_are_picklable() -> None:
 	"""Test that _extract_frame arguments can be pickled for multiprocessing."""
-	args = (Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"))
+	args = (Path("/tmp/video.mp4"), 0.0, Path("/tmp/frame.jpg"), False)
 	# This should not raise an exception
 	pickled = pickle.dumps(args)
 	unpickled = pickle.loads(pickled)
@@ -90,6 +90,75 @@ def test_get_iframe_timestamps_logs_failure(monkeypatch: pytest.MonkeyPatch, cap
 	assert result == []
 	assert "ffprobe failed" in caplog.text
 	assert "nonexistent.mp4" in caplog.text
+
+
+def test_check_is_hdr_detects_smpte2084(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that HDR video with smpte2084 transfer is detected."""
+	def hdr_execute() -> str:
+		return '{"streams": [{"color_transfer": "smpte2084"}]}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(hdr_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/hdr_video.mp4"))
+	assert result is True
+
+
+def test_check_is_hdr_detects_arib_std_b67(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that HDR video with arib-std-b67 transfer is detected."""
+	def hdr_execute() -> str:
+		return '{"streams": [{"color_transfer": "arib-std-b67"}]}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(hdr_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/hlg_video.mp4"))
+	assert result is True
+
+
+def test_check_is_hdr_rejects_non_hdr(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that non-HDR video is correctly identified."""
+	def sdr_execute() -> str:
+		return '{"streams": [{"color_transfer": "bt709"}]}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(sdr_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/sdr_video.mp4"))
+	assert result is False
+
+
+def test_check_is_hdr_handles_missing_transfer(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that video without color_transfer metadata is treated as non-HDR."""
+	def no_transfer_execute() -> str:
+		return '{"streams": [{}]}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(no_transfer_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/unknown_video.mp4"))
+	assert result is False
+
+
+def test_check_is_hdr_handles_empty_streams(monkeypatch: pytest.MonkeyPatch) -> None:
+	"""Test that video with no streams is treated as non-HDR."""
+	def empty_streams_execute() -> str:
+		return '{"streams": []}'
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(empty_streams_execute))
+
+	result = extract_utils.check_is_hdr(Path("/tmp/no_streams.mp4"))
+	assert result is False
+
+
+def test_check_is_hdr_handles_ffprobe_failure(monkeypatch: pytest.MonkeyPatch, caplog) -> None:
+	"""Test that ffprobe failure is handled gracefully."""
+	def failing_execute() -> None:
+		raise RuntimeError("ffprobe crashed")
+
+	monkeypatch.setattr(extract_utils, "FFmpeg", lambda *args, **kwargs: StubFFmpeg(failing_execute))
+	caplog.set_level("WARNING", logger="extract.utils")
+
+	result = extract_utils.check_is_hdr(Path("/tmp/broken_video.mp4"))
+	assert result is False
+	assert "ffprobe failed" in caplog.text
+	assert "broken_video.mp4" in caplog.text
 
 
 def test_find_highest_counter_empty_directory(tmp_path: Path) -> None:
@@ -192,6 +261,7 @@ def test_extract_appends_to_existing_files(tmp_path: Path, monkeypatch: pytest.M
 	# Use module-level mock function that can be pickled
 	monkeypatch.setattr(extractor, "_extract_frame", _mock_extract_frame_with_file_creation)
 	monkeypatch.setattr(extractor, "get_iframe_timestamps", lambda _video: [1.0, 2.0, 3.0])
+	monkeypatch.setattr(extractor, "check_is_hdr", lambda _video: False)
 	
 	params = extractor.ExtractParams(
 		video=Path("/tmp/test.mp4"),
@@ -223,6 +293,7 @@ def test_extract_with_cancellation_token(tmp_path: Path, monkeypatch: pytest.Mon
 	# Use module-level mock function that can be pickled
 	monkeypatch.setattr(extractor, "_extract_frame", _mock_extract_frame_with_file_creation)
 	monkeypatch.setattr(extractor, "get_iframe_timestamps", lambda _video: [1.0, 2.0])
+	monkeypatch.setattr(extractor, "check_is_hdr", lambda _video: False)
 	
 	# Create a cancellation token
 	cancel_token = extractor.CancellationToken()
