@@ -95,9 +95,7 @@
             <button class="gallery-section-header" type="button" data-section-toggle aria-expanded="true">
               <span class="gallery-section-title">{{ section.title }}</span>
               <span class="gallery-section-count">{{ section.images|length }} image{% if section.images|length != 1 %}s{% endif %}</span>
-              {% if is_inbox %}
-                <a class="btn btn-primary btn-sm" href="{{ section.choose_url }}" style="margin-left: auto; margin-right: 0.5rem;" onclick="event.stopPropagation();">Choose</a>
-              {% endif %}
+              <a class="btn btn-primary btn-sm" href="{{ section.choose_url }}" style="margin-left: auto; margin-right: 0.5rem;" onclick="event.stopPropagation();">Choose</a>
               <span class="gallery-section-arrow" aria-hidden="true">▼</span>
             </button>
             <div class="gallery-section-content" data-section-content>

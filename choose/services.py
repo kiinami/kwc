@@ -7,8 +7,10 @@ import re
 import shutil
 from collections import defaultdict
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, TypedDict
+from urllib.parse import urlencode
 
 from django.conf import settings
 from django.urls import reverse
@@ -281,7 +283,6 @@ def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext
     for (season, episode), group_images in sorted_groups:
         # Build section-specific choose URL with query params for filtering
         # Always add query params to ensure proper filtering by section
-        from urllib.parse import urlencode  # noqa: PLC0415
         params = {
             'season': season,
             'episode': episode,
@@ -436,6 +437,7 @@ def _get_max_counters(folder_path: Path) -> dict[tuple[str, str], int]:
                 key = (season, episode)
                 counters[key] = max(counters[key], val)
             except ValueError:
+                # Ignore malformed counter values and continue
                 pass
     return counters
 
@@ -465,13 +467,10 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
         # Check permission early
         if not source_path.exists():
              return {"ok": False, "error": "folder_not_found"}
-             
-        # files = list_image_files(source_path) # unused, but we might want to check emptiness later
     except PermissionError as exc:
         raise OSError(f"Permission denied scanning {safe_name}") from exc
 
     decisions_qs = ImageDecision.objects.filter(folder=safe_name)
-    # decision_map = {d.filename: d.decision for d in decisions_qs}
     
     # Prepare batch state
     base_title, parsed_year = parse_title_year_from_folder(safe_name)
@@ -507,6 +506,7 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
         suffix, _ = parse_version_suffix(filename)
         base_name_inbox = strip_version_suffix(filename)
         stem = os.path.splitext(base_name_inbox)[0]
+        original_ext = os.path.splitext(base_name_inbox)[1]
         
         season, episode = parse_season_episode(stem)
         key = (season, episode)
@@ -529,6 +529,11 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
             "counter": count,
         }
         new_base_name = render_pattern(pattern, values)
+        
+        # Preserve original file extension by replacing pattern's extension
+        pattern_stem = os.path.splitext(new_base_name)[0]
+        new_base_name = pattern_stem + original_ext
+        
         new_name = add_version_suffix(new_base_name, suffix)
         
         dest = lib_path / new_name
@@ -542,6 +547,9 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
                 count = current_counters[key]
                 values["counter"] = count
                 new_base_name = render_pattern(pattern, values)
+                # Preserve original file extension
+                pattern_stem = os.path.splitext(new_base_name)[0]
+                new_base_name = pattern_stem + original_ext
                 new_name = add_version_suffix(new_base_name, suffix)
                 dest = lib_path / new_name
             # Update assigned map for subsequent versions
@@ -564,6 +572,15 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
             continue
             
         dest = trash_path / filename
+        
+        # Handle existing files with the same name in trash folder
+        if dest.exists():
+            # Append timestamp to prevent collision
+            stem = dest.stem
+            suffix = dest.suffix
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            dest = trash_path / f"{stem}_{timestamp}{suffix}"
+        
         try:
             shutil.move(str(src), str(dest))
             moved_trash += 1
