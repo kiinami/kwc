@@ -191,10 +191,10 @@ class JobRunner:
 
 	def _download_cover_image(self, url: str, output_dir: Path) -> None:
 		"""Download a cover image from a URL and save it to the output directory."""
-		from io import BytesIO  # noqa: PLC0415
+		from io import BytesIO
 
-		import requests  # noqa: PLC0415
-		from PIL import Image  # noqa: PLC0415
+		import requests
+		from PIL import Image
 		
 		try:
 			# Create output directory if it doesn't exist
@@ -217,7 +217,7 @@ class JobRunner:
 
 	def _copy_cover_image(self, source_path: Path, output_dir: Path) -> None:
 		"""Copy an existing cover image to the output directory."""
-		import shutil  # noqa: PLC0415
+		import shutil
 		
 		try:
 			if not source_path.exists():
@@ -232,8 +232,7 @@ class JobRunner:
 			dest_name = ".cover" + source_path.suffix
 			dest_path = output_dir / dest_name
 			
-			# Check if destination already has a cover (to avoid overwriting if we ran job twice?)
-			# But here we probably want to ensure the cover is there.
+			# Always overwrite any existing cover at the destination to ensure the selected cover is applied.
 			
 			shutil.copy2(source_path, dest_path)
 			logger.info(f"Copied cover image from {source_path} to {dest_path}")
