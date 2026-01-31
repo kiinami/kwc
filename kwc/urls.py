@@ -29,6 +29,7 @@ urlpatterns = [
     path('choose/', include(('choose.urls', 'choose'), namespace='choose')),
     path('extract/', include(('extract.urls', 'extract'), namespace='extract')),
     path('wall-thumbs/<str:folder>/<path:filename>', choose_views.thumbnail, name='wallpaper-thumbnail'),
+    path('inbox-thumbs/<str:folder>/<path:filename>', choose_views.inbox_thumbnail, name='inbox-thumbnail'),
     path('offline/', TemplateView.as_view(template_name='offline.html'), name='offline'),
     path('manifest.webmanifest', core_views.ManifestView.as_view(), name='pwa-manifest'),
     path('service-worker.js', core_views.ServiceWorkerView.as_view(), name='service-worker'),
@@ -39,4 +40,10 @@ _wall_root = getattr(settings, 'WALLPAPERS_FOLDER', None)
 if _wall_root:
     urlpatterns += [
         re_path(r'^wallpapers/(?P<path>.+)$', static_serve, { 'document_root': _wall_root }),
+    ]
+
+_inbox_root = getattr(settings, 'EXTRACTION_FOLDER', None)
+if _inbox_root:
+    urlpatterns += [
+        re_path(r'^inbox-files/(?P<path>.+)$', static_serve, { 'document_root': _inbox_root }),
     ]

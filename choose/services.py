@@ -1,20 +1,34 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
+import re
+import shutil
 from collections import defaultdict
 from dataclasses import asdict, dataclass
-from typing import TypedDict
+from datetime import datetime
+from pathlib import Path
+from typing import Any, TypedDict
+from urllib.parse import urlencode
 
+from django.conf import settings
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 
+from extract.utils import render_pattern
+
 from .models import FolderProgress, ImageDecision
 from .utils import (
+    add_version_suffix,
+    discard_root,
+    extraction_root,
     find_cover_filename,
     get_folder_path,
     list_image_files,
     parse_folder_name,
     parse_season_episode,
+    parse_title_year_from_folder,
     parse_version_suffix,
     strip_version_suffix,
     thumbnail_url,
@@ -22,6 +36,8 @@ from .utils import (
     wallpaper_url,
     wallpapers_root,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class GalleryImage(TypedDict):
@@ -119,9 +135,9 @@ def format_section_title(season: str, episode: str) -> str:
     return " ".join(parts) if parts else "General"
 
 
-def list_gallery_images(folder: str) -> GalleryContext:
+def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext:
     safe_name = validate_folder_name(folder)
-    root_path = wallpapers_root()
+    root_path = root or wallpapers_root()
     target = get_folder_path(safe_name, root_path)
 
     try:
@@ -267,7 +283,6 @@ def list_gallery_images(folder: str) -> GalleryContext:
     for (season, episode), group_images in sorted_groups:
         # Build section-specific choose URL with query params for filtering
         # Always add query params to ensure proper filtering by section
-        from urllib.parse import urlencode  # noqa: PLC0415
         params = {
             'season': season,
             'episode': episode,
@@ -299,19 +314,25 @@ def list_gallery_images(folder: str) -> GalleryContext:
     )
 
 
-def load_folder_context(folder: str, season: str | None = None, episode: str | None = None) -> FolderContext:
+def load_folder_context(
+    folder: str,
+    season: str | None = None,
+    episode: str | None = None,
+    root: Path | None = None,
+) -> FolderContext:
     """Load folder context for the chooser UI.
     
     Args:
         folder: The folder name to load
         season: Optional season filter (e.g., "01")
         episode: Optional episode filter (e.g., "03", "IN", "OU")
+        root: Optional root directory (defaults to wallpapers_root)
         
     Returns:
         FolderContext with images (optionally filtered by section)
     """
     safe_name = validate_folder_name(folder)
-    root_path = wallpapers_root()
+    root_path = root or wallpapers_root()
     target = get_folder_path(safe_name, root_path)
 
     try:
@@ -378,6 +399,7 @@ def load_folder_context(folder: str, season: str | None = None, episode: str | N
         images[selected_index]["name"] if images and selected_index >= 0 else ""
     )
 
+
     return FolderContext(
         folder=safe_name,
         images=images,
@@ -387,3 +409,199 @@ def load_folder_context(folder: str, season: str | None = None, episode: str | N
         root=str(root_path),
         path=str(target),
     )
+
+
+def _get_max_counters(folder_path: Path) -> dict[tuple[str, str], int]:
+    """Scan a folder and return max counter for each season/episode group."""
+    counters: dict[tuple[str, str], int] = defaultdict(int)
+    if not folder_path.exists():
+        return counters
+        
+    try:
+        files = list_image_files(folder_path)
+    except PermissionError:
+        return counters
+
+    for fname in files:
+        base_name = strip_version_suffix(fname)
+        stem = os.path.splitext(base_name)[0]
+        
+        # Parse Season/Episode
+        season, episode = parse_season_episode(stem)
+        
+        # Parse Counter
+        counter_match = re.search(r"(\d+)$", stem)
+        if counter_match:
+            try:
+                val = int(counter_match.group(1))
+                key = (season, episode)
+                counters[key] = max(counters[key], val)
+            except ValueError:
+                # Ignore malformed counter values and continue
+                pass
+    return counters
+
+
+def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
+    """Move decisions from Inbox to Library/Discard.
+    
+    Kept files: Moved to Library, appended to existing series.
+    Discarded files: Moved to Discard folder.
+    Undecided files: Remain in Inbox.
+    
+    If Inbox becomes empty, the folder is removed.
+    """
+    safe_name = validate_folder_name(folder_name)
+    inbox_root = extraction_root()
+    source_path = get_folder_path(safe_name, root=inbox_root)
+
+    # Ensure destinations exist
+    lib_path = wallpapers_root() / safe_name
+    lib_path.mkdir(parents=True, exist_ok=True)
+    
+    trash_path = discard_root() / safe_name
+    trash_path.mkdir(parents=True, exist_ok=True)
+
+    # Load file list and decisions
+    try:
+        # Check permission early
+        if not source_path.exists():
+             return {"ok": False, "error": "folder_not_found"}
+    except PermissionError as exc:
+        raise OSError(f"Permission denied scanning {safe_name}") from exc
+
+    decisions_qs = ImageDecision.objects.filter(folder=safe_name)
+    
+    # Prepare batch state
+    base_title, parsed_year = parse_title_year_from_folder(safe_name)
+    pattern = settings.EXTRACT_IMAGE_PATTERN
+    
+    # Load existing library counters to append correctly
+    current_counters = _get_max_counters(lib_path)
+    
+    moved_keeps = 0
+    moved_trash = 0
+    errors: list[str] = []
+    
+    # Process files
+    # We iterate valid decisions first for order, then check file existence
+    
+    # Sort keeps by decision time to respect user order
+    sorted_keeps = decisions_qs.filter(decision=ImageDecision.DECISION_KEEP).order_by("decided_at", "filename")
+    keep_filenames = [d.filename for d in sorted_keeps]
+    
+    # Process Keeps
+    # We must group by base name to ensure versions get same counter? 
+    # Current policy: Treat versions as separate files with suffixes.
+    # But they should share the counter if they are versions of same image.
+    # Map base_name -> assigned_counter to reuse it for versions.
+    assigned_counters: dict[str, int] = {} # base_name_in_inbox -> assigned_counter
+    
+    for filename in keep_filenames:
+        src = source_path / filename
+        if not src.exists():
+            continue
+            
+        # Parse info
+        suffix, _ = parse_version_suffix(filename)
+        base_name_inbox = strip_version_suffix(filename)
+        stem = os.path.splitext(base_name_inbox)[0]
+        original_ext = os.path.splitext(base_name_inbox)[1]
+        
+        season, episode = parse_season_episode(stem)
+        key = (season, episode)
+        
+        # Determine counter
+        if base_name_inbox in assigned_counters:
+            count = assigned_counters[base_name_inbox]
+        else:
+            current_counters[key] += 1
+            count = current_counters[key]
+            assigned_counters[base_name_inbox] = count
+            
+        # render new name
+        values: dict[str, object] = {
+            "title": base_title,
+            "base_title": base_title,
+            "year": parsed_year or "",
+            "season": int(season) if season and season.isdigit() else season,
+            "episode": int(episode) if episode and episode.isdigit() else episode,
+            "counter": count,
+        }
+        new_base_name = render_pattern(pattern, values)
+        
+        # Preserve original file extension by replacing pattern's extension
+        pattern_stem = os.path.splitext(new_base_name)[0]
+        new_base_name = pattern_stem + original_ext
+        
+        new_name = add_version_suffix(new_base_name, suffix)
+        
+        dest = lib_path / new_name
+        
+        # Prevent overwriting existing library files
+        if dest.exists():
+            # This shouldn't happen with monotonic counters, but race conditions/manual changes exists
+            # Fallback: keep incrementing until free
+            while dest.exists():
+                current_counters[key] += 1
+                count = current_counters[key]
+                values["counter"] = count
+                new_base_name = render_pattern(pattern, values)
+                # Preserve original file extension
+                pattern_stem = os.path.splitext(new_base_name)[0]
+                new_base_name = pattern_stem + original_ext
+                new_name = add_version_suffix(new_base_name, suffix)
+                dest = lib_path / new_name
+            # Update assigned map for subsequent versions
+            assigned_counters[base_name_inbox] = count
+
+        try:
+            shutil.move(str(src), str(dest))
+            moved_keeps += 1
+            # Remove decision
+            ImageDecision.objects.filter(folder=safe_name, filename=filename).delete()
+        except OSError as exc:
+            errors.append(f"Failed to move {filename} to library: {exc}")
+
+    # Process Deletes (Trash)
+    trash_decisions = decisions_qs.filter(decision=ImageDecision.DECISION_DELETE)
+    for d in trash_decisions:
+        filename = d.filename
+        src = source_path / filename
+        if not src.exists():
+            continue
+            
+        dest = trash_path / filename
+        
+        # Handle existing files with the same name in trash folder
+        if dest.exists():
+            # Append timestamp to prevent collision
+            stem = dest.stem
+            suffix = dest.suffix
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            dest = trash_path / f"{stem}_{timestamp}{suffix}"
+        
+        try:
+            shutil.move(str(src), str(dest))
+            moved_trash += 1
+            ImageDecision.objects.filter(folder=safe_name, filename=filename).delete()
+        except OSError as exc:
+            errors.append(f"Failed to move {filename} to trash: {exc}")
+
+    # Cleanup
+    remaining_files = list_image_files(source_path)
+    if not remaining_files:
+        # If empty (ignoring hidden files), delete folder
+        try:
+            shutil.rmtree(source_path)
+            shutil.rmtree(trash_path, ignore_errors=True) # Optional: clean empty trash folder? No, keep history.
+        except OSError as exc:
+            errors.append(f"Failed to remove empty inbox folder: {exc}")
+            
+    return {
+        "ok": len(errors) == 0,
+        "moved_library": moved_keeps,
+        "moved_trash": moved_trash,
+        "remaining": len(remaining_files),
+        "errors": errors
+    }

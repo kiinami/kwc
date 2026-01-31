@@ -755,7 +755,7 @@
         <div class="mobile-sheet-chrome" id="mobileSheetChrome">
           <button class="mobile-sheet-handle" id="mobileSheetHandle" type="button" aria-label="Expand image details"></button>
           <div class="mobile-sheet-toolbar" id="mobileSheetHeader">
-            <a href="{% url 'choose:gallery' folder=folder %}" class="mobile-sheet-back" aria-label="Back to gallery">
+            <a href="{% if is_inbox %}{% url 'choose:inbox_gallery' folder=folder %}{% else %}{% url 'choose:gallery' folder=folder %}{% endif %}" class="mobile-sheet-back" aria-label="Back to gallery">
               <span aria-hidden="true">←</span>
             </a>
             <div class="mobile-sheet-title" id="mobileSheetTitle">{{ current_image.name }}</div>
@@ -788,7 +788,7 @@
         <div class="sidebar-scrollable">
           <div class="sidebar-section sidebar-section--intro">
             <div class="sidebar-header">
-              <a href="{% url 'choose:gallery' folder=folder %}" class="back-btn">← Back to gallery</a>
+              <a href="{% if is_inbox %}{% url 'choose:inbox_gallery' folder=folder %}{% else %}{% url 'choose:gallery' folder=folder %}{% endif %}" class="back-btn">← Back to gallery</a>
             </div>
             <div class="metadata-title-group">
               <div class="metadata-title">{{ title }}</div>
@@ -939,6 +939,7 @@
 
   <script>
     (function() {
+      const isInbox = {{ is_inbox|yesno:"true,false" }};
       const layout = document.getElementById('lightboxLayout');
       const sidebar = document.getElementById('lightboxSidebar');
       const viewer = document.getElementById('lightboxViewer');
@@ -1490,7 +1491,8 @@
             });
             
             // Apply decisions (which will delete the file and rename others)
-            const response = await fetch(`/choose/${encodeURIComponent(folder)}/save`, {
+            const saveUrl = `/choose/${encodeURIComponent(folder)}/save` + (isInbox ? '?mode=inbox' : '');
+            const response = await fetch(saveUrl, {
               method: 'POST',
               headers: {
                 'X-CSRFToken': csrfToken,
@@ -1500,9 +1502,19 @@
             if (!response.ok) {
               throw new Error('Delete failed');
             }
+
+            const result = await response.json();
             
             // Redirect back to gallery
-            window.location.href = `/choose/${encodeURIComponent(folder)}/gallery/`;
+            if (isInbox) {
+                if (result.remaining === 0) {
+                    window.location.href = '/choose/inbox/';
+                } else {
+                    window.location.href = `/choose/inbox/${encodeURIComponent(folder)}/gallery/`;
+                }
+            } else {
+                window.location.href = `/choose/${encodeURIComponent(folder)}/gallery/`;
+            }
           } catch (error) {
             console.error('Delete failed:', error);
             alert('Failed to delete image. Please try again.');

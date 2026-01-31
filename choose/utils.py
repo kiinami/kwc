@@ -180,6 +180,22 @@ def wallpapers_root() -> Path:
     return Path(settings.WALLPAPERS_FOLDER)
 
 
+def extraction_root() -> Path:
+    """Return the inbox directory for new extractions.
+
+    Configured via settings.EXTRACTION_FOLDER.
+    """
+    return Path(settings.EXTRACTION_FOLDER)
+
+
+def discard_root() -> Path:
+    """Return the trash directory for discarded images.
+
+    Configured via settings.DISCARD_FOLDER.
+    """
+    return Path(settings.DISCARD_FOLDER)
+
+
 def parse_folder_name(folder_name: str) -> tuple[str, int | None]:
     """Parse a folder name like "Title (2020)" into (title, year|None).
 
@@ -231,8 +247,14 @@ def find_cover_filename(folder: Path, files: Iterable[str] | None = None) -> str
 
 def wallpaper_url(folder: str, filename: str, *, root: Path | None = None) -> str:
     """Return a cache-busted URL for a wallpaper image."""
-    base = f"/wallpapers/{quote(folder)}/{quote(filename)}"
     actual_root = root or wallpapers_root()
+    
+    # Check if we are serving from the inbox
+    if actual_root == extraction_root():
+        base = f"/inbox-files/{quote(folder)}/{quote(filename)}"
+    else:
+        base = f"/wallpapers/{quote(folder)}/{quote(filename)}"
+        
     path = actual_root / folder / filename
     return f"{base}?v={cache_token(path)}"
 
@@ -253,8 +275,13 @@ def thumbnail_url(
     if not filename:
         return None
 
-    base = f"/wall-thumbs/{quote(folder)}/{quote(filename)}"
     actual_root = root or wallpapers_root()
+    
+    if actual_root == extraction_root():
+        base = f"/inbox-thumbs/{quote(folder)}/{quote(filename)}"
+    else:
+        base = f"/wall-thumbs/{quote(folder)}/{quote(filename)}"
+        
     path = actual_root / folder / filename
 
     params: dict[str, str] = {}

@@ -100,7 +100,7 @@
   </style>
 
   <div class="fullbleed">
-  <div class="chooser-layout">
+  <div class="chooser-layout" data-is-inbox="{{ is_inbox|yesno:'true,false' }}">
     <aside class="chooser-sidebar">
       <div class="sidebar-header">
         <div class="sidebar-title">{{ folder }}</div>
@@ -171,6 +171,7 @@
 
   <script>
     (function(){
+      const isInbox = document.querySelector('.chooser-layout').dataset.isInbox === 'true';
       const thumbs = Array.from(document.querySelectorAll('.thumb'));
       const main = document.getElementById('mainImage');
       const sidebar = document.querySelector('.sidebar-list');
@@ -444,13 +445,18 @@
         btnConfirmSave.disabled = true;
         btnConfirmSave.textContent = 'Applying…';
         try {
-          const res = await fetch(`${window.location.pathname}save`, {
+          const url = `${window.location.pathname}save` + (isInbox ? '?mode=inbox' : '');
+          const res = await fetch(url, {
             method: 'POST',
             headers: { 'X-CSRFToken': getCsrf() },
           });
           if (!res.ok) throw new Error('request_failed');
-          // Redirect to gallery on success
-          window.location.assign(`${window.location.pathname}gallery/`);
+          // Redirect to appropriate page
+          if (isInbox) {
+            window.location.assign('{% url "choose:inbox" %}');
+          } else {
+            window.location.assign(`${window.location.pathname}gallery/`);
+          }
         } catch (e) {
           console.error('Save failed', e);
           alert('Saving failed. Please try again.');

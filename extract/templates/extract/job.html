@@ -58,7 +58,7 @@
     <div style="margin-top: 1rem;">
       <a class="btn btn-ghost" href="{% url 'extract:index' %}">Back</a>
       <button class="btn btn-ghost" id="cancelBtn" style="{% if is_finished %}display:none{% endif %}; color:#fca5a5; border-color:#fca5a5;" {% if status == 'cancelling' %}disabled{% endif %}>{% if status == 'cancelling' %}Cancelling...{% else %}Cancel{% endif %}</button>
-      <a class="btn btn-primary" id="chooseBtn" href="{{ gallery_url }}" style="{% if not is_done %}display:none{% endif %}">Open Gallery</a>
+      <a class="btn btn-primary" id="chooseBtn" href="{{ gallery_url }}" style="{% if not is_done %}display:none{% endif %}">Curate in Inbox</a>
     </div>
   </div>
 </div>
