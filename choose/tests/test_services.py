@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from choose.models import FolderProgress, ImageDecision
-from choose.services import list_gallery_images, load_folder_context
+from choose.services import ingest_inbox_folder, list_gallery_images, load_folder_context
 from choose.utils import wallpapers_root
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -236,3 +236,79 @@ def test_load_folder_context_filters_general_section(wallpapers_dir: Path) -> No
 	assert len(context.images) == 1
 	assert context.images[0]["name"] == "General.jpg"
 
+
+@pytest.fixture()
+def ingest_dirs(tmp_path: Path, settings) -> Path:
+    settings.WALLPAPERS_FOLDER = tmp_path / "wallpapers"
+    settings.EXTRACTION_FOLDER = tmp_path / "extraction"
+    settings.DISCARD_FOLDER = tmp_path / "discard"
+    settings.EXTRACT_IMAGE_PATTERN = "{title} 〜 {counter}"
+    
+    settings.WALLPAPERS_FOLDER.mkdir()
+    settings.EXTRACTION_FOLDER.mkdir()
+    settings.DISCARD_FOLDER.mkdir()
+    
+    return tmp_path
+
+
+def test_ingest_copies_cover_image(ingest_dirs: Path, settings) -> None:
+    folder_name = "New Series (2025)"
+    inbox_folder = Path(settings.EXTRACTION_FOLDER) / folder_name
+    inbox_folder.mkdir()
+    
+    # create cover image
+    cover_file = inbox_folder / ".cover.png"
+    cover_file.write_bytes(b"fake cover content")
+    
+    # create an image file and a decision
+    image_file = inbox_folder / "image.jpg"
+    image_file.write_bytes(b"fake image content")
+    
+    ImageDecision.objects.create(
+        folder=folder_name,
+        filename="image.jpg",
+        decision=ImageDecision.DECISION_KEEP
+    )
+    
+    ingest_inbox_folder(folder_name)
+    
+    # Check if cover image was copied to library
+    lib_folder = Path(settings.WALLPAPERS_FOLDER) / folder_name
+    lib_cover = lib_folder / ".cover.png"
+    
+    assert lib_folder.exists()
+    assert lib_cover.exists()
+    assert lib_cover.read_bytes() == b"fake cover content"
+    
+    # Check if image was moved (renamed)
+    files = list(lib_folder.glob("*.jpg"))
+    assert len(files) == 1
+    
+    assert not inbox_folder.exists()
+
+
+def test_ingest_does_not_overwrite_existing_cover(ingest_dirs: Path, settings) -> None:
+    folder_name = "Existing Series (2025)"
+    inbox_folder = Path(settings.EXTRACTION_FOLDER) / folder_name
+    inbox_folder.mkdir()
+    
+    # inbox cover
+    (inbox_folder / ".cover.png").write_bytes(b"new cover")
+    
+    # existing library folder with cover
+    lib_folder = Path(settings.WALLPAPERS_FOLDER) / folder_name
+    lib_folder.mkdir()
+    (lib_folder / ".cover.png").write_bytes(b"old cover")
+    
+    # create image and decision
+    (inbox_folder / "image.jpg").write_bytes(b"img")
+    ImageDecision.objects.create(
+        folder=folder_name,
+        filename="image.jpg",
+        decision=ImageDecision.DECISION_KEEP
+    )
+    
+    ingest_inbox_folder(folder_name)
+    
+    assert (lib_folder / ".cover.png").read_bytes() == b"old cover"
+    assert not inbox_folder.exists()

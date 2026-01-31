@@ -458,7 +458,18 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
     # Ensure destinations exist
     lib_path = wallpapers_root() / safe_name
     lib_path.mkdir(parents=True, exist_ok=True)
-    
+
+    # Check for cover image in inbox and copy if missing in library
+    for cand in (".cover.jpg", ".cover.jpeg", ".cover.png", ".cover.webp"):
+        src_cover = source_path / cand
+        if src_cover.exists() and src_cover.is_file():
+            dest_cover = lib_path / cand
+            if not dest_cover.exists():
+                try:
+                    shutil.copy2(str(src_cover), str(dest_cover))
+                except OSError as exc:
+                    logger.warning("Failed to copy cover image %s: %s", cand, exc)
+
     trash_path = discard_root() / safe_name
     trash_path.mkdir(parents=True, exist_ok=True)
 
