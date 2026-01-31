@@ -153,10 +153,14 @@ class JobRunner:
 		try:
 			frame_count = self.extractor(params=extract_params, on_progress=on_progress)
 			
-			# Download cover image if URL was provided
+			# Download cover image if URL was provided, or copy from source if available
 			cover_image_url = params_data.get("cover_image_url", "").strip()
+			source_cover_path = params_data.get("source_cover_path", "").strip()
+			
 			if cover_image_url:
 				self._download_cover_image(cover_image_url, output_dir)
+			elif source_cover_path:
+				self._copy_cover_image(Path(source_cover_path), output_dir)
 			
 			job.refresh_from_db()
 			job.total_frames = frame_count
@@ -210,6 +214,31 @@ class JobRunner:
 		except Exception as e:
 			logger.warning(f"Failed to download cover image: {e}")
 			# Don't fail the job if cover download fails
+
+	def _copy_cover_image(self, source_path: Path, output_dir: Path) -> None:
+		"""Copy an existing cover image to the output directory."""
+		import shutil  # noqa: PLC0415
+		
+		try:
+			if not source_path.exists():
+				return
+
+			# Create output directory if it doesn't exist
+			output_dir.mkdir(parents=True, exist_ok=True)
+			
+			# Determine destination filename
+			# If source is explicitly named .cover.*, preserve extension
+			# If source is a random image, strictly name it .cover + extension to mark it as cover
+			dest_name = ".cover" + source_path.suffix
+			dest_path = output_dir / dest_name
+			
+			# Check if destination already has a cover (to avoid overwriting if we ran job twice?)
+			# But here we probably want to ensure the cover is there.
+			
+			shutil.copy2(source_path, dest_path)
+			logger.info(f"Copied cover image from {source_path} to {dest_path}")
+		except Exception as e:
+			logger.warning(f"Failed to copy cover image: {e}")
 
 	def _get_job(self, job_id: str) -> ExtractionJob | None:
 		try:

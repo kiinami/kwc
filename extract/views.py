@@ -77,6 +77,19 @@ def start(request: HttpRequest) -> HttpResponse:
 			video_path = params.get("video", "")
 			job_name = os.path.basename(video_path) if video_path else ""
 
+			# Check if there is an existing cover image in the library folder
+			try:
+				from choose.utils import find_cover_filename  # noqa: PLC0415
+				library_root = Path(settings.WALLPAPERS_FOLDER)
+				library_dir = library_root / folder_rel
+				if library_dir.exists() and library_dir.is_dir():
+					cover_name = find_cover_filename(library_dir)
+					if cover_name:
+						params["source_cover_path"] = str(library_dir / cover_name)
+			except Exception:  # pragma: no cover
+				# Fail silently if we can't find/access the library folder
+				pass
+
 			ExtractionJob.objects.create(
 				id=job_id,
 				name=job_name,
