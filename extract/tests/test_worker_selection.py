@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase, override_settings
 
-from .extractor import ExtractParams, extract
+from extract.extractor import ExtractParams, extract
 
 
 class ExtractorWorkerSelectionTests(SimpleTestCase):

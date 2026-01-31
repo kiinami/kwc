@@ -1,8 +1,10 @@
 
-from unittest.mock import patch
-from django.test import TestCase, Client
-from django.urls import reverse
 from pathlib import Path
+from unittest.mock import patch
+
+from django.test import Client, TestCase
+from django.urls import reverse
+
 
 class FoldersApiTest(TestCase):
     def test_folders_api_merges_library_and_inbox(self):
@@ -14,13 +16,45 @@ class FoldersApiTest(TestCase):
             # First call has no args (Library), second has root (Inbox)
             
             library_folders = [
-                {'name': 'UniqueLib (2020)', 'title': 'UniqueLib', 'year_raw': 2020, 'year_sort': 2020, 'mtime': 100, 'cover_url': 'lib_url', 'cover_thumb_url': 'lib_thumb'},
-                {'name': 'Shared (2021)', 'title': 'Shared', 'year_raw': 2021, 'year_sort': 2021, 'mtime': 200, 'cover_url': 'shared_lib_url', 'cover_thumb_url': 'shared_lib_thumb'},
+                {
+                    "name": "UniqueLib (2020)",
+                    "title": "UniqueLib",
+                    "year_raw": 2020,
+                    "year_sort": 2020,
+                    "mtime": 100,
+                    "cover_url": "lib_url",
+                    "cover_thumb_url": "lib_thumb",
+                },
+                {
+                    "name": "Shared (2021)",
+                    "title": "Shared",
+                    "year_raw": 2021,
+                    "year_sort": 2021,
+                    "mtime": 200,
+                    "cover_url": "shared_lib_url",
+                    "cover_thumb_url": "shared_lib_thumb",
+                },
             ]
-            
+
             inbox_folders = [
-                {'name': 'Shared (2021)', 'title': 'Shared', 'year_raw': 2021, 'year_sort': 2021, 'mtime': 300, 'cover_url': 'shared_inbox_url', 'cover_thumb_url': 'shared_inbox_thumb'},
-                {'name': 'UniqueInbox (2022)', 'title': 'UniqueInbox', 'year_raw': 2022, 'year_sort': 2022, 'mtime': 400, 'cover_url': 'inbox_url', 'cover_thumb_url': 'inbox_thumb'},
+                {
+                    "name": "Shared (2021)",
+                    "title": "Shared",
+                    "year_raw": 2021,
+                    "year_sort": 2021,
+                    "mtime": 300,
+                    "cover_url": "shared_inbox_url",
+                    "cover_thumb_url": "shared_inbox_thumb",
+                },
+                {
+                    "name": "UniqueInbox (2022)",
+                    "title": "UniqueInbox",
+                    "year_raw": 2022,
+                    "year_sort": 2022,
+                    "mtime": 400,
+                    "cover_url": "inbox_url",
+                    "cover_thumb_url": "inbox_thumb",
+                },
             ]
 
             def side_effect(root=None):
