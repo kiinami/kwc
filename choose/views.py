@@ -83,13 +83,15 @@ def inbox_gallery(request: HttpRequest, folder: str) -> HttpResponse:
     # Patch choose_url to point to inbox folder
     data['choose_url'] = reverse('choose:inbox_folder', kwargs={'folder': folder})
     
-    # Patch section choose URLs
+    # Patch section choose URLs to use inbox routing
     sections = cast(list[dict[str, Any]], data.get('sections', []))
+    library_base = reverse('choose:folder', kwargs={'folder': folder})
+    inbox_base = reverse('choose:inbox_folder', kwargs={'folder': folder})
+    
     for section in sections:
-        section['choose_url'] = section['choose_url'].replace(
-            reverse('choose:folder', kwargs={'folder': folder}),
-            reverse('choose:inbox_folder', kwargs={'folder': folder})
-        )
+        # Replace the base URL while preserving query parameters
+        if section['choose_url'].startswith(library_base):
+            section['choose_url'] = section['choose_url'].replace(library_base, inbox_base, 1)
 
     return render(request, 'choose/gallery.html', data)
 
@@ -145,9 +147,8 @@ def _lightbox_view(request: HttpRequest, folder: str, filename: str, root: Path 
     
     # Get image dimensions
     try:
-        from PIL import Image  # noqa: PLC0415
         with Image.open(image_path) as img:
-            width, height = img.size
+            width, height = img.size  # type: ignore[attr-defined]
     except Exception:
         width, height = 0, 0
     
@@ -195,7 +196,7 @@ def _lightbox_view(request: HttpRequest, folder: str, filename: str, root: Path 
         'episode_display': episode_display,
         'counter': counter,
         'filepath': str(image_path.relative_to(actual_root)),
-        'is_inbox': root == extraction_root(),
+        'is_inbox': root is not None and root.resolve() == extraction_root().resolve(),
     }
     
     return render(request, 'choose/lightbox.html', lightbox_context)
@@ -316,6 +317,7 @@ def _thumbnail_view(request: HttpRequest, folder: str, filename: str, root: Path
             if parse_http_date(ims) >= int(stat.st_mtime):
                 return HttpResponseNotModified()
         except (ValueError, OverflowError):
+            # Ignore invalid or out-of-range If-Modified-Since headers and fall back to a normal response
             pass
 
     content_length = len(result.data)
@@ -404,6 +406,3 @@ def save_api(request: HttpRequest, folder: str) -> JsonResponse:
     except Exception:  # pragma: no cover - defensive
         logger.exception("Unexpected error applying decisions for %s", folder)
         return JsonResponse({"error": "unexpected_error"}, status=500)
-
-    # Should be unreachable if branches return
-    return JsonResponse({"error": "unexpected_error"}, status=500)

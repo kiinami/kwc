@@ -37,7 +37,7 @@ def test_inbox_decide_route(client) -> None:
 def test_inbox_save_route_reachable(client, tmp_path, settings) -> None:
     # Test that inbox/save endpoint is reachable
     folder = "ztmy"
-    settings.EXTRACT_FOLDER = tmp_path
+    settings.EXTRACTION_FOLDER = tmp_path
     
     url = reverse("choose:inbox_save_api", kwargs={"folder": folder})
     assert url == f"/choose/inbox/{folder}/save"
