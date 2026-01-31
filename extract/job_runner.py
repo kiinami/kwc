@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import threading
 from collections.abc import Callable
 from contextlib import contextmanager
+from io import BytesIO
 from pathlib import Path
 
+import requests
 from django.db import close_old_connections
 from django.utils import timezone
+from PIL import Image
 
 from .extractor import CancellationToken, CancelledException, ExtractParams, extract
 from .models import ExtractionJob
@@ -153,10 +157,14 @@ class JobRunner:
 		try:
 			frame_count = self.extractor(params=extract_params, on_progress=on_progress)
 			
-			# Download cover image if URL was provided
+			# Download cover image if URL was provided, or copy from source if available
 			cover_image_url = params_data.get("cover_image_url", "").strip()
+			source_cover_path = params_data.get("source_cover_path", "").strip()
+			
 			if cover_image_url:
 				self._download_cover_image(cover_image_url, output_dir)
+			elif source_cover_path:
+				self._copy_cover_image(Path(source_cover_path), output_dir)
 			
 			job.refresh_from_db()
 			job.total_frames = frame_count
@@ -187,11 +195,6 @@ class JobRunner:
 
 	def _download_cover_image(self, url: str, output_dir: Path) -> None:
 		"""Download a cover image from a URL and save it to the output directory."""
-		from io import BytesIO  # noqa: PLC0415
-
-		import requests  # noqa: PLC0415
-		from PIL import Image  # noqa: PLC0415
-		
 		try:
 			# Create output directory if it doesn't exist
 			output_dir.mkdir(parents=True, exist_ok=True)
@@ -210,6 +213,28 @@ class JobRunner:
 		except Exception as e:
 			logger.warning(f"Failed to download cover image: {e}")
 			# Don't fail the job if cover download fails
+
+	def _copy_cover_image(self, source_path: Path, output_dir: Path) -> None:
+		"""Copy an existing cover image to the output directory."""
+		try:
+			if not source_path.exists():
+				return
+
+			# Create output directory if it doesn't exist
+			output_dir.mkdir(parents=True, exist_ok=True)
+			
+			# Determine destination filename
+			# If source is explicitly named .cover.*, preserve extension
+			# If source is a random image, strictly name it .cover + extension to mark it as cover
+			dest_name = ".cover" + source_path.suffix
+			dest_path = output_dir / dest_name
+			
+			# Always overwrite any existing cover at the destination to ensure the selected cover is applied.
+			
+			shutil.copy2(source_path, dest_path)
+			logger.info(f"Copied cover image from {source_path} to {dest_path}")
+		except Exception as e:
+			logger.warning(f"Failed to copy cover image: {e}")
 
 	def _get_job(self, job_id: str) -> ExtractionJob | None:
 		try:
