@@ -1,3 +1,4 @@
+import contextlib
 import os
 import uuid
 from pathlib import Path
@@ -16,8 +17,9 @@ try:
 except Exception:  # pragma: no cover
 	_guessit = None
 
-import contextlib
+from choose.utils import extraction_root, find_cover_filename, list_media_folders
 
+from . import tmdb
 from .forms import ExtractStartForm
 from .job_runner import JobRunner, job_runner
 from .models import ExtractionJob
@@ -79,7 +81,6 @@ def start(request: HttpRequest) -> HttpResponse:
 
 			# Check if there is an existing cover image in the library folder
 			try:
-				from choose.utils import extraction_root, find_cover_filename
 				library_root = Path(settings.WALLPAPERS_FOLDER)
 				library_dir = library_root / folder_rel
 				if library_dir.exists() and library_dir.is_dir():
@@ -324,8 +325,6 @@ def folders_api(request: HttpRequest) -> JsonResponse:
 
 	Returns a list of folders that can be used for selection in the extract form.
 	"""
-	from choose.utils import extraction_root, list_media_folders
-
 	# Get folders from both library (wallpapers) and inbox (extraction)
 	library_folders, _ = list_media_folders()
 	inbox_folders, _ = list_media_folders(root=extraction_root())
@@ -371,10 +370,6 @@ def tmdb_search_api(request: HttpRequest) -> JsonResponse:
 	- query: The title to search for (required)
 	- year: Optional year to filter results
 	"""
-	from django.conf import settings
-
-	from . import tmdb
-
 	if not settings.TMDB_API_KEY:
 		return JsonResponse({"error": "tmdb_not_configured"}, status=500)
 
@@ -404,10 +399,6 @@ def tmdb_posters_api(request: HttpRequest) -> JsonResponse:
 	- media_type: Either "movie" or "tv" (required)
 	- media_id: The TMDB ID of the media (required)
 	"""
-	from django.conf import settings
-
-	from . import tmdb
-
 	if not settings.TMDB_API_KEY:
 		return JsonResponse({"error": "tmdb_not_configured"}, status=500)
 

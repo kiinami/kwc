@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import logging
+import shutil
 import threading
 from collections.abc import Callable
 from contextlib import contextmanager
+from io import BytesIO
 from pathlib import Path
 
+import requests
 from django.db import close_old_connections
 from django.utils import timezone
+from PIL import Image
 
 from .extractor import CancellationToken, CancelledException, ExtractParams, extract
 from .models import ExtractionJob
@@ -191,11 +195,6 @@ class JobRunner:
 
 	def _download_cover_image(self, url: str, output_dir: Path) -> None:
 		"""Download a cover image from a URL and save it to the output directory."""
-		from io import BytesIO
-
-		import requests
-		from PIL import Image
-		
 		try:
 			# Create output directory if it doesn't exist
 			output_dir.mkdir(parents=True, exist_ok=True)
@@ -217,8 +216,6 @@ class JobRunner:
 
 	def _copy_cover_image(self, source_path: Path, output_dir: Path) -> None:
 		"""Copy an existing cover image to the output directory."""
-		import shutil
-		
 		try:
 			if not source_path.exists():
 				return
