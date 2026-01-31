@@ -78,7 +78,7 @@
           {% if year %}<span>{{ year }}</span>{% endif %}
           <span class="gallery-count">{{ images|length }} image{% if images|length != 1 %}s{% endif %}</span>
         </div>
-        {% if sections|length <= 1 %}
+        {% if sections|length <= 1 and is_inbox %}
           {# Only show global Choose button for non-series or single-section folders #}
           <div class="gallery-actions">
             <a class="btn btn-primary" href="{{ choose_url }}">Choose</a>
@@ -95,14 +95,16 @@
             <button class="gallery-section-header" type="button" data-section-toggle aria-expanded="true">
               <span class="gallery-section-title">{{ section.title }}</span>
               <span class="gallery-section-count">{{ section.images|length }} image{% if section.images|length != 1 %}s{% endif %}</span>
-              <a class="btn btn-primary btn-sm" href="{{ section.choose_url }}" style="margin-left: auto; margin-right: 0.5rem;" onclick="event.stopPropagation();">Choose</a>
+              {% if is_inbox %}
+                <a class="btn btn-primary btn-sm" href="{{ section.choose_url }}" style="margin-left: auto; margin-right: 0.5rem;" onclick="event.stopPropagation();">Choose</a>
+              {% endif %}
               <span class="gallery-section-arrow" aria-hidden="true">▼</span>
             </button>
             <div class="gallery-section-content" data-section-content>
               <div class="gallery-grid">
                 {% for image in section.images %}
                   <a class="gallery-thumb loading{% if image.versions|length > 1 %} has-versions{% endif %}" 
-                    href="{% url 'choose:lightbox' folder=folder filename=image.name %}"
+                    href="{% if is_inbox %}{% url 'choose:inbox_lightbox' folder=folder filename=image.name %}{% else %}{% url 'choose:lightbox' folder=folder filename=image.name %}{% endif %}"
                     aria-label="View {{ image.name }} full screen">
                     <div class="spinner" aria-hidden="true"></div>
                     <img class="gallery-thumb-img" src="{{ image.thumb_url|default:image.url }}" alt="{{ title }} – {{ image.name }}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.closest('.gallery-thumb')?.classList.remove('loading');" onerror="this.closest('.gallery-thumb')?.classList.remove('loading'); this.classList.add('loaded'); this.style.opacity='0.35';" />
@@ -120,7 +122,7 @@
         <div class="gallery-grid">
           {% for image in images %}
             <a class="gallery-thumb loading{% if image.versions|length > 1 %} has-versions{% endif %}" 
-              href="{% url 'choose:lightbox' folder=folder filename=image.name %}"
+              href="{% if is_inbox %}{% url 'choose:inbox_lightbox' folder=folder filename=image.name %}{% else %}{% url 'choose:lightbox' folder=folder filename=image.name %}{% endif %}"
               aria-label="View {{ image.name }} full screen">
               <div class="spinner" aria-hidden="true"></div>
               <img class="gallery-thumb-img" src="{{ image.thumb_url|default:image.url }}" alt="{{ title }} – {{ image.name }}" loading="lazy" decoding="async" onload="this.classList.add('loaded'); this.closest('.gallery-thumb')?.classList.remove('loading');" onerror="this.closest('.gallery-thumb')?.classList.remove('loading'); this.classList.add('loaded'); this.style.opacity='0.35';" />

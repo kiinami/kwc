@@ -22,14 +22,14 @@ def test_job_view_includes_gallery_url():
 	
 	assert response.status_code == 200
 	assert 'gallery_url' in response.context
-	# The gallery_url should be for the folder "Test Movie (2024)"
-	expected_url = reverse('choose:gallery', kwargs={'folder': 'Test Movie (2024)'})
+	# The gallery_url should be for the folder "Test Movie (2024)" in the inbox
+	expected_url = reverse('choose:inbox_gallery', kwargs={'folder': 'Test Movie (2024)'})
 	assert response.context['gallery_url'] == expected_url
 
 
 @pytest.mark.django_db
-def test_job_view_button_text_is_open_gallery():
-	"""Test that the job view button says 'Open Gallery' instead of 'Open Choose'."""
+def test_job_view_button_text_is_curate_in_inbox():
+	"""Test that the job view button says 'Curate in Inbox'."""
 	job = ExtractionJob.objects.create(
 		id="test-job-456",
 		params={"title": "Another Movie"},
@@ -42,8 +42,7 @@ def test_job_view_button_text_is_open_gallery():
 	
 	assert response.status_code == 200
 	content = response.content.decode('utf-8')
-	assert 'Open Gallery' in content
-	assert 'Open Choose' not in content
+	assert 'Curate in Inbox' in content
 
 
 @pytest.mark.django_db

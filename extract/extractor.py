@@ -12,7 +12,7 @@ from pathlib import Path
 from django.conf import settings
 from ffmpeg import FFmpeg
 
-from .utils import cut_video, get_iframe_timestamps, render_pattern, check_is_hdr
+from .utils import check_is_hdr, cut_video, get_iframe_timestamps, render_pattern
 
 logger = logging.getLogger(__name__)
 _sleep = time.sleep

@@ -483,6 +483,8 @@
         <div class="spacer"></div>
         <div class="nav-controls">
           <nav class="nav">
+            <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' or request.resolver_match.url_name == 'gallery' or request.resolver_match.url_name == 'folder' or request.resolver_match.url_name == 'lightbox' %}active{% endif %}">Library</a>
+            <a href="{% url 'choose:inbox' %}" class="{% if 'inbox' in request.resolver_match.url_name %}active{% endif %}">Inbox</a>
             <a href="{% url 'extract:index' %}" class="{% if request.resolver_match.namespace == 'extract' %}active{% endif %}">Extract</a>
           </nav>
           <button class="install-btn" id="kwc-install" hidden>Install app</button>

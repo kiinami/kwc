@@ -56,7 +56,7 @@ def start(request: HttpRequest) -> HttpResponse:
 			params["trim_intervals"] = form.cleaned_data.get("trim_intervals", [])
 			params["cover_image_url"] = form.cleaned_data.get("cover_image_url", "")
 
-			root = Path(settings.WALLPAPERS_FOLDER)
+			root = Path(settings.EXTRACTION_FOLDER)
 			folder_pattern = settings.EXTRACT_FOLDER_PATTERN
 			folder_rel = render_pattern(
 				folder_pattern,
@@ -115,7 +115,7 @@ def job(request: HttpRequest, job_id: str) -> HttpResponse:
 	
 	# Extract folder name from output_dir for gallery link
 	folder_name = os.path.basename(job_obj.output_dir.rstrip(os.sep))
-	gallery_url = reverse('choose:gallery', kwargs={'folder': folder_name})
+	gallery_url = reverse('choose:inbox_gallery', kwargs={'folder': folder_name})
 	
 	context = {
 		"job_id": job_obj.id,
