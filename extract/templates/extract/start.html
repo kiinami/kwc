@@ -245,11 +245,11 @@
       folderSelectButton.querySelector('.folder-select-display span').textContent = 'Create new';
       
       if (titleEl) {
-        titleEl.disabled = false;
+        titleEl.readOnly = false;
         titleEl.value = '';
       }
       if (yearEl) {
-        yearEl.disabled = false;
+        yearEl.readOnly = false;
         yearEl.value = '';
       }
       coverField.style.cursor = 'pointer';
@@ -261,19 +261,22 @@
     } else {
       // Existing folder selected
       selectedFolderInput.value = folder.name;
+
+      // Clear cover URL input to prevent overwriting existing cover
+      if (coverImageUrlInput) coverImageUrlInput.value = '';
       
       // Update button display
       const displayText = `${folder.title}${folder.year ? ' (' + folder.year + ')' : ''}`;
       folderSelectButton.querySelector('.folder-select-display span').textContent = displayText;
       
-      // Fill and disable title and year
+      // Fill and make read-only title and year
       if (titleEl) {
         titleEl.value = folder.title;
-        titleEl.disabled = true;
+        titleEl.readOnly = true;
       }
       if (yearEl) {
         yearEl.value = folder.year || '';
-        yearEl.disabled = true;
+        yearEl.readOnly = true;
       }
       
       // Set cover image

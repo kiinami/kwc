@@ -302,8 +302,31 @@ def folders_api(request: HttpRequest) -> JsonResponse:
 
 	Returns a list of folders that can be used for selection in the extract form.
 	"""
-	from choose.utils import list_media_folders  # noqa: PLC0415
-	folders, _ = list_media_folders()
+	from choose.utils import extraction_root, list_media_folders  # noqa: PLC0415
+
+	# Get folders from both library (wallpapers) and inbox (extraction)
+	library_folders, _ = list_media_folders()
+	inbox_folders, _ = list_media_folders(root=extraction_root())
+
+	# Merge lists, keyed by folder name to avoid duplicates
+	# Library takes precedence for metadata if both exist
+	seen = set()
+	merged = []
+
+	for f in library_folders:
+		seen.add(f["name"])
+		merged.append(f)
+
+	for f in inbox_folders:
+		if f["name"] not in seen:
+			seen.add(f["name"])
+			merged.append(f)
+
+	# Re-sort combined list
+	merged.sort(
+		key=lambda x: (x["year_sort"], x["mtime"], x["name"].lower()), reverse=True
+	)
+
 	# Return folder data including cover URLs for the dropdown
 	result = [
 		{
@@ -313,7 +336,7 @@ def folders_api(request: HttpRequest) -> JsonResponse:
 			"cover_url": f["cover_url"],
 			"cover_thumb_url": f["cover_thumb_url"],
 		}
-		for f in folders
+		for f in merged
 	]
 	return JsonResponse({"folders": result})
 
