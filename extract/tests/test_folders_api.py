@@ -11,7 +11,7 @@ class FoldersApiTest(TestCase):
         """Test that folders_api merges folders from both library and inbox."""
         
         # Mock list_media_folders to return different sets of folders
-        with patch('choose.utils.list_media_folders') as mock_list:
+        with patch('extract.views.list_media_folders') as mock_list:
             # Define side_effect to return different lists based on arguments
             # First call has no args (Library), second has root (Inbox)
             
