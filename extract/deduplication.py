@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def _initialize_cnn_environment():
+def _initialize_cnn_environment() -> None:
     """
     Initialize environment variables needed for CNN/Torch.
     
