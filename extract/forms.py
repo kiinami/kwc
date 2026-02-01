@@ -54,8 +54,8 @@ class ExtractStartForm(forms.Form):
         label="Similarity threshold",
         required=False,
         initial=0.9,
-        min_value=0.1,
-        max_value=1.0,
+        min_value=0.8,
+        max_value=0.99,
         widget=forms.NumberInput(attrs={"type": "range", "min": "0.8", "max": "0.99", "step": "0.01"}),
         help_text="Higher means stricter (fewer duplicates found).",
     )

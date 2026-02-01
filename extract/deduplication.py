@@ -1,24 +1,13 @@
 import logging
 import os
+import tempfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-# Fix for docker environments running as non-root user without a username set
-# Torch (used by imagededup) requires a username to determine the cache directory
-if "USER" not in os.environ:
-    os.environ["USER"] = "kwc"
-
-# Torch attempts to write to /root/.cache if HOME is not writable or set to /root
-# We redirect it to a temporary directory that is definitely writable
-os.environ["TORCH_HOME"] = "/tmp/torch-cache"
-# Some other tools might use XDG_CACHE_HOME
-os.environ["XDG_CACHE_HOME"] = "/tmp/xdg-cache"
-
-from imagededup.methods import CNN
-
 from kwc.utils.files import safe_remove, safe_rename
-from .utils import render_pattern
+
 from .extractor import CancellationToken, CancelledException
+from .utils import render_pattern
 
 if TYPE_CHECKING:
     from .models import ExtractionJob
@@ -26,7 +15,30 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def process_deduplication(job: "ExtractionJob", cancel_token: CancellationToken | None = None, threshold: float = 0.9) -> None:
+def _initialize_cnn_environment() -> None:
+    """
+    Initialize environment variables needed for CNN/Torch.
+    
+    This is done lazily to avoid setting global environment variables at import time.
+    These settings only apply when deduplication is actually used.
+    """
+    # Fix for docker environments running as non-root user without a username set
+    # Torch (used by imagededup) requires a username to determine the cache directory
+    if "USER" not in os.environ:
+        os.environ["USER"] = "kwc"
+    
+    # Torch attempts to write to /root/.cache if HOME is not writable or set to /root
+    # We redirect it to a temporary directory that is definitely writable
+    # Use tempfile.gettempdir() for platform-appropriate temporary directory
+    temp_dir = tempfile.gettempdir()
+    os.environ["TORCH_HOME"] = os.path.join(temp_dir, "torch-cache")
+    # Some other tools might use XDG_CACHE_HOME
+    os.environ["XDG_CACHE_HOME"] = os.path.join(temp_dir, "xdg-cache")
+
+
+def process_deduplication(
+    job: "ExtractionJob", cancel_token: CancellationToken | None = None, threshold: float = 0.9
+) -> None:
     """
     Run deduplication on the job's output directory.
     Uses ImageDedup (CNN) to find duplicates and removes them, keeping the highest quality one (largest file size).
@@ -43,12 +55,18 @@ def process_deduplication(job: "ExtractionJob", cancel_token: CancellationToken 
     if cancel_token and cancel_token.is_cancelled():
         raise CancelledException()
 
+    # Initialize environment for CNN - done lazily to avoid global side effects at import time
+    _initialize_cnn_environment()
+    
+    # Import CNN here after environment is set up
+    from imagededup.methods import CNN
+
     # Initialize CNN method
     try:
         cnn = CNN()
     except Exception as e:
         logger.error(f"Failed to initialize CNN: {e}")
-        return
+        raise
 
     if cancel_token and cancel_token.is_cancelled():
         raise CancelledException()
@@ -69,7 +87,7 @@ def process_deduplication(job: "ExtractionJob", cancel_token: CancellationToken 
         duplicates = cnn.find_duplicates(encoding_map=encodings, min_similarity_threshold=threshold, scores=False)
     except Exception as e:
         logger.error(f"Deduplication failed during processing: {e}")
-        return
+        raise
 
     if cancel_token and cancel_token.is_cancelled():
         raise CancelledException()
@@ -114,7 +132,7 @@ def process_deduplication(job: "ExtractionJob", cancel_token: CancellationToken 
 
     # Renumber images to fill gaps if we deleted anything
     if files_to_delete:
-         _renumber_images(job, cancel_token)
+        _renumber_images(job, cancel_token)
 
 
 def _get_best_image(base_dir: Path, filenames: set[str]) -> str:
@@ -199,5 +217,7 @@ def _renumber_images(job: "ExtractionJob", cancel_token: CancellationToken | Non
         try:
             safe_rename(temp_path, new_path)
         except Exception as e:
-             logger.error(f"Failed to rename from temp file {temp_path} -> {new_path}: {e}")
+            logger.error(f"Failed to rename from temp file {temp_path} -> {new_path}: {e}")
+            # Re-raise to ensure the job is marked as failed and to avoid partial renumbering
+            raise
 
