@@ -124,13 +124,13 @@ def test_job_runner_marks_job_done(monkeypatch: pytest.MonkeyPatch) -> None:
 
 	progress: list[tuple[int, int]] = []
 
-	def fake_extract(*, params: ExtractParams, on_progress: Callable[[int, int], None]) -> int:
+	def fake_extract(*, params: ExtractParams, on_progress: Callable[[int, int], None]) -> tuple[int, list[Path]]:
 		assert isinstance(params, ExtractParams)
 		on_progress(1, 3)
 		on_progress(3, 3)
 		progress.append((1, 3))
 		progress.append((3, 3))
-		return 3
+		return 3, []
 
 	runner, manager = _configure_runner(job, fake_extract)
 	runner.start_job(job.id)

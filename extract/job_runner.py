@@ -15,6 +15,7 @@ from PIL import Image
 
 from .extractor import CancellationToken, CancelledException, ExtractParams, extract
 from .models import ExtractionJob
+from .deduplication import process_deduplication
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +156,7 @@ class JobRunner:
 			)
 
 		try:
-			frame_count = self.extractor(params=extract_params, on_progress=on_progress)
+			frame_count, extracted_files = self.extractor(params=extract_params, on_progress=on_progress)
 			
 			# Download cover image if URL was provided, or copy from source if available
 			cover_image_url = params_data.get("cover_image_url", "").strip()
@@ -166,6 +167,11 @@ class JobRunner:
 			elif source_cover_path:
 				self._copy_cover_image(Path(source_cover_path), output_dir)
 			
+			if params_data.get("deduplicate"):
+				job.status = self.model.Status.DEDUPLICATING
+				job.save(update_fields=["status", "updated_at"])
+				
+
 			job.refresh_from_db()
 			job.total_frames = frame_count
 			if job.total_steps == 0:
