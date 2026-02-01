@@ -192,10 +192,9 @@ def extract(
     *,
     params: ExtractParams,
     on_progress: Callable[[int, int], None] | None = None,
-) -> tuple[int, list[Path]]:
+) -> int:
     """
-    Extract frames for each I-frame in a video. 
-    Returns (number of frames extracted, list of paths to extracted images).
+    Extract frames for each I-frame in a video. Returns number of frames extracted.
 
     on_progress(current, total) can be used to track progress.
     """
@@ -258,7 +257,6 @@ def extract(
 
     total = len(frame_args)
     done = 0
-    extracted_files: list[Path] = []
     if on_progress:
         on_progress(done, total)
 
@@ -290,7 +288,6 @@ def extract(
             logger.debug("Using configured max workers: %d", max_workers)
         with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
             futures = {executor.submit(_extract_frame, arg): arg for arg in frame_args}
-            extracted_files: list[Path] = []
             for f in concurrent.futures.as_completed(futures):
                 # Check for cancellation
                 if params.cancel_token and params.cancel_token.is_cancelled():
@@ -301,11 +298,10 @@ def extract(
                     raise CancelledException("Extraction cancelled")
                 
                 # Retrieve result to surface exceptions immediately
-                path = f.result()
-                extracted_files.append(path)
+                f.result()
                 done += 1
                 if on_progress:
                     on_progress(done, total)
 
     logger.info('Extracted %d frames from "%s" to "%s"!', done, video, output_dir)
-    return done, extracted_files
+    return done

@@ -274,8 +274,7 @@ def test_extract_appends_to_existing_files(tmp_path: Path, monkeypatch: pytest.M
 	result = extractor.extract(params=params)
 	
 	# Check that 3 frames were extracted
-	assert result[0] == 3
-	assert len(result[1]) == 3
+	assert result == 3
 	
 	# Check that new files start from 6 (highest was 5)
 	assert (output_dir / "Test ~ 0006.jpg").exists()
@@ -310,8 +309,7 @@ def test_extract_with_cancellation_token(tmp_path: Path, monkeypatch: pytest.Mon
 	
 	# Should complete successfully without pickle errors
 	result = extractor.extract(params=params)
-	assert result[0] == 2
-	assert len(result[1]) == 2
+	assert result == 2
 	assert (output_dir / "output 0001.jpg").exists()
 	assert (output_dir / "output 0002.jpg").exists()
 

@@ -10,6 +10,7 @@ from django.urls import reverse
 from extract.job_runner import JobRunner
 from extract.models import ExtractionJob
 
+
 class StartCoverCopyTest(TestCase):
     def setUp(self):
         self.tmp_dir = tempfile.mkdtemp()

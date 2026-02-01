@@ -6,6 +6,7 @@ class ExtractionJob(models.Model):
 	class Status(models.TextChoices):
 		PENDING = "pending", "Pending"
 		RUNNING = "running", "Running"
+		DEDUPLICATING = "deduplicating", "Deduplicating"
 		CANCELLING = "cancelling", "Cancelling"
 		DONE = "done", "Done"
 		ERROR = "error", "Error"

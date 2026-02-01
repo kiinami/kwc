@@ -17,9 +17,8 @@ os.environ["XDG_CACHE_HOME"] = "/tmp/xdg-cache"
 from imagededup.methods import CNN
 
 from kwc.utils.files import safe_remove, safe_rename
-
-from .extractor import CancellationToken, CancelledException
 from .utils import render_pattern
+from .extractor import CancellationToken, CancelledException
 
 if TYPE_CHECKING:
     from .models import ExtractionJob
@@ -27,11 +26,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-def process_deduplication(
-    job: "ExtractionJob",
-    cancel_token: CancellationToken | None = None,
-    files_to_check: list[Path] | None = None,
-) -> None:
+def process_deduplication(job: "ExtractionJob", cancel_token: CancellationToken | None = None, threshold: float = 0.9) -> None:
     """
     Run deduplication on the job's output directory.
     Uses ImageDedup (CNN) to find duplicates and removes them, keeping the highest quality one (largest file size).
@@ -42,7 +37,7 @@ def process_deduplication(
         logger.warning(f"Output directory {output_dir} does not exist, skipping deduplication")
         return
 
-    logger.info(f"Starting deduplication for job {job.id} in {output_dir}")
+    logger.info(f"Starting deduplication for job {job.id} in {output_dir} with threshold {threshold}")
 
     # Check for cancellation before expensive operations
     if cancel_token and cancel_token.is_cancelled():
@@ -64,38 +59,14 @@ def process_deduplication(
     try:
         # returns {filename: [duplicate_filenames], ...}
         # default score_threshold is 0.9 for CNN, which is reasonable for "obvious duplicates"
-        
-        # If files_to_check is provided, we only encode and check those files.
-        # This prevents running deduplication against old files in the directory.
-        if files_to_check is not None:
-            encodings = {}
-            # Filter files that actually exist (might have been deleted manually?)
-            valid_files = [f for f in files_to_check if f.exists()]
-            
-            logger.info(f"Encoding {len(valid_files)} new images for deduplication...")
-            
-            for _i, f in enumerate(valid_files):
-                if cancel_token and cancel_token.is_cancelled():
-                    raise CancelledException()
-                
-                # Check absolute vs relative: imagededup returns simple filenames as keys usually
-                # if we pass image_dir. But here we use encode_image(path).
-                # We'll use filename as key to match find_duplicates output structure expectation?
-                # find_duplicates returns keys matching the input dictionary keys.
-                # Since the files are all in output_dir, we can just use the filename as key.
-                try:
-                    encodings[f.name] = cnn.encode_image(image_file=str(f))
-                except Exception as e:
-                    logger.warning(f"Failed to encode {f.name}: {e}")
-        else:
-            # Fallback for full directory scan
-            logger.info(f"Encoding all images in {output_dir} for deduplication...")
-            encodings = cnn.encode_images(image_dir=str(output_dir))
+        # The user said "Process should be light, only deleting the most obvious duplicates"
+        # We can adjust threshold if needed, but default is usually fine.
+        encodings = cnn.encode_images(image_dir=str(output_dir))
         
         if cancel_token and cancel_token.is_cancelled():
             raise CancelledException()
             
-        duplicates = cnn.find_duplicates(encoding_map=encodings, scores=False)
+        duplicates = cnn.find_duplicates(encoding_map=encodings, min_similarity_threshold=threshold, scores=False)
     except Exception as e:
         logger.error(f"Deduplication failed during processing: {e}")
         return
