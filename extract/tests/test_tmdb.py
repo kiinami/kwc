@@ -29,7 +29,7 @@ class TMDBServiceTests(TestCase):
         tmdb.configure_api_key(test_key)
         
         # Verify the key was set by checking the module
-        import tmdbsimple  # noqa: PLC0415
+        import tmdbsimple
         assert test_key == tmdbsimple.API_KEY
 
     @patch('extract.tmdb.tmdb.Search')
@@ -107,7 +107,7 @@ class TMDBServiceTests(TestCase):
     def test_search_multi_raises_error_without_api_key(self):
         """Test that search_multi raises error when API key is not configured."""
         # Clear API key
-        import tmdbsimple  # noqa: PLC0415
+        import tmdbsimple
         tmdbsimple.API_KEY = ''
         
         # Execute and verify

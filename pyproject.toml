@@ -39,6 +39,7 @@ lint.ignore = [
     "PLR0912",  # too-many-branches - style preference
     "PLR0915",  # too-many-statements - style preference
     "PLW2901",  # redefined-loop-name - intentional in some cases
+    "PLC0415",  # import-outside-top-level - intentional for lazy loading
     "RUF012",   # mutable-class-default - mostly in auto-generated migrations
     "SIM117",   # multiple-with-statements - style preference
 ]

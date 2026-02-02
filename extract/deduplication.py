@@ -59,7 +59,7 @@ def process_deduplication(
     _initialize_cnn_environment()
     
     # Import CNN here after environment is set up
-    from imagededup.methods import CNN
+    from imagededup.methods import CNN  # type: ignore[import-untyped]
 
     # Initialize CNN method
     try:
