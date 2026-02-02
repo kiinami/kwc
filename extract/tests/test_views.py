@@ -4,6 +4,7 @@ from django.test import Client
 from django.urls import reverse
 
 from extract.models import ExtractionJob
+from extract.views import _format_duration_seconds
 
 
 @pytest.mark.django_db
@@ -215,3 +216,81 @@ def test_folders_api_returns_existing_folders(tmp_path, settings):
 	movie_c = next(f for f in folders if f['name'] == "Movie C")
 	assert movie_c['title'] == "Movie C"
 	assert movie_c['year'] is None
+
+
+def test_format_duration_seconds_zero():
+	"""Test that zero seconds is formatted correctly."""
+	result = _format_duration_seconds(0)
+	assert result == "0s"
+
+
+def test_format_duration_seconds_only():
+	"""Test that seconds-only durations are formatted correctly."""
+	result = _format_duration_seconds(45)
+	assert result == "45s"
+
+
+def test_format_duration_seconds_one_second():
+	"""Test that one second is formatted correctly."""
+	result = _format_duration_seconds(1)
+	assert result == "1s"
+
+
+def test_format_duration_seconds_fifty_nine_seconds():
+	"""Test that 59 seconds (edge case before minutes) is formatted correctly."""
+	result = _format_duration_seconds(59)
+	assert result == "59s"
+
+
+def test_format_duration_minutes_and_seconds():
+	"""Test that minutes and seconds are formatted correctly."""
+	result = _format_duration_seconds(195)  # 3 minutes 15 seconds
+	assert result == "3m 15s"
+
+
+def test_format_duration_minutes_exact():
+	"""Test that exact minutes (no remaining seconds) are formatted correctly."""
+	result = _format_duration_seconds(120)  # 2 minutes 0 seconds
+	assert result == "2m 0s"
+
+
+def test_format_duration_one_minute():
+	"""Test that one minute is formatted correctly."""
+	result = _format_duration_seconds(60)
+	assert result == "1m 0s"
+
+
+def test_format_duration_hours_minutes_seconds():
+	"""Test that hours, minutes, and seconds are formatted correctly."""
+	result = _format_duration_seconds(9045)  # 2 hours 30 minutes 45 seconds
+	assert result == "2h 30m 45s"
+
+
+def test_format_duration_hours_exact():
+	"""Test that exact hours (no remaining minutes or seconds) are formatted correctly."""
+	result = _format_duration_seconds(7200)  # 2 hours 0 minutes 0 seconds
+	assert result == "2h 0m 0s"
+
+
+def test_format_duration_one_hour():
+	"""Test that one hour is formatted correctly."""
+	result = _format_duration_seconds(3600)
+	assert result == "1h 0m 0s"
+
+
+def test_format_duration_hours_with_seconds_no_minutes():
+	"""Test hours with seconds but no minutes."""
+	result = _format_duration_seconds(3615)  # 1 hour 0 minutes 15 seconds
+	assert result == "1h 0m 15s"
+
+
+def test_format_duration_fractional_seconds():
+	"""Test that fractional seconds are truncated to integers."""
+	result = _format_duration_seconds(45.7)
+	assert result == "45s"
+
+
+def test_format_duration_large_value():
+	"""Test a large duration value (multiple hours)."""
+	result = _format_duration_seconds(86400)  # 24 hours
+	assert result == "24h 0m 0s"
