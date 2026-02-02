@@ -41,10 +41,19 @@ def _job_summary(job: ExtractionJob) -> dict[str, Any]:
 	}
 
 
+def _format_duration_seconds(seconds: float) -> str:
+	m, s = divmod(int(seconds), 60)
+	h, m = divmod(m, 60)
+	if h > 0:
+		return f"{h}h {m}m {s}s"
+	if m > 0:
+		return f"{m}m {s}s"
+	return f"{s}s"
+
+
 def _format_duration(job: ExtractionJob) -> str:
 	if job.started_at:
-		end = job.finished_at or timezone.now()
-		return f"{max(0.0, (end - job.started_at).total_seconds()):.1f}s"
+		return _format_duration_seconds(job.elapsed_seconds)
 	return "—"
 
 
@@ -151,6 +160,7 @@ def job(request: HttpRequest, job_id: str) -> HttpResponse:
 		"total": job_obj.total_steps if total_known else None,
 		"current": job_obj.current_step if total_known else None,
 		"elapsed": job_obj.elapsed_seconds,
+		"elapsed_formatted": _format_duration_seconds(job_obj.elapsed_seconds),
 		"is_finished": job_obj.status in FINISHED_STATUSES,
 		"is_done": job_obj.status == ExtractionJob.Status.DONE,
 		"is_error": job_obj.status == ExtractionJob.Status.ERROR,

@@ -42,7 +42,7 @@
           </span>
           <span id="countsUnknown" {% if total %}style="display:none"{% endif %}>Getting total frames…</span>
         </span>
-        (<span id="percent">{{ percent }}</span>%) — <span id="elapsed">{{ elapsed|floatformat:1 }}</span>s
+        (<span id="percent">{{ percent }}</span>%) — <span id="elapsed">{{ elapsed_formatted }}</span>
       </div>
     </div>
 
@@ -138,6 +138,23 @@
     return cookieValue;
   }
 
+  function formatDuration(seconds) {
+    if (seconds == null) return '0s';
+    const s = Math.floor(seconds);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    const remainingS = s % 60;
+    const remainingM = m % 60;
+
+    if (h > 0) {
+      return `${h}h ${remainingM}m ${remainingS}s`;
+    } else if (m > 0) {
+      return `${remainingM}m ${remainingS}s`;
+    } else {
+      return `${remainingS}s`;
+    }
+  }
+
   async function poll() {
     try {
       const res = await fetch(apiUrl, {cache: 'no-store'});
@@ -174,7 +191,7 @@
       }
 
       if (elapsedEl && data.elapsed_seconds != null) {
-        elapsedEl.textContent = Number(data.elapsed_seconds).toFixed(1);
+        elapsedEl.textContent = formatDuration(data.elapsed_seconds);
       }
       if (framesEl && data.total_frames != null) framesEl.textContent = data.total_frames;
       if (timeEl && data.time_taken) timeEl.textContent = data.time_taken;
