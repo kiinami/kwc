@@ -42,7 +42,7 @@ def test_list_gallery_images_handles_permission_error(monkeypatch: pytest.Monkey
 	folder = wallpapers_dir / "Show"
 	folder.mkdir()
 
-	from choose import services  # noqa: PLC0415
+	from choose import services
 
 	def deny(_path: Path) -> list[str]:
 		raise PermissionError("denied")
@@ -63,7 +63,7 @@ def test_load_folder_context_permission_error(monkeypatch: pytest.MonkeyPatch, w
 	folder = wallpapers_dir / "Clip"
 	folder.mkdir()
 
-	from choose import services  # noqa: PLC0415
+	from choose import services
 
 	def deny(_path: Path) -> list[str]:
 		raise PermissionError("nope")

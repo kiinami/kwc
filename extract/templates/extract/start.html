@@ -8,6 +8,54 @@
       padding-inline: 1.25rem;
     }
   }
+
+  /* Toggle Switch */
+  .toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255,255,255,0.1);
+    transition: .2s;
+    border-radius: 24px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: var(--muted);
+    transition: .2s;
+    border-radius: 50%;
+  }
+  .toggle-switch input:checked + .toggle-slider {
+    background-color: var(--accent);
+    border-color: var(--accent);
+  }
+  .toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+    background-color: white;
+  }
+  .toggle-switch input:focus + .toggle-slider {
+    box-shadow: 0 0 0 2px rgba(76, 139, 245, 0.3);
+  }
 </style>
 <div class="extract-page-shell">
   <div class="extract-page-inner">
@@ -95,6 +143,40 @@
                 <input type="hidden" name="{{ form.trim_intervals.html_name }}" id="id_trim_intervals" />
                 <div id="intervals" class="grid" style="margin-top:.5rem;"></div>
                 {% if form.trim_intervals.errors %}<div class="status status--error">{{ form.trim_intervals.errors|striptags }}</div>{% endif %}
+              </div>
+            </div>
+
+                        <!-- Deduplicate -->
+            <div class="form-row">
+              <div class="form-field form-field-full" style="display:flex; flex-direction:column; gap: 0.5rem;">
+                <div style="display:flex; flex-direction:row; align-items:center;">
+                  <!-- Toggle Switch -->
+                  <label class="toggle-switch" style="margin-right: 0.75rem;">
+                    {{ form.deduplicate }}
+                    <span class="toggle-slider"></span>
+                  </label>
+                  
+                  <!-- Label Text -->
+                  <label for="{{ form.deduplicate.id_for_label }}" style="cursor: pointer; font-weight:500; font-size: 0.95rem;">
+                    {{ form.deduplicate.label }}
+                  </label>
+                </div>
+                
+                <!-- Threshold Slider -->
+                <div id="deduplicateThresholdRow" style="margin-left: 3.5rem; transition: opacity 0.2s; opacity: 1;">
+                   <div style="display:flex; align-items:center; gap: 0.75rem;">
+                      <label for="{{ form.deduplicate_threshold.id_for_label }}" class="muted" style="font-size: 0.85rem; white-space: nowrap;">Sensitivity:</label>
+                      <div style="flex-grow: 1; max-width: 200px; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 0.7rem;" class="muted">Min</span>
+                        {{ form.deduplicate_threshold }}
+                        <span style="font-size: 0.7rem;" class="muted">Max</span>
+                      </div>
+                      <input type="number" id="thresholdValueInput" class="input" style="width: 4rem; padding: 0.25rem 0.5rem; font-size: 0.85rem;" min="0.8" max="0.99" step="0.01" value="{{ form.deduplicate_threshold.value|default:'0.9' }}">
+                   </div>
+                   <div class="muted" style="font-size: 0.75rem; margin-top: 0.25rem;">
+                     {{ form.deduplicate_threshold.help_text }}
+                   </div>
+                </div>
               </div>
             </div>
 
@@ -715,6 +797,52 @@
     coverPreview.innerHTML = `<img src="${url}" alt="Cover" class="cover-image" />`;
     
     closeCoverModal();
+  }
+
+  // Deduplicate controls logic
+  const dedupCheckbox = document.getElementById('{{ form.deduplicate.auto_id }}');
+  const dedupRow = document.getElementById('deduplicateThresholdRow');
+  const thresholdInput = document.getElementById('{{ form.deduplicate_threshold.auto_id }}');
+  const thresholdDisplayInput = document.getElementById('thresholdValueInput');
+
+  function updateDedupVisibility() {
+    if (dedupCheckbox && dedupRow) {
+      if (dedupCheckbox.checked) {
+        dedupRow.style.opacity = '1';
+        dedupRow.style.pointerEvents = 'auto';
+        if (thresholdInput) thresholdInput.disabled = false;
+        if (thresholdDisplayInput) thresholdDisplayInput.disabled = false;
+      } else {
+        dedupRow.style.opacity = '0.3';
+        dedupRow.style.pointerEvents = 'none';
+        if (thresholdInput) thresholdInput.disabled = true;
+        if (thresholdDisplayInput) thresholdDisplayInput.disabled = true;
+      }
+    }
+  }
+
+  function syncThreshold(source) {
+      if (!thresholdInput || !thresholdDisplayInput) return;
+      if (source === thresholdInput) {
+          thresholdDisplayInput.value = thresholdInput.value;
+      } else {
+          thresholdInput.value = thresholdDisplayInput.value;
+      }
+  }
+
+  if (dedupCheckbox) {
+    dedupCheckbox.addEventListener('change', updateDedupVisibility);
+    // Initialize state
+    updateDedupVisibility();
+  }
+  
+  if (thresholdInput) {
+      thresholdInput.addEventListener('input', () => syncThreshold(thresholdInput));
+      thresholdInput.style.width = '100%';
+  }
+
+  if (thresholdDisplayInput) {
+      thresholdDisplayInput.addEventListener('input', () => syncThreshold(thresholdDisplayInput));
   }
 
 </script>

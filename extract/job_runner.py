@@ -166,6 +166,19 @@ class JobRunner:
 			elif source_cover_path:
 				self._copy_cover_image(Path(source_cover_path), output_dir)
 			
+			if params_data.get("deduplicate"):
+				job.status = self.model.Status.DEDUPLICATING
+				job.save(update_fields=["status", "updated_at"])
+				
+				threshold_val = params_data.get("deduplicate_threshold")
+				try:
+					threshold = float(threshold_val) if threshold_val is not None else 0.9
+				except (ValueError, TypeError):
+					threshold = 0.9
+				
+				from .deduplication import process_deduplication
+				process_deduplication(job, cancel_token, threshold=threshold)
+			
 			job.refresh_from_db()
 			job.total_frames = frame_count
 			if job.total_steps == 0:

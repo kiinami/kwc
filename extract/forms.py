@@ -43,6 +43,23 @@ class ExtractStartForm(forms.Form):
     # Backed by a hidden JSON string that the UI manages
     trim_intervals = forms.CharField(widget=forms.HiddenInput(), required=False)
     
+    deduplicate = forms.BooleanField(
+        label="Deduplicate images",
+        required=False,
+        initial=True,
+        help_text="Remove similar images after extraction",
+    )
+    
+    deduplicate_threshold = forms.FloatField(
+        label="Similarity threshold",
+        required=False,
+        initial=0.9,
+        min_value=0.8,
+        max_value=0.99,
+        widget=forms.NumberInput(attrs={"type": "range", "min": "0.8", "max": "0.99", "step": "0.01"}),
+        help_text="Higher means stricter (fewer duplicates found).",
+    )
+
     # Cover image URL from TMDB (optional)
     cover_image_url = forms.CharField(widget=forms.HiddenInput(), required=False)
 
