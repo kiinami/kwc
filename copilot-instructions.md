@@ -51,6 +51,12 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 **Static files**: `uv run manage.py collectstatic --noinput` (WhiteNoise compression)
 **Docker**: `docker build -t kwc-web .` (~2-3min), `docker-compose up` (port 8080)
 
+**Agent Contribution Workflow**:
+1. **Start**: Always create a new branch `git checkout -b <branch-name>` (e.g., `feat/...` or `fix/...`).
+2. **Work**: Commit atomically as you progress.
+3. **Finish**: Push to origin and create a PR to `main`.
+4. **Verify**: Check PR checks (CI). If they fail, get results and fix the issues until green.
+
 ## Key Patterns & Guidelines
 
 **Testing**: Despite README saying "No tests by design", there ARE comprehensive tests. Always run `uv run python -m pytest -v` before/after changes (fast, ~1-2s).
