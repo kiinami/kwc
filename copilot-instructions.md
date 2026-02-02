@@ -2,19 +2,19 @@
 
 ## Overview
 
-**KWC**: Django 5.2.7 app for extracting video keyframes (FFmpeg) and curating wallpapers. Two apps: **Extract** (video→images) and **Choose** (review/rename). Python 3.13 only, Docker deployment.
+**KWC**: Django 5.2.7 app for extracting video keyframes (FFmpeg), deduplicating them (CNN-based), and curating wallpapers. Two apps: **Extract** (video→images) and **Choose** (review/rename). Python 3.13 only, Docker deployment.
 
 ## Project Structure
 
 **Key directories:**
 - `kwc/` - Django project: settings.py (env config), urls.py, wsgi.py, context_processors.py (PWA), static/
 - `choose/` - App: models.py (ImageDecision, FolderProgress), views.py, api.py (JSON endpoints), services.py, tests/
-- `extract/` - App: models.py (ExtractionJob), extractor.py (FFmpeg), job_runner.py, forms.py, tests/
+- `extract/` - App: models.py (ExtractionJob), extractor.py (FFmpeg), deduplication.py (CNN/imagededup), tmdb.py (metadata), job_runner.py, forms.py, tests/
 - `templates/` - Project templates (base.html, home.html, offline.html)
 - `deploy/run` - Docker entrypoint (migrations, gunicorn/dev server)
 
 **Config files:**
-- `pyproject.toml` - Dependencies (base/dev groups), pytest config, ruff config
+- `pyproject.toml` - Dependencies: `django`, `python-ffmpeg`, `imagededup`, `tensorflow`, `tmdbsimple`. Tool configs: `ruff`, `pytest`, `mypy`.
 - `.editorconfig` - 4 spaces (Python), 2 spaces (YAML/JS), tabs (HTML templates)
 - `.python-version` - `3.13`
 - `uv.lock` - Committed lockfile
@@ -51,6 +51,12 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 **Static files**: `uv run manage.py collectstatic --noinput` (WhiteNoise compression)
 **Docker**: `docker build -t kwc-web .` (~2-3min), `docker-compose up` (port 8080)
 
+**Agent Contribution Workflow**:
+1. **Start**: Always create a new branch `git checkout -b <branch-name>` (e.g., `feat/...` or `fix/...`).
+2. **Work**: Commit atomically as you progress.
+3. **Finish**: Push to origin and create a PR to `main`.
+4. **Verify**: Check PR checks (CI). If they fail, get results and fix the issues until green.
+
 ## Key Patterns & Guidelines
 
 **Testing**: Despite README saying "No tests by design", there ARE comprehensive tests. Always run `uv run python -m pytest -v` before/after changes (fast, ~1-2s).
@@ -59,7 +65,9 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 
 **APIs**: Manual JSON parsing in `choose/api.py` (not DRF), CSRF via headers.
 
-**Jobs**: Foreground execution (no Celery), `job_runner.py` uses process pooling for FFmpeg parallelism.
+**Jobs**: Foreground execution (no Celery), `job_runner.py` uses process pooling. Phases: Extraction (FFmpeg) -> Deduplication (MobileNet/CNN).
+
+**Deduplication**: Uses `imagededup` with logic in `extract/deduplication.py`. Handles similarity thresholds.
 
 **PWA**: Dynamic manifest/service worker via `kwc/context_processors.py`, pre-caches `/`, `/extract/`, `/choose/`, `/offline/`.
 
