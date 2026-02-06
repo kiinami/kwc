@@ -1,5 +1,6 @@
 import logging
 import os
+import shutil
 from functools import lru_cache
 from io import BytesIO
 from pathlib import Path
@@ -25,6 +26,7 @@ from .models import ImageDecision
 from .services import ingest_inbox_folder, list_gallery_images, load_folder_context
 from .utils import (
     extraction_root,
+    get_folder_path,
     list_media_folders,
     parse_counter,
     parse_season_episode,
@@ -94,6 +96,19 @@ def inbox_gallery(request: HttpRequest, folder: str) -> HttpResponse:
             section['choose_url'] = section['choose_url'].replace(library_base, inbox_base, 1)
 
     return render(request, 'choose/gallery.html', data)
+
+
+@require_POST
+def delete_folder(request: HttpRequest, folder: str) -> HttpResponse:
+    """Delete an entire folder from the inbox."""
+    try:
+        safe_name = validate_folder_name(folder)
+        target = get_folder_path(safe_name, extraction_root())
+    except (ValueError, FileNotFoundError):
+        raise Http404("Folder not found")
+
+    shutil.rmtree(target)
+    return redirect('choose:inbox')
 
 
 def lightbox(request: HttpRequest, folder: str, filename: str) -> HttpResponse:

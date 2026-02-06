@@ -9,6 +9,7 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('inbox/', views.inbox, name='inbox'),
     path('inbox/<str:folder>/gallery/', views.inbox_gallery, name='inbox_gallery'),
+    path('inbox/<str:folder>/delete', views.delete_folder, name='inbox_delete'),
     path('inbox/<str:folder>/lightbox/<str:filename>', views.inbox_lightbox, name='inbox_lightbox'),
     path('inbox/<str:folder>/', views.inbox_folder, name='inbox_folder'),
     path('inbox/<str:folder>/decide', views.decide_api, name='inbox_decide'),

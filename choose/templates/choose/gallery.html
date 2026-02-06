@@ -78,10 +78,15 @@
           {% if year %}<span>{{ year }}</span>{% endif %}
           <span class="gallery-count">{{ images|length }} image{% if images|length != 1 %}s{% endif %}</span>
         </div>
-        {% if sections|length <= 1 and is_inbox %}
-          {# Only show global Choose button for non-series or single-section folders #}
+        {% if is_inbox %}
           <div class="gallery-actions">
-            <a class="btn btn-primary" href="{{ choose_url }}">Choose</a>
+            {% if sections|length <= 1 %}
+              <a class="btn btn-primary" href="{{ choose_url }}">Choose</a>
+            {% endif %}
+            <form action="{% url 'choose:inbox_delete' folder=folder %}" method="post" style="display: flex;">
+              {% csrf_token %}
+              <button type="submit" class="btn" style="background: rgba(239, 68, 68, 0.15); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.25);" onclick="return confirm('Are you sure you want to delete this folder permanently? This cannot be undone.');">Delete folder</button>
+            </form>
           </div>
         {% endif %}
       </div>
