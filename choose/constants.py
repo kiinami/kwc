@@ -1,7 +1,7 @@
 """Constants used across the choose app."""
 
 # Supported image file extensions (lowercase)
-IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp'}
+IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
 
 # Season/episode pattern for parsing filenames
 # Supports: S01E02 (season+episode), S01 (season only), E02 (episode only)

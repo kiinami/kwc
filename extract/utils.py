@@ -71,16 +71,13 @@ def get_iframe_timestamps(video: Path) -> list[float]:
     """
     Return a list of timestamps (in seconds) for all I-frames in the video.
     """
-    ffprobe = (
-        FFmpeg(executable="ffprobe")
-        .input(
-            str(video),
-            select_streams="v:0",
-            skip_frame="nokey",
-            show_entries="frame=pict_type,best_effort_timestamp_time",
-            print_format="json",
-            show_frames=None,
-        )
+    ffprobe = FFmpeg(executable="ffprobe").input(
+        str(video),
+        select_streams="v:0",
+        skip_frame="nokey",
+        show_entries="frame=pict_type,best_effort_timestamp_time",
+        print_format="json",
+        show_frames=None,
     )
     try:
         output = ffprobe.execute()
@@ -110,14 +107,11 @@ def check_is_hdr(video: Path) -> bool:
     """
     Check if the video has HDR metadata (transfer characteristics).
     """
-    ffprobe = (
-        FFmpeg(executable="ffprobe")
-        .input(
-            str(video),
-            select_streams="v:0",
-            show_entries="stream=color_transfer",
-            print_format="json",
-        )
+    ffprobe = FFmpeg(executable="ffprobe").input(
+        str(video),
+        select_streams="v:0",
+        show_entries="stream=color_transfer",
+        print_format="json",
     )
     try:
         output = ffprobe.execute()

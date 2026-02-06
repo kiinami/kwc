@@ -106,9 +106,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
         logger.warning("Permission denied scanning folder %s: %s", safe_name, exc)
         raise APIError("permission_denied", 403, str(exc)) from exc
 
-    decisions = list(
-        ImageDecision.objects.filter(folder=safe_name).order_by("decided_at", "filename")
-    )
+    decisions = list(ImageDecision.objects.filter(folder=safe_name).order_by("decided_at", "filename"))
     decision_map = {d.filename: d.decision for d in decisions}
 
     indices_by_name = {name: idx for idx, name in enumerate(files)}
@@ -149,7 +147,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
     # Build suffix map and group files by their base name (without suffix)
     suffix_map: dict[str, str] = {}
     base_name_map: dict[str, str] = {}  # Maps filename to its base (without suffix)
-    
+
     for name in files:
         valid_suffix, _invalid_suffix = parse_version_suffix(name)
         # If valid suffix exists, store it
@@ -181,22 +179,22 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
     keep_dest_names: set[str] = set()
     # Track which base names we've already assigned counters to (for preview)
     preview_assigned_bases: dict[tuple[str, str], set[str]] = {}
-    
+
     for original_src, _tmp in plans_decided:
         original_name = original_src.name
         base_name_for_parsing = base_name_map.get(original_name, original_name)
         base_stem = os.path.splitext(base_name_for_parsing)[0]
-        
+
         match = SEASON_EPISODE_RE.search(base_stem)
         season = match.group("season") if match else ""
         # Episode can be in either "episode" group (when season present) or "ep_only" group
         episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
         key = (season, episode)
-        
+
         # Only increment counter if this is a new base image (not a version of one we've seen)
         if key not in preview_assigned_bases:
             preview_assigned_bases[key] = set()
-        
+
         if base_name_for_parsing not in preview_assigned_bases[key]:
             current = preview_counters.get(key, 0) + 1
             preview_counters[key] = current
@@ -204,7 +202,7 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
         else:
             # This is a version of an image we've already counted
             current = preview_counters[key]
-        
+
         values = {
             "title": base_title,
             "base_title": base_title,
@@ -256,17 +254,17 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
             original_name = original_src.name
             base_name_for_parsing = base_name_map.get(original_name, original_name)
             base_stem = os.path.splitext(base_name_for_parsing)[0]
-            
+
             match = SEASON_EPISODE_RE.search(base_stem)
             season = match.group("season") if match else ""
             # Episode can be in either "episode" group (when season present) or "ep_only" group
             episode = (match.group("episode") or match.group("ep_only") or "") if match else ""
             key = (season, episode)
-            
+
             # Check if we've already assigned a counter to this base image
             if key not in assigned_bases:
                 assigned_bases[key] = set()
-            
+
             lookup_key = (key, base_name_for_parsing)
             if lookup_key in base_to_counter:
                 # Reuse the same counter for this version
@@ -288,11 +286,11 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
             }
 
             new_name = render_pattern(pattern, values)
-            
+
             # Re-apply version suffix if the original had one
             if suffix_map.get(original_name):
                 new_name = add_version_suffix(new_name, suffix_map[original_name])
-            
+
             dest = target / new_name
 
             try:
