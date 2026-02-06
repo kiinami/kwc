@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     # Project apps
     "choose",
     "extract",
+    "recommend",
 ]
 
 MIDDLEWARE = [
@@ -273,3 +274,8 @@ PWA_SCOPE = os.getenv("KWC_PWA_SCOPE", "/")
 PWA_DISPLAY = os.getenv("KWC_PWA_DISPLAY", "standalone")
 PWA_ORIENTATION = os.getenv("KWC_PWA_ORIENTATION", "portrait")
 PWA_CACHE_ID = os.getenv("KWC_PWA_CACHE_ID", "kwc-pwa-v1")
+
+# AI Curator Configuration
+KWC_AI_ENABLED = os.getenv("KWC_AI_ENABLED", "False").lower() in {"1", "true", "yes", "on"}
+KWC_AI_AUTO_THRESHOLD = float(os.getenv("KWC_AI_AUTO_THRESHOLD", "0.85"))
+KWC_DISCARDS_FOLDER = Path(os.getenv("KWC_DISCARDS_FOLDER", BASE_DIR / "data" / "discarded"))

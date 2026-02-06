@@ -84,6 +84,26 @@ def process_deduplication(
         if cancel_token and cancel_token.is_cancelled():
             raise CancelledException()
 
+        # Capture features for AI recommendations
+        # We do this here to leverage the computed vectors (avoid re-inference)
+        try:
+            from recommend.services import FeatureService
+
+            for filename, vector in encodings.items():
+                if cancel_token and cancel_token.is_cancelled():
+                    raise CancelledException()
+
+                try:
+                    file_path = output_dir / filename
+                    FeatureService.extract_and_save_features(file_path, vector_data=vector)
+                except Exception as e:
+                    logger.warning(f"Failed to save AI features for {filename}: {e}")
+
+        except ImportError:
+            logger.debug("Recommend app not installed or FeatureService unavailable, skipping feature extraction")
+        except Exception as e:
+            logger.error(f"Error in feature extraction loop: {e}")
+
         duplicates = cnn.find_duplicates(encoding_map=encodings, min_similarity_threshold=threshold, scores=False)
     except Exception as e:
         logger.error(f"Deduplication failed during processing: {e}")

@@ -41,6 +41,14 @@
   .thumb.delete { outline: 4px solid #ef4444; }
   /* Active selection always shows blue border and takes precedence */
   .thumb.active { outline: 5px solid rgba(124,76,245,0.95); }
+  
+  /* AI Styling */
+  .thumb.ai-keep:not(.keep):not(.delete):not(.active) { outline: 2px dashed rgba(34,197,94,0.6); }
+  .thumb.ai-discard:not(.keep):not(.delete):not(.active) { outline: 2px dashed rgba(239,68,68,0.6); opacity: 0.8; }
+  .ai-badge { position: absolute; bottom: 4px; right: 4px; font-size: 0.65rem; padding: 2px 6px; border-radius: 4px; font-weight: 700; color: #fff; pointer-events: none; z-index: 2; }
+  .ai-badge.keep { background: rgba(34,197,94,0.85); }
+  .ai-badge.discard { background: rgba(239,68,68,0.85); }
+  
     .thumb-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; }
     .thumb.loading .thumb-img { opacity: .2; }
   .thumb .spinner { position: absolute; inset: 0; display: grid; place-items: center; }
@@ -114,7 +122,22 @@
       <div class="sidebar-list">
         {% if images %}
           {% for img in images %}
-            <div class="thumb loading{% if forloop.counter0 == selected_index %} active{% endif %}{% if img.decision %} {{ img.decision }}{% endif %}" data-index="{{ forloop.counter0 }}" data-url="{{ img.url }}" data-name="{{ img.name|escape }}" data-decision="{{ img.decision }}" title="{{ img.name }}">
+            <div class="thumb loading{% if forloop.counter0 == selected_index %} active{% endif %}{% if img.decision %} {{ img.decision }}{% endif %}
+              {% if ai_suggestions and img.name in ai_suggestions %}
+                {% with sugg=ai_suggestions|get:img.name %}
+                  {% if sugg.confidence > 0.85 %}
+                    ai-{{ sugg.decision }}
+                  {% endif %}
+                {% endwith %}
+              {% endif %}"
+              data-index="{{ forloop.counter0 }}" data-url="{{ img.url }}" data-name="{{ img.name|escape }}" data-decision="{{ img.decision }}" title="{{ img.name }}">
+              
+              {% if ai_suggestions and img.name in ai_suggestions %}
+                {% with sugg=ai_suggestions|get:img.name %}
+                   <div class="ai-badge {{ sugg.decision }}">{{ sugg.confidence|floatformat:0 }}%</div>
+                {% endwith %}
+              {% endif %}
+              
               <div class="spinner"></div>
               <img class="thumb-img" src="{{ img.thumb_url|default:img.url }}" alt="{{ img.name }}" loading="lazy" onload="this.closest('.thumb').classList.remove('loading')" />
             </div>
@@ -161,6 +184,14 @@
         <p><strong><span id="saveKeepCount">0</span></strong> image(s) will be kept and renamed to close gaps.</p>
         <p><strong><span id="saveDeleteCount">0</span></strong> image(s) will be permanently deleted.</p>
         <p id="saveUndecidedWarn" style="color:#eab308; display:none;">Some images are undecided; they'll be treated as Keep.</p>
+        
+        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.08);">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+            <input type="checkbox" id="updateAI" checked>
+            <span>Update AI with these choices?</span>
+          </label>
+          <p class="muted" style="font-size: 0.85rem; margin: 0.25rem 0 0 1.5rem;">Helps the AI learn your preferences for next time.</p>
+        </div>
       </div>
       <footer>
         <button id="btnCancelSave" class="btn btn-ghost" type="button">Cancel</button>
@@ -186,6 +217,7 @@
       const saveModal = document.getElementById('saveModal');
       const btnCancelSave = document.getElementById('btnCancelSave');
       const btnConfirmSave = document.getElementById('btnConfirmSave');
+      const updateAICheckbox = document.getElementById('updateAI');
       const keepCountEl = document.getElementById('saveKeepCount');
       const deleteCountEl = document.getElementById('saveDeleteCount');
       const undecidedWarnEl = document.getElementById('saveUndecidedWarn');
@@ -388,7 +420,7 @@
         updateUndoState();
 
         // Optimistically mark decision on current thumb
-        active.classList.remove('keep','delete');
+        active.classList.remove('keep','delete','ai-keep','ai-discard'); // Remove AI styles when manual decision made
         active.classList.add(decision);
         active.dataset.decision = decision;
 
@@ -440,6 +472,20 @@
       btnOpenSave?.addEventListener('click', openSaveModal);
       btnCancelSave?.addEventListener('click', closeSaveModal);
       saveModal?.addEventListener('click', (e) => { if (e.target === saveModal) closeSaveModal(); });
+      
+      {% if ai_suggestions %}
+      // Select AI suggestions automatically on load if high confidence
+      (function applyAutoAI() {
+         document.querySelectorAll('.thumb.ai-keep, .thumb.ai-discard').forEach(el => {
+             // Only auto-apply if no decision made
+             if (el.classList.contains('ai-keep') && !el.classList.contains('keep') && !el.classList.contains('delete')) {
+                 // For now, only visual suggestion. 
+                 // If we wanted to auto-select, we would call decide(), but that moves focus.
+                 // let's leave it as a suggestion.
+             }
+         });
+      })();
+      {% endif %}
 
       btnConfirmSave?.addEventListener('click', async () => {
         btnConfirmSave.disabled = true;

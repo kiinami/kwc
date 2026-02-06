@@ -34,6 +34,12 @@ from .utils import (
     wallpapers_root,
 )
 
+# Optional AI import
+try:
+    from recommend.services import InferenceService
+except ImportError:
+    InferenceService = None  # type: ignore
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +80,23 @@ def gallery(request: HttpRequest, folder: str) -> HttpResponse:
     except (ValueError, FileNotFoundError):
         raise Http404("Folder not found") from None
 
-    return render(request, "choose/gallery.html", context.to_dict())
+    data = context.to_dict()
+
+    if InferenceService and getattr(settings, "KWC_AI_ENABLED", False):
+        try:
+            # We assume relative paths? list_gallery_images returns file names.
+            # We need absolute paths for InferenceService
+            root = wallpapers_root() / folder
+            files = [str(root / f) for f in context.files]
+            
+            suggestions = InferenceService.get_suggestions(files)
+            
+            # Add to template context
+            data["ai_suggestions"] = suggestions
+        except Exception as e:
+            logger.error(f"Failed to get AI suggestions: {e}")
+
+    return render(request, "choose/gallery.html", data)
 
 
 def inbox_gallery(request: HttpRequest, folder: str) -> HttpResponse:

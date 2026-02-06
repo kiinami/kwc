@@ -8,10 +8,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+import threading
+
 from django.conf import settings
 
 from extract.utils import render_pattern
 from kwc.utils.files import safe_remove, safe_rename
+try:
+    from recommend.services import TrainingService
+except ImportError:
+    TrainingService = None  # type: ignore
 
 from .constants import SEASON_EPISODE_PATTERN
 from .models import FolderProgress, ImageDecision
@@ -33,6 +39,7 @@ logger = logging.getLogger(__name__)
 class DecisionPayload:
     filename: str = ""
     decision: str = ""
+    update_ai: bool = False
 
 
 @dataclass(slots=True, frozen=True)
@@ -81,8 +88,9 @@ def parse_decision_request(body: bytes) -> DecisionPayload:
 
     filename = str(data.get("filename", "")).strip()
     decision = str(data.get("decision", "")).strip()
+    update_ai = bool(data.get("update_ai", True))  # Default to True
 
-    return DecisionPayload(filename=filename, decision=decision)
+    return DecisionPayload(filename=filename, decision=decision, update_ai=update_ai)
 
 
 def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
@@ -99,7 +107,23 @@ def apply_decisions(folder: str, payload: DecisionPayload) -> ApplyResult:
         target = get_folder_path(safe_name, root_path)
     except FileNotFoundError as exc:
         raise APIError("not_found", 404, str(exc)) from exc
+    
+    # Trigger AI training if requested
+    if payload.update_ai and TrainingService and getattr(settings, "KWC_AI_ENABLED", False):
+        # Fire and forget
+        def _train_trigger():
+            try:
+                logger.info("Triggering AI background retraining...")
+                TrainingService.train_new_model()
+            except Exception as e:
+                logger.error(f"Background training failed: {e}")
 
+        threading.Thread(target=_train_trigger, daemon=True).start()
+
+    filename = payload.filename
+    decision = payload.decision
+    if not filename or not decision:
+        raise APIError("invalid_payload", 400, "Missing filename or decision")
     try:
         files = list_image_files(target)
     except PermissionError as exc:
