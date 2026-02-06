@@ -59,7 +59,7 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
    - Lint: `uv run ruff check .`
    - Type check: `uv run mypy .`
    - Test: `uv run pytest`
-4. **Finish**: Push to origin and create a PR to `main`.
+4. **Finish**: Push to origin and create a PR to `main` using `gh`.
 5. **Verify CI**: Check PR checks (CI). If they fail, get results and fix the issues until green.
 
 ## Key Patterns & Guidelines
