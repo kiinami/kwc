@@ -4,15 +4,24 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('extract', '0002_extractionjob_name'),
+        ("extract", "0002_extractionjob_name"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='extractionjob',
-            name='status',
-            field=models.CharField(choices=[('pending', 'Pending'), ('running', 'Running'), ('done', 'Done'), ('error', 'Error'), ('cancelled', 'Cancelled')], default='pending', max_length=16),  # noqa: E501
+            model_name="extractionjob",
+            name="status",
+            field=models.CharField(
+                choices=[
+                    ("pending", "Pending"),
+                    ("running", "Running"),
+                    ("done", "Done"),
+                    ("error", "Error"),
+                    ("cancelled", "Cancelled"),
+                ],
+                default="pending",
+                max_length=16,
+            ),
         ),
     ]

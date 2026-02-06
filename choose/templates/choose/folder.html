@@ -158,9 +158,60 @@
       <header id="saveTitle">Apply and Save</header>
       <div class="body">
         <p>You're about to apply your choices to this folder.</p>
-        <p><strong><span id="saveKeepCount">0</span></strong> image(s) will be kept and renamed to close gaps.</p>
-        <p><strong><span id="saveDeleteCount">0</span></strong> image(s) will be permanently deleted.</p>
-        <p id="saveUndecidedWarn" style="color:#eab308; display:none;">Some images are undecided; they'll be treated as Keep.</p>
+        
+        <style>
+          .save-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin: 1.5rem 0;
+          }
+          .stat-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 1rem 0.5rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+          }
+          .stat-label {
+            font-size: 0.75rem;
+            color: var(--muted);
+            text-transform: uppercase;
+             letter-spacing: 0.5px;
+            font-weight: 600;
+          }
+          .stat-card.keep { border-color: rgba(34, 197, 94, 0.2); background: rgba(34, 197, 94, 0.05); }
+          .stat-card.keep .stat-value { color: var(--state-done); }
+          
+          .stat-card.delete { border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); }
+          .stat-card.delete .stat-value { color: var(--state-error); }
+          
+          .stat-card.undecided .stat-value { color: var(--text); }
+        </style>
+
+        <div class="save-stats-grid">
+          <div class="stat-card keep">
+            <span class="stat-value" id="saveKeepCount">0</span>
+            <span class="stat-label">Save</span>
+          </div>
+          <div class="stat-card delete">
+            <span class="stat-value" id="saveDeleteCount">0</span>
+            <span class="stat-label">Discard</span>
+          </div>
+          <div class="stat-card undecided">
+            <span class="stat-value" id="saveUndecidedCount">0</span>
+            <span class="stat-label">Left</span>
+          </div>
+        </div>
       </div>
       <footer>
         <button id="btnCancelSave" class="btn btn-ghost" type="button">Cancel</button>
@@ -188,7 +239,7 @@
       const btnConfirmSave = document.getElementById('btnConfirmSave');
       const keepCountEl = document.getElementById('saveKeepCount');
       const deleteCountEl = document.getElementById('saveDeleteCount');
-      const undecidedWarnEl = document.getElementById('saveUndecidedWarn');
+      const undecidedCountEl = document.getElementById('saveUndecidedCount');
       const decisionBadge = document.getElementById('mobileDecisionBadge');
       const swipeHint = document.querySelector('.mobile-swipe-hint');
       const mobileMedia = window.matchMedia('(max-width: 768px)');
@@ -428,11 +479,10 @@
         const deletes = thumbs.filter(t => t.classList.contains('delete')).length;
         const keeps = thumbs.filter(t => t.classList.contains('keep')).length;
         const undecided = total - deletes - keeps;
-        // undecided are treated as keep
-        const finalKeep = keeps + undecided;
-        keepCountEl.textContent = String(finalKeep);
+        
+        keepCountEl.textContent = String(keeps);
         deleteCountEl.textContent = String(deletes);
-        undecidedWarnEl.style.display = undecided > 0 ? '' : 'none';
+        if (undecidedCountEl) undecidedCountEl.textContent = String(undecided);
         saveModal?.classList.add('show');
       }
       function closeSaveModal(){ saveModal?.classList.remove('show'); }
