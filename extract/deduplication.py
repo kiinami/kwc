@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 def _initialize_cnn_environment() -> None:
     """
     Initialize environment variables needed for CNN/Torch.
-    
+
     This is done lazily to avoid setting global environment variables at import time.
     These settings only apply when deduplication is actually used.
     """
@@ -26,7 +26,7 @@ def _initialize_cnn_environment() -> None:
     # Torch (used by imagededup) requires a username to determine the cache directory
     if "USER" not in os.environ:
         os.environ["USER"] = "kwc"
-    
+
     # Torch attempts to write to /root/.cache if HOME is not writable or set to /root
     # We redirect it to a temporary directory that is definitely writable
     # Use tempfile.gettempdir() for platform-appropriate temporary directory
@@ -57,7 +57,7 @@ def process_deduplication(
 
     # Initialize environment for CNN - done lazily to avoid global side effects at import time
     _initialize_cnn_environment()
-    
+
     # Import CNN here after environment is set up
     from imagededup.methods import CNN  # type: ignore[import-untyped]
 
@@ -80,10 +80,10 @@ def process_deduplication(
         # The user said "Process should be light, only deleting the most obvious duplicates"
         # We can adjust threshold if needed, but default is usually fine.
         encodings = cnn.encode_images(image_dir=str(output_dir))
-        
+
         if cancel_token and cancel_token.is_cancelled():
             raise CancelledException()
-            
+
         duplicates = cnn.find_duplicates(encoding_map=encodings, min_similarity_threshold=threshold, scores=False)
     except Exception as e:
         logger.error(f"Deduplication failed during processing: {e}")
@@ -93,30 +93,30 @@ def process_deduplication(
         raise CancelledException()
 
     files_to_delete = set()
-    
+
     # Process duplicates logic
     # The output is a dict where key is a filename and value is a list of duplicate filenames.
     # Example: {'A': ['B'], 'B': ['A']}
-    
+
     processed_files: set[str] = set()
-    
+
     # Determine which files to keep and which to delete
     for filename, dup_list in duplicates.items():
         if filename in processed_files:
             continue
-            
+
         if not dup_list:
             continue
-            
+
         # Form the cluster of all identical images
         cluster = {filename} | set(dup_list)
-        
+
         # Mark all as processed so we don't re-evaluate duplicates in the same cluster
         processed_files.update(cluster)
-        
+
         # Select best image from cluster using heuristic (file size)
         best_file = _get_best_image(output_dir, cluster)
-        
+
         # Mark others for deletion
         for f in cluster:
             if f != best_file:
@@ -142,16 +142,16 @@ def _get_best_image(base_dir: Path, filenames: set[str]) -> str:
     """
     best_file: str | None = None
     max_size = -1
-    
-    # Convert to list to have a stable fallback (though sets are unordered, 
+
+    # Convert to list to have a stable fallback (though sets are unordered,
     # we just need *a* file if sizes are equal)
     filename_list = list(filenames)
-    
+
     for fname in filename_list:
         path = base_dir / fname
         if not path.exists():
             continue
-            
+
         try:
             size = path.stat().st_size
             if size > max_size:
@@ -159,7 +159,7 @@ def _get_best_image(base_dir: Path, filenames: set[str]) -> str:
                 best_file = fname
         except OSError:
             continue
-            
+
     return best_file or filename_list[0]
 
 
@@ -170,7 +170,7 @@ def _renumber_images(job: "ExtractionJob", cancel_token: CancellationToken | Non
     output_dir = Path(job.output_dir)
     params = job.params
     pattern = params.get("image_pattern") or "output_{{ counter|pad:4 }}.jpg"
-    
+
     # Re-construct context for rendering
     context: dict[str, Any] = {
         "title": params.get("title", ""),
@@ -178,10 +178,10 @@ def _renumber_images(job: "ExtractionJob", cancel_token: CancellationToken | Non
         "season": params.get("season", ""),
         "episode": params.get("episode", ""),
     }
-    
+
     # List all image files (ignoring hidden files like .cover.jpg)
-    files = sorted([f for f in output_dir.iterdir() if f.is_file() and not f.name.startswith('.')])
-    
+    files = sorted([f for f in output_dir.iterdir() if f.is_file() and not f.name.startswith(".")])
+
     if not files:
         return
 
@@ -189,7 +189,7 @@ def _renumber_images(job: "ExtractionJob", cancel_token: CancellationToken | Non
 
     # Use a staging renaming strategy to avoid collisions
     temp_files = []
-    
+
     for i, file_path in enumerate(files):
         if cancel_token and cancel_token.is_cancelled():
             raise CancelledException()
@@ -204,7 +204,7 @@ def _renumber_images(job: "ExtractionJob", cancel_token: CancellationToken | Non
             logger.error(f"Failed to rename to temp file {file_path} -> {temp_path}: {e}")
             # If we fail here, we might leave things in a messy state, but aborting is safer than continuing
             raise e
-        
+
     # Now rename for real
     for i, temp_path in enumerate(temp_files):
         if cancel_token and cancel_token.is_cancelled():
@@ -213,11 +213,10 @@ def _renumber_images(job: "ExtractionJob", cancel_token: CancellationToken | Non
         counter = i + 1
         new_name = render_pattern(pattern, {**context, "counter": counter})
         new_path = output_dir / new_name
-        
+
         try:
             safe_rename(temp_path, new_path)
         except Exception as e:
             logger.error(f"Failed to rename from temp file {temp_path} -> {new_path}: {e}")
             # Re-raise to ensure the job is marked as failed and to avoid partial renumbering
             raise
-

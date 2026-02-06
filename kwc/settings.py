@@ -19,7 +19,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from a .env file at the project root if present
 try:
     from dotenv import load_dotenv  # type: ignore
-    load_dotenv(dotenv_path=BASE_DIR / '.env')
+
+    load_dotenv(dotenv_path=BASE_DIR / ".env")
 except Exception:
     # If python-dotenv is not installed, silently skip; env vars can still be provided by the OS
     pass
@@ -31,82 +32,82 @@ except Exception:
 # SECURITY WARNING: keep the secret key used in production secret!
 # Prefer DJANGO_SECRET_KEY or SECRET_KEY from env; fall back to the dev key (not for real prod).
 SECRET_KEY = (
-	os.getenv('DJANGO_SECRET_KEY')
-	or os.getenv('SECRET_KEY')
-	or 'django-insecure-c=ph*e1er)+jkkg6@+u9m=t2fc6mapv3+3byy)2eob$n41r4po'
+    os.getenv("DJANGO_SECRET_KEY")
+    or os.getenv("SECRET_KEY")
+    or "django-insecure-c=ph*e1er)+jkkg6@+u9m=t2fc6mapv3+3byy)2eob$n41r4po"
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Accept DJANGO_DEBUG or fallback to DEBUG
-DEBUG = (os.getenv('DJANGO_DEBUG', os.getenv('DEBUG', 'False'))).lower() in {'1', 'true', 'yes', 'on'}
+DEBUG = (os.getenv("DJANGO_DEBUG", os.getenv("DEBUG", "False"))).lower() in {"1", "true", "yes", "on"}
 
 # Comma-separated allowed hosts, default to allowing all in container unless specified
-_allowed_hosts_raw = os.getenv('DJANGO_ALLOWED_HOSTS', os.getenv('ALLOWED_HOSTS', '*'))
-ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_raw.split(',') if h.strip()]
+_allowed_hosts_raw = os.getenv("DJANGO_ALLOWED_HOSTS", os.getenv("ALLOWED_HOSTS", "*"))
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_raw.split(",") if h.strip()]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
     # Project apps
-    'choose',
-    'extract',
+    "choose",
+    "extract",
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
+    "django.middleware.security.SecurityMiddleware",
     # Serve static files efficiently in production without a separate CDN/proxy
-    'whitenoise.middleware.WhiteNoiseMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'kwc.urls'
+ROOT_URLCONF = "kwc.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'kwc.context_processors.pwa',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "kwc.context_processors.pwa",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'kwc.wsgi.application'
+WSGI_APPLICATION = "kwc.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-_default_db_path = BASE_DIR / 'db.sqlite3'
+_default_db_path = BASE_DIR / "db.sqlite3"
 # If a persistent data mount exists, prefer placing the DB there without needing symlinks
-_data_dir = Path('/data')
+_data_dir = Path("/data")
 if _data_dir.is_dir():
-    _default_db_path = _data_dir / 'db.sqlite3'
+    _default_db_path = _data_dir / "db.sqlite3"
 
 # Allow overriding DB path explicitly via env
-DB_PATH = Path(os.getenv('DJANGO_DB_PATH', os.getenv('DB_PATH', str(_default_db_path))))
+DB_PATH = Path(os.getenv("DJANGO_DB_PATH", os.getenv("DB_PATH", str(_default_db_path))))
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': DB_PATH,
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": DB_PATH,
     }
 }
 
@@ -116,16 +117,16 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -133,9 +134,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -146,18 +147,18 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 # Always include a leading slash for STATIC_URL so absolute URLs are generated
-STATIC_URL = '/static/'
+STATIC_URL = "/static/"
 # Allow overriding static root via env (useful in some container setups)
-STATIC_ROOT = Path(os.getenv('STATIC_ROOT', str(BASE_DIR / 'static')))
+STATIC_ROOT = Path(os.getenv("STATIC_ROOT", str(BASE_DIR / "static")))
 
 # Include project-level static assets (e.g., favicons) collected by Django
-STATICFILES_DIRS = [BASE_DIR / 'kwc' / 'static']
+STATICFILES_DIRS = [BASE_DIR / "kwc" / "static"]
 
 # WhiteNoise compressed manifest storage for long-lived caching and integrity
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # Optional: configure cache max age for WhiteNoise via env (seconds)
-_whitenoise_max_age = os.getenv('WHITENOISE_MAX_AGE')
+_whitenoise_max_age = os.getenv("WHITENOISE_MAX_AGE")
 if _whitenoise_max_age is not None:
     try:
         WHITENOISE_MAX_AGE = int(_whitenoise_max_age)
@@ -165,57 +166,56 @@ if _whitenoise_max_age is not None:
         WHITENOISE_MAX_AGE = 60 * 60 * 24 * 30  # 30 days fallback
 
 # When running behind a reverse proxy (common in containers)
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 # CSRF trusted origins (comma or space separated). Include scheme, e.g. https://example.com
-_csrf_trusted = os.getenv('DJANGO_CSRF_TRUSTED_ORIGINS', os.getenv('CSRF_TRUSTED_ORIGINS', '')).strip()
+_csrf_trusted = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", os.getenv("CSRF_TRUSTED_ORIGINS", "")).strip()
 if _csrf_trusted:
     # Split by commas/spaces and strip
-    CSRF_TRUSTED_ORIGINS = [o.strip() for part in _csrf_trusted.split(',') for o in part.split() if o.strip()]
+    CSRF_TRUSTED_ORIGINS = [o.strip() for part in _csrf_trusted.split(",") for o in part.split() if o.strip()]
 else:
     CSRF_TRUSTED_ORIGINS = []
 
-# Optional security toggles via env
-def _bool_env(name: str, default: str = 'False') -> bool:
-    return os.getenv(name, default).lower() in {'1', 'true', 'yes', 'on'}
 
-SESSION_COOKIE_SECURE = _bool_env('SESSION_COOKIE_SECURE', 'False')
-CSRF_COOKIE_SECURE = _bool_env('CSRF_COOKIE_SECURE', 'False')
-SECURE_SSL_REDIRECT = _bool_env('SECURE_SSL_REDIRECT', 'False')
-SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
-SECURE_HSTS_INCLUDE_SUBDOMAINS = _bool_env('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False')
-SECURE_HSTS_PRELOAD = _bool_env('SECURE_HSTS_PRELOAD', 'False')
+# Optional security toggles via env
+def _bool_env(name: str, default: str = "False") -> bool:
+    return os.getenv(name, default).lower() in {"1", "true", "yes", "on"}
+
+
+SESSION_COOKIE_SECURE = _bool_env("SESSION_COOKIE_SECURE", "False")
+CSRF_COOKIE_SECURE = _bool_env("CSRF_COOKIE_SECURE", "False")
+SECURE_SSL_REDIRECT = _bool_env("SECURE_SSL_REDIRECT", "False")
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = _bool_env("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False")
+SECURE_HSTS_PRELOAD = _bool_env("SECURE_HSTS_PRELOAD", "False")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Extract/Choose shared configuration via env vars
 # Final wallpapers root directory where extracted frames are stored and later curated.
-WALLPAPERS_FOLDER = os.getenv('KWC_WALLPAPERS_FOLDER', str(BASE_DIR / 'extracted'))
+WALLPAPERS_FOLDER = os.getenv("KWC_WALLPAPERS_FOLDER", str(BASE_DIR / "extracted"))
 
 # Inbox for new extractions (pending curation)
-EXTRACTION_FOLDER = os.getenv('KWC_EXTRACTION_FOLDER', str(BASE_DIR / 'extractions'))
+EXTRACTION_FOLDER = os.getenv("KWC_EXTRACTION_FOLDER", str(BASE_DIR / "extractions"))
 
 # Trash folder for discarded images
-DISCARD_FOLDER = os.getenv('KWC_DISCARD_FOLDER', str(BASE_DIR / 'discarded'))
+DISCARD_FOLDER = os.getenv("KWC_DISCARD_FOLDER", str(BASE_DIR / "discarded"))
 
 
 # Folder pattern (relative to root). Supports Django template syntax and brace placeholders.
 # Example default includes year only when present.
-EXTRACT_FOLDER_PATTERN = os.getenv(
-    'KWC_FOLDER_PATTERN',
-    '{{ title }}{% if year %} ({{ year }}){% endif %}'
-)
+EXTRACT_FOLDER_PATTERN = os.getenv("KWC_FOLDER_PATTERN", "{{ title }}{% if year %} ({{ year }}){% endif %}")
 
 # Image filename pattern. Supports Django template syntax and brace placeholders.
 # Default: conditionally include season/episode; zero-pad using the 'pad' filter; pad counter to 4.
 # Space before E when there's no season ensures episode-only files can be parsed back.
 EXTRACT_IMAGE_PATTERN = os.getenv(
-    'KWC_IMAGE_PATTERN',
-    '{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}'
-    '{% if episode %}{% if not season %} {% endif %}E{{ episode|pad:2 }}{% endif %} 〜 {{ counter|pad:4 }}.jpg'
+    "KWC_IMAGE_PATTERN",
+    "{{ title }}{% if season %} S{{ season|pad:2 }}{% endif %}"
+    "{% if episode %}{% if not season %} {% endif %}E{{ episode|pad:2 }}{% endif %} 〜 {{ counter|pad:4 }}.jpg",
 )
 
 
@@ -239,8 +239,8 @@ def _float_setting(env_name: str, default: float, *, minimum: float | None = Non
     return value
 
 
-EXTRACT_FFMPEG_RETRIES = _int_setting('KWC_EXTRACT_FFMPEG_RETRIES', 2, minimum=0)
-EXTRACT_FFMPEG_RETRY_BACKOFF = _float_setting('KWC_EXTRACT_FFMPEG_RETRY_BACKOFF', 0.5, minimum=0.0)
+EXTRACT_FFMPEG_RETRIES = _int_setting("KWC_EXTRACT_FFMPEG_RETRIES", 2, minimum=0)
+EXTRACT_FFMPEG_RETRY_BACKOFF = _float_setting("KWC_EXTRACT_FFMPEG_RETRY_BACKOFF", 0.5, minimum=0.0)
 
 
 def _positive_int_or_none(value: str | None) -> int | None:
@@ -254,25 +254,22 @@ def _positive_int_or_none(value: str | None) -> int | None:
 
 
 # Optional override for the number of workers used during frame extraction
-EXTRACT_MAX_WORKERS = _positive_int_or_none(os.getenv('KWC_EXTRACT_WORKERS'))
+EXTRACT_MAX_WORKERS = _positive_int_or_none(os.getenv("KWC_EXTRACT_WORKERS"))
 
 # Default start path for the file picker in the extract form
-FILE_PICKER_START_PATH = os.getenv('KWC_FILE_PICKER_START_PATH', '/')
+FILE_PICKER_START_PATH = os.getenv("KWC_FILE_PICKER_START_PATH", "/")
 
 # TMDB API key for cover art selection
-TMDB_API_KEY = os.getenv('TMDB_API_KEY', '')
+TMDB_API_KEY = os.getenv("TMDB_API_KEY", "")
 
 # Progressive Web App configuration (tweak via env vars if desired)
-PWA_APP_NAME = os.getenv('KWC_PWA_APP_NAME', 'KWC Wallpapers')
-PWA_APP_SHORT_NAME = os.getenv('KWC_PWA_SHORT_NAME', 'KWC')
-PWA_APP_DESCRIPTION = os.getenv(
-    'KWC_PWA_DESCRIPTION',
-    'Extract video frames and curate wallpapers wherever you are.'
-)
-PWA_THEME_COLOR = os.getenv('KWC_PWA_THEME_COLOR', '#0b1020')
-PWA_BACKGROUND_COLOR = os.getenv('KWC_PWA_BACKGROUND_COLOR', '#0b1020')
-PWA_START_URL = os.getenv('KWC_PWA_START_URL', '/')
-PWA_SCOPE = os.getenv('KWC_PWA_SCOPE', '/')
-PWA_DISPLAY = os.getenv('KWC_PWA_DISPLAY', 'standalone')
-PWA_ORIENTATION = os.getenv('KWC_PWA_ORIENTATION', 'portrait')
-PWA_CACHE_ID = os.getenv('KWC_PWA_CACHE_ID', 'kwc-pwa-v1')
+PWA_APP_NAME = os.getenv("KWC_PWA_APP_NAME", "KWC Wallpapers")
+PWA_APP_SHORT_NAME = os.getenv("KWC_PWA_SHORT_NAME", "KWC")
+PWA_APP_DESCRIPTION = os.getenv("KWC_PWA_DESCRIPTION", "Extract video frames and curate wallpapers wherever you are.")
+PWA_THEME_COLOR = os.getenv("KWC_PWA_THEME_COLOR", "#0b1020")
+PWA_BACKGROUND_COLOR = os.getenv("KWC_PWA_BACKGROUND_COLOR", "#0b1020")
+PWA_START_URL = os.getenv("KWC_PWA_START_URL", "/")
+PWA_SCOPE = os.getenv("KWC_PWA_SCOPE", "/")
+PWA_DISPLAY = os.getenv("KWC_PWA_DISPLAY", "standalone")
+PWA_ORIENTATION = os.getenv("KWC_PWA_ORIENTATION", "portrait")
+PWA_CACHE_ID = os.getenv("KWC_PWA_CACHE_ID", "kwc-pwa-v1")

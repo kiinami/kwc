@@ -42,14 +42,14 @@ class ExtractStartForm(forms.Form):
 
     # Backed by a hidden JSON string that the UI manages
     trim_intervals = forms.CharField(widget=forms.HiddenInput(), required=False)
-    
+
     deduplicate = forms.BooleanField(
         label="Deduplicate images",
         required=False,
         initial=True,
         help_text="Remove similar images after extraction",
     )
-    
+
     deduplicate_threshold = forms.FloatField(
         label="Similarity threshold",
         required=False,
