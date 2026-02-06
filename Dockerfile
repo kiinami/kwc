@@ -46,6 +46,7 @@ RUN --mount=type=cache,target=/app/.cache/uv \
 COPY kwc /app/kwc
 COPY choose /app/choose
 COPY extract /app/extract
+COPY recommend /app/recommend
 COPY templates /app/templates
 COPY manage.py /app/
 
@@ -86,6 +87,7 @@ COPY --link --from=builder /venv /venv
 COPY --link --from=builder /app/kwc /app/kwc
 COPY --link --from=builder /app/choose /app/choose
 COPY --link --from=builder /app/extract /app/extract
+COPY --link --from=builder /app/recommend /app/recommend
 COPY --link --from=builder /app/templates /app/templates
 COPY --link --from=builder /app/manage.py /app/manage.py
 
