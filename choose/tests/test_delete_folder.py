@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 from django.urls import reverse
 
@@ -56,3 +58,27 @@ def test_delete_folder_not_found(client, mock_extraction_folder):
     url = reverse("choose:inbox_delete", kwargs={"folder": "NonExistent"})
     response = client.post(url)
     assert response.status_code == 404
+
+
+@patch("choose.views.shutil.rmtree")
+def test_delete_folder_permission_error(mock_rmtree, client, mock_extraction_folder):
+    """Test that OSError during deletion is handled gracefully."""
+    # Setup
+    folder_name = "Test Series (2024)"
+    folder_path = mock_extraction_folder / folder_name
+    folder_path.mkdir()
+
+    # Mock rmtree to raise OSError (simulating permission error, etc.)
+    mock_rmtree.side_effect = OSError("Permission denied")
+
+    # URL
+    url = reverse("choose:inbox_delete", kwargs={"folder": folder_name})
+
+    # Action
+    response = client.post(url)
+
+    # Assert 404 response (controlled error)
+    assert response.status_code == 404
+
+    # Verify folder still exists (since deletion failed)
+    assert folder_path.exists()
