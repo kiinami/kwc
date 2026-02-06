@@ -11,7 +11,7 @@ from choose.utils import list_media_folders
 
 
 class HomeView(TemplateView):
-    template_name = 'home.html'
+    template_name = "home.html"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -22,15 +22,15 @@ class HomeView(TemplateView):
             enriched.append(
                 {
                     **entry,
-                    'gallery_url': reverse('choose:gallery', kwargs={'folder': entry['name']}),
-                    'choose_url': reverse('choose:folder', kwargs={'folder': entry['name']}),
+                    "gallery_url": reverse("choose:gallery", kwargs={"folder": entry["name"]}),
+                    "choose_url": reverse("choose:folder", kwargs={"folder": entry["name"]}),
                 }
             )
 
         context.update(
             {
-                'folders': enriched,
-                'root': str(root),
+                "folders": enriched,
+                "root": str(root),
             }
         )
         return context
@@ -39,8 +39,8 @@ class HomeView(TemplateView):
 class ManifestView(TemplateView):
     """Serve a dynamic web manifest so hashed static URLs stay accurate."""
 
-    template_name = 'pwa/manifest.webmanifest'
-    content_type = 'application/manifest+json'
+    template_name = "pwa/manifest.webmanifest"
+    content_type = "application/manifest+json"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -49,42 +49,42 @@ class ManifestView(TemplateView):
 
         context.update(
             {
-                'name': settings.PWA_APP_NAME,
-                'short_name': settings.PWA_APP_SHORT_NAME,
-                'description': settings.PWA_APP_DESCRIPTION,
-                'start_url': build_absolute(settings.PWA_START_URL),
-                'scope': build_absolute(settings.PWA_SCOPE),
-                'display': settings.PWA_DISPLAY,
-                'orientation': settings.PWA_ORIENTATION,
-                'theme_color': settings.PWA_THEME_COLOR,
-                'background_color': settings.PWA_BACKGROUND_COLOR,
-                'lang': settings.LANGUAGE_CODE,
-                'icon_sources': [
+                "name": settings.PWA_APP_NAME,
+                "short_name": settings.PWA_APP_SHORT_NAME,
+                "description": settings.PWA_APP_DESCRIPTION,
+                "start_url": build_absolute(settings.PWA_START_URL),
+                "scope": build_absolute(settings.PWA_SCOPE),
+                "display": settings.PWA_DISPLAY,
+                "orientation": settings.PWA_ORIENTATION,
+                "theme_color": settings.PWA_THEME_COLOR,
+                "background_color": settings.PWA_BACKGROUND_COLOR,
+                "lang": settings.LANGUAGE_CODE,
+                "icon_sources": [
                     {
-                        'src': build_absolute(static('kwc/icon.png')),
-                        'sizes': '192x192',
-                        'type': 'image/png',
-                        'purpose': 'any maskable',
+                        "src": build_absolute(static("kwc/icon.png")),
+                        "sizes": "192x192",
+                        "type": "image/png",
+                        "purpose": "any maskable",
                     },
                     {
-                        'src': build_absolute(static('kwc/icon.png')),
-                        'sizes': '512x512',
-                        'type': 'image/png',
-                        'purpose': 'any maskable',
+                        "src": build_absolute(static("kwc/icon.png")),
+                        "sizes": "512x512",
+                        "type": "image/png",
+                        "purpose": "any maskable",
                     },
                 ],
-                'shortcuts': [
+                "shortcuts": [
                     {
-                        'name': 'Extract frames',
-                        'short_name': 'Extract',
-                        'description': 'Start a new extraction job',
-                        'url': build_absolute(reverse('extract:index')),
+                        "name": "Extract frames",
+                        "short_name": "Extract",
+                        "description": "Start a new extraction job",
+                        "url": build_absolute(reverse("extract:index")),
                     },
                     {
-                        'name': 'Choose wallpapers',
-                        'short_name': 'Choose',
-                        'description': 'Review and keep your favorite frames',
-                        'url': build_absolute(reverse('choose:index')),
+                        "name": "Choose wallpapers",
+                        "short_name": "Choose",
+                        "description": "Review and keep your favorite frames",
+                        "url": build_absolute(reverse("choose:index")),
                     },
                 ],
             }
@@ -93,39 +93,39 @@ class ManifestView(TemplateView):
 
     def render_to_response(self, context, **response_kwargs):
         response = super().render_to_response(context, **response_kwargs)
-        response['Cache-Control'] = 'no-cache'
+        response["Cache-Control"] = "no-cache"
         return response
 
 
-@method_decorator(never_cache, name='dispatch')
+@method_decorator(never_cache, name="dispatch")
 class ServiceWorkerView(TemplateView):
     """Serve the service worker at the root scope."""
 
-    template_name = 'pwa/service-worker.js'
-    content_type = 'application/javascript'
+    template_name = "pwa/service-worker.js"
+    content_type = "application/javascript"
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
         asset_urls = [
-            reverse('home'),
-            reverse('offline'),
-            reverse('extract:index'),
-            reverse('choose:index'),
-            static('kwc/icon.png'),
-            static('kwc/favicon.ico'),
+            reverse("home"),
+            reverse("offline"),
+            reverse("extract:index"),
+            reverse("choose:index"),
+            static("kwc/icon.png"),
+            static("kwc/favicon.ico"),
         ]
 
         context.update(
             {
-                'cache_name': settings.PWA_CACHE_ID,
-                'asset_urls': asset_urls,
-                'offline_url': reverse('offline'),
+                "cache_name": settings.PWA_CACHE_ID,
+                "asset_urls": asset_urls,
+                "offline_url": reverse("offline"),
             }
         )
         return context
 
     def render_to_response(self, context, **response_kwargs):
         response = super().render_to_response(context, **response_kwargs)
-        response['Service-Worker-Allowed'] = '/'
+        response["Service-Worker-Allowed"] = "/"
         return response

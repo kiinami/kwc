@@ -14,6 +14,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path, re_path
@@ -24,26 +25,26 @@ from choose import views as choose_views
 from kwc import views as core_views
 
 urlpatterns = [
-    path('', core_views.HomeView.as_view(), name='home'),
-    path('admin/', admin.site.urls),
-    path('choose/', include(('choose.urls', 'choose'), namespace='choose')),
-    path('extract/', include(('extract.urls', 'extract'), namespace='extract')),
-    path('wall-thumbs/<str:folder>/<path:filename>', choose_views.thumbnail, name='wallpaper-thumbnail'),
-    path('inbox-thumbs/<str:folder>/<path:filename>', choose_views.inbox_thumbnail, name='inbox-thumbnail'),
-    path('offline/', TemplateView.as_view(template_name='offline.html'), name='offline'),
-    path('manifest.webmanifest', core_views.ManifestView.as_view(), name='pwa-manifest'),
-    path('service-worker.js', core_views.ServiceWorkerView.as_view(), name='service-worker'),
+    path("", core_views.HomeView.as_view(), name="home"),
+    path("admin/", admin.site.urls),
+    path("choose/", include(("choose.urls", "choose"), namespace="choose")),
+    path("extract/", include(("extract.urls", "extract"), namespace="extract")),
+    path("wall-thumbs/<str:folder>/<path:filename>", choose_views.thumbnail, name="wallpaper-thumbnail"),
+    path("inbox-thumbs/<str:folder>/<path:filename>", choose_views.inbox_thumbnail, name="inbox-thumbnail"),
+    path("offline/", TemplateView.as_view(template_name="offline.html"), name="offline"),
+    path("manifest.webmanifest", core_views.ManifestView.as_view(), name="pwa-manifest"),
+    path("service-worker.js", core_views.ServiceWorkerView.as_view(), name="service-worker"),
 ]
 
 # Serve wallpaper images directly from disk. This is intended for internal/self-hosted use.
-_wall_root = getattr(settings, 'WALLPAPERS_FOLDER', None)
+_wall_root = getattr(settings, "WALLPAPERS_FOLDER", None)
 if _wall_root:
     urlpatterns += [
-        re_path(r'^wallpapers/(?P<path>.+)$', static_serve, { 'document_root': _wall_root }),
+        re_path(r"^wallpapers/(?P<path>.+)$", static_serve, {"document_root": _wall_root}),
     ]
 
-_inbox_root = getattr(settings, 'EXTRACTION_FOLDER', None)
+_inbox_root = getattr(settings, "EXTRACTION_FOLDER", None)
 if _inbox_root:
     urlpatterns += [
-        re_path(r'^inbox-files/(?P<path>.+)$', static_serve, { 'document_root': _inbox_root }),
+        re_path(r"^inbox-files/(?P<path>.+)$", static_serve, {"document_root": _inbox_root}),
     ]

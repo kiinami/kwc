@@ -4,25 +4,23 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='ImageDecision',
+            name="ImageDecision",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('folder', models.CharField(max_length=512)),
-                ('filename', models.CharField(max_length=512)),
-                ('decision', models.CharField(choices=[('keep', 'Keep'), ('delete', 'Delete')], max_length=10)),
-                ('decided_at', models.DateTimeField(auto_now=True)),
+                ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
+                ("folder", models.CharField(max_length=512)),
+                ("filename", models.CharField(max_length=512)),
+                ("decision", models.CharField(choices=[("keep", "Keep"), ("delete", "Delete")], max_length=10)),
+                ("decided_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'indexes': [models.Index(fields=['folder'], name='choose_imag_folder_15bb2c_idx')],
-                'unique_together': {('folder', 'filename')},
+                "indexes": [models.Index(fields=["folder"], name="choose_imag_folder_15bb2c_idx")],
+                "unique_together": {("folder", "filename")},
             },
         ),
     ]

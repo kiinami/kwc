@@ -19,24 +19,25 @@ _sleep = time.sleep
 
 
 class CancellationToken:
-	"""Thread-safe token for signaling cancellation."""
-	
-	def __init__(self) -> None:
-		self._cancelled = False
-		self._lock = threading.Lock()
-	
-	def cancel(self) -> None:
-		with self._lock:
-			self._cancelled = True
-	
-	def is_cancelled(self) -> bool:
-		with self._lock:
-			return self._cancelled
+    """Thread-safe token for signaling cancellation."""
+
+    def __init__(self) -> None:
+        self._cancelled = False
+        self._lock = threading.Lock()
+
+    def cancel(self) -> None:
+        with self._lock:
+            self._cancelled = True
+
+    def is_cancelled(self) -> bool:
+        with self._lock:
+            return self._cancelled
 
 
 class CancelledException(Exception):
-	"""Raised when an extraction is cancelled."""
-	pass
+    """Raised when an extraction is cancelled."""
+
+    pass
 
 
 def _get_retry_config() -> tuple[int, float]:
@@ -63,68 +64,65 @@ def _find_highest_counter(output_dir: Path, pattern: str, context: Mapping[str, 
     """
     if not output_dir.exists():
         return 0
-    
+
     # We need to determine which files match our pattern by rendering it with different counters
     # and comparing. Since we don't know the range, we'll iterate through existing files and try
     # to extract the counter by comparing against the pattern.
-    
+
     highest = 0
-    
+
     try:
         for entry in output_dir.iterdir():
             if not entry.is_file():
                 continue
-            
+
             filename = entry.name
-            
+
             # Try to extract counter by testing various counter values
             # We'll render the pattern with different counters and see which one matches the filename
             # Since filenames use zero-padding, we need to handle that
-            
+
             # First, determine if the filename could match by rendering with a dummy counter
             # and checking if the non-counter parts match
-            
+
             # Strategy: Generate pattern with counter=999999 (unlikely to collide)
             # Replace that number with a regex and match
             test_counter = 999999
             try:
-                test_rendered = render_pattern(
-                    pattern,
-                    {**context, "counter": test_counter}
-                )
+                test_rendered = render_pattern(pattern, {**context, "counter": test_counter})
             except Exception:
                 continue
-            
+
             # Find where the counter appears in the rendered pattern
             counter_str = str(test_counter)
             if counter_str not in test_rendered:
                 # Pattern doesn't include counter, skip
                 continue
-            
+
             # Split the rendered pattern into parts before and after the counter
             parts = test_rendered.split(counter_str, 1)
             if len(parts) != 2:
                 continue
-            
+
             prefix, suffix = parts
-            
+
             # Check if the filename matches the pattern structure
             if not filename.startswith(prefix) or not filename.endswith(suffix):
                 continue
-            
+
             # Extract the counter part from the filename
-            counter_part = filename[len(prefix):-len(suffix)] if suffix else filename[len(prefix):]
-            
+            counter_part = filename[len(prefix) : -len(suffix)] if suffix else filename[len(prefix) :]
+
             # Try to parse it as an integer
             try:
                 counter = int(counter_part)
                 highest = max(highest, counter)
             except ValueError:
                 continue
-                
+
     except OSError as e:
         logger.warning("Error reading directory %s: %s", output_dir, e)
-    
+
     return highest
 
 
@@ -201,7 +199,7 @@ def extract(
     # Check for cancellation early
     if params.cancel_token and params.cancel_token.is_cancelled():
         raise CancelledException("Extraction cancelled")
-    
+
     video = params.video
     output_dir = params.output_dir
     if not output_dir.exists():
@@ -226,7 +224,7 @@ def extract(
 
     # Build filename pattern
     pattern = params.image_pattern or "output {{ counter|pad:4 }}.jpg"
-    
+
     # Find highest existing counter to append new files
     context_for_pattern = {
         "title": params.title,
@@ -236,7 +234,7 @@ def extract(
     }
     start_counter = _find_highest_counter(output_dir, pattern, context_for_pattern) + 1
     logger.debug("Starting counter at %d (appending to existing files)", start_counter)
-    
+
     frame_args: list[tuple[Path, float, Path, bool]] = []
     for idx, ts in enumerate(timestamps, start_counter):
         try:
@@ -296,7 +294,7 @@ def extract(
                         future.cancel()
                     executor.shutdown(wait=False, cancel_futures=True)
                     raise CancelledException("Extraction cancelled")
-                
+
                 # Retrieve result to surface exceptions immediately
                 f.result()
                 done += 1

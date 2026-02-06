@@ -1,4 +1,3 @@
-
 import pytest
 from django.test import Client
 from django.urls import reverse
@@ -9,288 +8,291 @@ from extract.views import _format_duration_seconds
 
 @pytest.mark.django_db
 def test_job_view_includes_gallery_url():
-	"""Test that the job view includes a gallery_url in the context."""
-	# Create a test extraction job with an output directory
-	job = ExtractionJob.objects.create(
-		id="test-job-123",
-		params={"title": "Test Movie"},
-		output_dir="/test/path/Test Movie (2024)",
-		status=ExtractionJob.Status.DONE,
-	)
-	
-	client = Client()
-	response = client.get(reverse('extract:job', kwargs={'job_id': job.id}))
-	
-	assert response.status_code == 200
-	assert 'gallery_url' in response.context
-	# The gallery_url should be for the folder "Test Movie (2024)" in the inbox
-	expected_url = reverse('choose:inbox_gallery', kwargs={'folder': 'Test Movie (2024)'})
-	assert response.context['gallery_url'] == expected_url
+    """Test that the job view includes a gallery_url in the context."""
+    # Create a test extraction job with an output directory
+    job = ExtractionJob.objects.create(
+        id="test-job-123",
+        params={"title": "Test Movie"},
+        output_dir="/test/path/Test Movie (2024)",
+        status=ExtractionJob.Status.DONE,
+    )
+
+    client = Client()
+    response = client.get(reverse("extract:job", kwargs={"job_id": job.id}))
+
+    assert response.status_code == 200
+    assert "gallery_url" in response.context
+    # The gallery_url should be for the folder "Test Movie (2024)" in the inbox
+    expected_url = reverse("choose:inbox_gallery", kwargs={"folder": "Test Movie (2024)"})
+    assert response.context["gallery_url"] == expected_url
 
 
 @pytest.mark.django_db
 def test_job_view_button_text_is_curate_in_inbox():
-	"""Test that the job view button says 'Curate in Inbox'."""
-	job = ExtractionJob.objects.create(
-		id="test-job-456",
-		params={"title": "Another Movie"},
-		output_dir="/test/path/Another Movie",
-		status=ExtractionJob.Status.DONE,
-	)
-	
-	client = Client()
-	response = client.get(reverse('extract:job', kwargs={'job_id': job.id}))
-	
-	assert response.status_code == 200
-	content = response.content.decode('utf-8')
-	assert 'Curate in Inbox' in content
+    """Test that the job view button says 'Curate in Inbox'."""
+    job = ExtractionJob.objects.create(
+        id="test-job-456",
+        params={"title": "Another Movie"},
+        output_dir="/test/path/Another Movie",
+        status=ExtractionJob.Status.DONE,
+    )
+
+    client = Client()
+    response = client.get(reverse("extract:job", kwargs={"job_id": job.id}))
+
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert "Curate in Inbox" in content
 
 
 @pytest.mark.django_db
 def test_browse_api_returns_no_store_cache_header():
-	"""Test that the browse_api endpoint returns Cache-Control: no-store header."""
-	client = Client()
-	
-	# Test with root path
-	response = client.get(reverse('extract:browse_api'), {'path': '/', 'dirs_only': '1'})
-	assert 'Cache-Control' in response
-	assert response['Cache-Control'] == 'no-store'
-	
-	# Test with not found path
-	response = client.get(reverse('extract:browse_api'), {'path': '/nonexistent/path/xyz'})
-	assert response.status_code == 404
-	assert 'Cache-Control' in response
-	assert response['Cache-Control'] == 'no-store'
+    """Test that the browse_api endpoint returns Cache-Control: no-store header."""
+    client = Client()
+
+    # Test with root path
+    response = client.get(reverse("extract:browse_api"), {"path": "/", "dirs_only": "1"})
+    assert "Cache-Control" in response
+    assert response["Cache-Control"] == "no-store"
+
+    # Test with not found path
+    response = client.get(reverse("extract:browse_api"), {"path": "/nonexistent/path/xyz"})
+    assert response.status_code == 404
+    assert "Cache-Control" in response
+    assert response["Cache-Control"] == "no-store"
 
 
 @pytest.mark.django_db
 def test_job_view_displays_filename():
-	"""Test that the job view displays the filename from the name field."""
-	job = ExtractionJob.objects.create(
-		id="test-job-789",
-		name="my_video.mp4",
-		params={"title": "Test Movie"},
-		output_dir="/test/path/Test Movie",
-		status=ExtractionJob.Status.DONE,
-	)
-	
-	client = Client()
-	response = client.get(reverse('extract:job', kwargs={'job_id': job.id}))
-	
-	assert response.status_code == 200
-	content = response.content.decode('utf-8')
-	assert 'my_video.mp4' in content
+    """Test that the job view displays the filename from the name field."""
+    job = ExtractionJob.objects.create(
+        id="test-job-789",
+        name="my_video.mp4",
+        params={"title": "Test Movie"},
+        output_dir="/test/path/Test Movie",
+        status=ExtractionJob.Status.DONE,
+    )
+
+    client = Client()
+    response = client.get(reverse("extract:job", kwargs={"job_id": job.id}))
+
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert "my_video.mp4" in content
 
 
 @pytest.mark.django_db
 def test_job_view_falls_back_to_extraction_when_no_name():
-	"""Test that the job view displays 'Extraction' when name is empty."""
-	job = ExtractionJob.objects.create(
-		id="test-job-101",
-		name="",
-		params={"title": "Test Movie"},
-		output_dir="/test/path/Test Movie",
-		status=ExtractionJob.Status.DONE,
-	)
-	
-	client = Client()
-	response = client.get(reverse('extract:job', kwargs={'job_id': job.id}))
-	
-	assert response.status_code == 200
-	content = response.content.decode('utf-8')
-	assert 'Extraction' in content
+    """Test that the job view displays 'Extraction' when name is empty."""
+    job = ExtractionJob.objects.create(
+        id="test-job-101",
+        name="",
+        params={"title": "Test Movie"},
+        output_dir="/test/path/Test Movie",
+        status=ExtractionJob.Status.DONE,
+    )
+
+    client = Client()
+    response = client.get(reverse("extract:job", kwargs={"job_id": job.id}))
+
+    assert response.status_code == 200
+    content = response.content.decode("utf-8")
+    assert "Extraction" in content
 
 
 @pytest.mark.django_db
 def test_job_api_includes_name():
-	"""Test that the job API endpoint returns the job name."""
-	job = ExtractionJob.objects.create(
-		id="test-job-202",
-		name="video_file.mkv",
-		params={"title": "Test Show"},
-		output_dir="/test/path/Test Show",
-		status=ExtractionJob.Status.RUNNING,
-	)
-	
-	client = Client()
-	response = client.get(reverse('extract:job_api', kwargs={'job_id': job.id}))
-	
-	assert response.status_code == 200
-	data = response.json()
-	assert data['name'] == "video_file.mkv"
+    """Test that the job API endpoint returns the job name."""
+    job = ExtractionJob.objects.create(
+        id="test-job-202",
+        name="video_file.mkv",
+        params={"title": "Test Show"},
+        output_dir="/test/path/Test Show",
+        status=ExtractionJob.Status.RUNNING,
+    )
+
+    client = Client()
+    response = client.get(reverse("extract:job_api", kwargs={"job_id": job.id}))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "video_file.mkv"
 
 
 @pytest.mark.django_db
 def test_jobs_api_includes_names():
-	"""Test that the jobs API endpoint returns job names."""
-	ExtractionJob.objects.create(
-		id="test-job-303",
-		name="first_video.mp4",
-		params={"title": "First"},
-		output_dir="/test/path/First",
-		status=ExtractionJob.Status.DONE,
-	)
-	ExtractionJob.objects.create(
-		id="test-job-404",
-		name="second_video.mp4",
-		params={"title": "Second"},
-		output_dir="/test/path/Second",
-		status=ExtractionJob.Status.RUNNING,
-	)
-	
-	client = Client()
-	response = client.get(reverse('extract:jobs_api'))
-	
-	assert response.status_code == 200
-	data = response.json()
-	jobs = data['jobs']
-	assert len(jobs) == 2
-	job_names = [j['name'] for j in jobs]
-	assert "first_video.mp4" in job_names
-	assert "second_video.mp4" in job_names
+    """Test that the jobs API endpoint returns job names."""
+    ExtractionJob.objects.create(
+        id="test-job-303",
+        name="first_video.mp4",
+        params={"title": "First"},
+        output_dir="/test/path/First",
+        status=ExtractionJob.Status.DONE,
+    )
+    ExtractionJob.objects.create(
+        id="test-job-404",
+        name="second_video.mp4",
+        params={"title": "Second"},
+        output_dir="/test/path/Second",
+        status=ExtractionJob.Status.RUNNING,
+    )
+
+    client = Client()
+    response = client.get(reverse("extract:jobs_api"))
+
+    assert response.status_code == 200
+    data = response.json()
+    jobs = data["jobs"]
+    assert len(jobs) == 2
+    job_names = [j["name"] for j in jobs]
+    assert "first_video.mp4" in job_names
+    assert "second_video.mp4" in job_names
 
 
 @pytest.mark.django_db
 def test_start_view_extracts_filename_from_video_path(tmp_path):
-	"""Test that creating a job via the start view extracts the filename."""
-	# Create a dummy video file
-	video_file = tmp_path / "my_test_video.mkv"
-	video_file.write_text("fake video")
-	
-	client = Client()
-	response = client.post(reverse('extract:start'), {
-		'video': str(video_file),
-		'title': 'Test Movie',
-		'trim_intervals': '[]',
-	})
-	
-	# Should redirect to job page
-	assert response.status_code == 302
-	
-	# Extract job ID from redirect URL
-	job_url = response.url
-	job_id = job_url.split('/')[-2]
-	
-	# Verify the job was created with the correct name
-	job = ExtractionJob.objects.get(id=job_id)
-	assert job.name == "my_test_video.mkv"
+    """Test that creating a job via the start view extracts the filename."""
+    # Create a dummy video file
+    video_file = tmp_path / "my_test_video.mkv"
+    video_file.write_text("fake video")
+
+    client = Client()
+    response = client.post(
+        reverse("extract:start"),
+        {
+            "video": str(video_file),
+            "title": "Test Movie",
+            "trim_intervals": "[]",
+        },
+    )
+
+    # Should redirect to job page
+    assert response.status_code == 302
+
+    # Extract job ID from redirect URL
+    job_url = response.url
+    job_id = job_url.split("/")[-2]
+
+    # Verify the job was created with the correct name
+    job = ExtractionJob.objects.get(id=job_id)
+    assert job.name == "my_test_video.mkv"
 
 
 @pytest.mark.django_db
 def test_folders_api_returns_existing_folders(tmp_path, settings):
-	"""Test that the folders API returns existing wallpaper folders."""
-	# Set up temporary wallpapers folder
-	settings.WALLPAPERS_FOLDER = str(tmp_path)
-	
-	# Create some test folders
-	(tmp_path / "Movie A (2020)").mkdir()
-	(tmp_path / "Movie A (2020)" / "test.jpg").write_text("fake image")
-	(tmp_path / "Show B (2021)").mkdir()
-	(tmp_path / "Show B (2021)" / "test.jpg").write_text("fake image")
-	(tmp_path / "Movie C").mkdir()
-	(tmp_path / "Movie C" / "test.jpg").write_text("fake image")
-	
-	client = Client()
-	response = client.get(reverse('extract:folders_api'))
-	
-	assert response.status_code == 200
-	data = response.json()
-	assert 'folders' in data
-	
-	folders = data['folders']
-	assert len(folders) == 3
-	
-	# Check that folders contain the expected structure
-	folder_names = {f['name'] for f in folders}
-	assert "Movie A (2020)" in folder_names
-	assert "Show B (2021)" in folder_names
-	assert "Movie C" in folder_names
-	
-	# Check that title and year are parsed correctly
-	movie_a = next(f for f in folders if f['name'] == "Movie A (2020)")
-	assert movie_a['title'] == "Movie A"
-	assert movie_a['year'] == 2020
-	assert 'cover_url' in movie_a
-	assert 'cover_thumb_url' in movie_a
-	
-	movie_c = next(f for f in folders if f['name'] == "Movie C")
-	assert movie_c['title'] == "Movie C"
-	assert movie_c['year'] is None
+    """Test that the folders API returns existing wallpaper folders."""
+    # Set up temporary wallpapers folder
+    settings.WALLPAPERS_FOLDER = str(tmp_path)
+
+    # Create some test folders
+    (tmp_path / "Movie A (2020)").mkdir()
+    (tmp_path / "Movie A (2020)" / "test.jpg").write_text("fake image")
+    (tmp_path / "Show B (2021)").mkdir()
+    (tmp_path / "Show B (2021)" / "test.jpg").write_text("fake image")
+    (tmp_path / "Movie C").mkdir()
+    (tmp_path / "Movie C" / "test.jpg").write_text("fake image")
+
+    client = Client()
+    response = client.get(reverse("extract:folders_api"))
+
+    assert response.status_code == 200
+    data = response.json()
+    assert "folders" in data
+
+    folders = data["folders"]
+    assert len(folders) == 3
+
+    # Check that folders contain the expected structure
+    folder_names = {f["name"] for f in folders}
+    assert "Movie A (2020)" in folder_names
+    assert "Show B (2021)" in folder_names
+    assert "Movie C" in folder_names
+
+    # Check that title and year are parsed correctly
+    movie_a = next(f for f in folders if f["name"] == "Movie A (2020)")
+    assert movie_a["title"] == "Movie A"
+    assert movie_a["year"] == 2020
+    assert "cover_url" in movie_a
+    assert "cover_thumb_url" in movie_a
+
+    movie_c = next(f for f in folders if f["name"] == "Movie C")
+    assert movie_c["title"] == "Movie C"
+    assert movie_c["year"] is None
 
 
 def test_format_duration_seconds_zero():
-	"""Test that zero seconds is formatted correctly."""
-	result = _format_duration_seconds(0)
-	assert result == "0s"
+    """Test that zero seconds is formatted correctly."""
+    result = _format_duration_seconds(0)
+    assert result == "0s"
 
 
 def test_format_duration_seconds_only():
-	"""Test that seconds-only durations are formatted correctly."""
-	result = _format_duration_seconds(45)
-	assert result == "45s"
+    """Test that seconds-only durations are formatted correctly."""
+    result = _format_duration_seconds(45)
+    assert result == "45s"
 
 
 def test_format_duration_seconds_one_second():
-	"""Test that one second is formatted correctly."""
-	result = _format_duration_seconds(1)
-	assert result == "1s"
+    """Test that one second is formatted correctly."""
+    result = _format_duration_seconds(1)
+    assert result == "1s"
 
 
 def test_format_duration_seconds_fifty_nine_seconds():
-	"""Test that 59 seconds (edge case before minutes) is formatted correctly."""
-	result = _format_duration_seconds(59)
-	assert result == "59s"
+    """Test that 59 seconds (edge case before minutes) is formatted correctly."""
+    result = _format_duration_seconds(59)
+    assert result == "59s"
 
 
 def test_format_duration_minutes_and_seconds():
-	"""Test that minutes and seconds are formatted correctly."""
-	result = _format_duration_seconds(195)  # 3 minutes 15 seconds
-	assert result == "3m 15s"
+    """Test that minutes and seconds are formatted correctly."""
+    result = _format_duration_seconds(195)  # 3 minutes 15 seconds
+    assert result == "3m 15s"
 
 
 def test_format_duration_minutes_exact():
-	"""Test that exact minutes (no remaining seconds) are formatted correctly."""
-	result = _format_duration_seconds(120)  # 2 minutes 0 seconds
-	assert result == "2m 0s"
+    """Test that exact minutes (no remaining seconds) are formatted correctly."""
+    result = _format_duration_seconds(120)  # 2 minutes 0 seconds
+    assert result == "2m 0s"
 
 
 def test_format_duration_one_minute():
-	"""Test that one minute is formatted correctly."""
-	result = _format_duration_seconds(60)
-	assert result == "1m 0s"
+    """Test that one minute is formatted correctly."""
+    result = _format_duration_seconds(60)
+    assert result == "1m 0s"
 
 
 def test_format_duration_hours_minutes_seconds():
-	"""Test that hours, minutes, and seconds are formatted correctly."""
-	result = _format_duration_seconds(9045)  # 2 hours 30 minutes 45 seconds
-	assert result == "2h 30m 45s"
+    """Test that hours, minutes, and seconds are formatted correctly."""
+    result = _format_duration_seconds(9045)  # 2 hours 30 minutes 45 seconds
+    assert result == "2h 30m 45s"
 
 
 def test_format_duration_hours_exact():
-	"""Test that exact hours (no remaining minutes or seconds) are formatted correctly."""
-	result = _format_duration_seconds(7200)  # 2 hours 0 minutes 0 seconds
-	assert result == "2h 0m 0s"
+    """Test that exact hours (no remaining minutes or seconds) are formatted correctly."""
+    result = _format_duration_seconds(7200)  # 2 hours 0 minutes 0 seconds
+    assert result == "2h 0m 0s"
 
 
 def test_format_duration_one_hour():
-	"""Test that one hour is formatted correctly."""
-	result = _format_duration_seconds(3600)
-	assert result == "1h 0m 0s"
+    """Test that one hour is formatted correctly."""
+    result = _format_duration_seconds(3600)
+    assert result == "1h 0m 0s"
 
 
 def test_format_duration_hours_with_seconds_no_minutes():
-	"""Test hours with seconds but no minutes."""
-	result = _format_duration_seconds(3615)  # 1 hour 0 minutes 15 seconds
-	assert result == "1h 0m 15s"
+    """Test hours with seconds but no minutes."""
+    result = _format_duration_seconds(3615)  # 1 hour 0 minutes 15 seconds
+    assert result == "1h 0m 15s"
 
 
 def test_format_duration_fractional_seconds():
-	"""Test that fractional seconds are truncated to integers."""
-	result = _format_duration_seconds(45.7)
-	assert result == "45s"
+    """Test that fractional seconds are truncated to integers."""
+    result = _format_duration_seconds(45.7)
+    assert result == "45s"
 
 
 def test_format_duration_large_value():
-	"""Test a large duration value (multiple hours)."""
-	result = _format_duration_seconds(86400)  # 24 hours
-	assert result == "24h 0m 0s"
+    """Test a large duration value (multiple hours)."""
+    result = _format_duration_seconds(86400)  # 24 hours
+    assert result == "24h 0m 0s"

@@ -52,6 +52,7 @@ class GalleryImage(TypedDict):
 
 class GallerySection(TypedDict):
     """A group of images for the same season/episode combination."""
+
     title: str
     season: str
     episode: str
@@ -99,17 +100,17 @@ class FolderContext:
 
 def format_section_title(season: str, episode: str) -> str:
     """Format a human-readable section title from season/episode identifiers.
-    
+
     Args:
         season: Season identifier (e.g., "01", "1", or "")
         episode: Episode identifier (e.g., "03", "IN", "OU", or "")
-        
+
     Returns:
         Formatted title like "Season 1 Episode 3", "Season 1 Intro", "Season 1", or "General"
     """
     if not season and not episode:
         return "General"
-    
+
     parts = []
     if season:
         try:
@@ -117,7 +118,7 @@ def format_section_title(season: str, episode: str) -> str:
             parts.append(f"Season {season_num}")
         except ValueError:
             parts.append(f"Season {season}")
-    
+
     if episode:
         # Check for special episode markers
         episode_upper = episode.upper()
@@ -131,7 +132,7 @@ def format_section_title(season: str, episode: str) -> str:
                 parts.append(f"Episode {ep_num}")
             except ValueError:
                 parts.append(f"Episode {episode}")
-    
+
     return " ".join(parts) if parts else "General"
 
 
@@ -149,16 +150,8 @@ def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext
     year_display = str(year_int) if year_int is not None else ""
 
     cover_filename = find_cover_filename(target, files)
-    cover_url = (
-        wallpaper_url(safe_name, cover_filename, root=root_path)
-        if cover_filename
-        else None
-    )
-    cover_thumb_url = (
-        thumbnail_url(safe_name, cover_filename, width=420, root=root_path)
-        if cover_filename
-        else None
-    )
+    cover_url = wallpaper_url(safe_name, cover_filename, root=root_path) if cover_filename else None
+    cover_thumb_url = thumbnail_url(safe_name, cover_filename, width=420, root=root_path) if cover_filename else None
 
     # First, group files by their base name (without version suffix) to identify version sets
     version_groups: dict[str, list[str]] = defaultdict(list)
@@ -171,18 +164,18 @@ def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext
         else:
             # Invalid suffix - treat as separate image
             version_groups[name].append(name)
-    
+
     # Build gallery images with version information
     # For each version group, the base image (no suffix) should be the "primary" one
     processed_files: set[str] = set()
     images_with_versions: list[GalleryImage] = []
-    
+
     # Maintain original file order by iterating through sorted files
     # and processing each version group only once (when we see its first member)
     for name in files:
         if name in processed_files:
             continue
-            
+
         valid_suffix, invalid_suffix = parse_version_suffix(name)
         if valid_suffix or not invalid_suffix:
             # Valid suffix or no suffix - find its version group
@@ -191,27 +184,29 @@ def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext
         else:
             # Invalid suffix - treat as separate image
             version_files = version_groups[name]
-        
+
         # Sort so base image (no suffix) comes first, then alphabetically by suffix
         def sort_key(filename: str) -> tuple[int, str]:
             suffix, _ = parse_version_suffix(filename)
             # Base image (no suffix) sorts first (0), others by suffix (1)
             return (0 if not suffix else 1, suffix)
-        
+
         sorted_versions = sorted(version_files, key=sort_key)
         primary_name = sorted_versions[0]
-        
+
         # Build version info for all files in this group
         versions = []
         for vname in sorted_versions:
             vsuffix, _ = parse_version_suffix(vname)
-            versions.append({
-                "name": vname,
-                "url": wallpaper_url(safe_name, vname, root=root_path),
-                "thumb_url": thumbnail_url(safe_name, vname, width=512, root=root_path),
-                "version_suffix": vsuffix,
-            })
-        
+            versions.append(
+                {
+                    "name": vname,
+                    "url": wallpaper_url(safe_name, vname, root=root_path),
+                    "thumb_url": thumbnail_url(safe_name, vname, width=512, root=root_path),
+                    "version_suffix": vsuffix,
+                }
+            )
+
         # Create the primary gallery image (represents the whole version stack)
         primary_suffix, _ = parse_version_suffix(primary_name)
         image: GalleryImage = {
@@ -237,7 +232,7 @@ def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext
         season, episode = parse_season_episode(base_name)
         key = (season, episode)
         grouped[key].append(image)
-    
+
     # Convert grouped dict to sorted list of sections
     # Sort order: General, Season X (or episode-only), Season X Intro, Season X Episodes, Season X Outro
     def sort_key(item: tuple[tuple[str, str], list[GalleryImage]]) -> tuple:  # type: ignore[no-redef]
@@ -245,18 +240,18 @@ def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext
         # Empty season/episode comes first (General section)
         if not season and not episode:
             return (0, 0, 0, "")
-        
+
         # Parse season as int if possible
         # For episode-only patterns (no season), treat as season 1
         try:
             season_int = int(season) if season else 1
         except ValueError:
             season_int = 999999
-        
+
         # Handle empty episode (season-only) - comes right after General
         if not episode:
             return (season_int, 1, 0, "")
-        
+
         # Handle special episodes (IN, OU)
         episode_upper = episode.upper()
         if episode_upper == "IN":
@@ -265,7 +260,7 @@ def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext
         elif episode_upper == "OU":
             # Outro comes at the end after all episodes
             return (season_int, 999998, 0, "")
-        
+
         # Parse episode as int if possible, otherwise use string sorting
         try:
             episode_int = int(episode)
@@ -276,27 +271,29 @@ def list_gallery_images(folder: str, root: Path | None = None) -> GalleryContext
             episode_int = 999999
             episode_str = episode_upper
             return (season_int, 4, episode_int, episode_str)
-    
+
     sorted_groups = sorted(grouped.items(), key=sort_key)  # type: ignore[arg-type]
-    
+
     sections: list[GallerySection] = []
     for (season, episode), group_images in sorted_groups:
         # Build section-specific choose URL with query params for filtering
         # Always add query params to ensure proper filtering by section
         params = {
-            'season': season,
-            'episode': episode,
+            "season": season,
+            "episode": episode,
         }
         section_choose_url = reverse("choose:folder", kwargs={"folder": safe_name})
         section_choose_url = f"{section_choose_url}?{urlencode(params)}"
-        
-        sections.append({
-            "title": format_section_title(season, episode),
-            "season": season,
-            "episode": episode,
-            "images": group_images,
-            "choose_url": section_choose_url,
-        })
+
+        sections.append(
+            {
+                "title": format_section_title(season, episode),
+                "season": season,
+                "episode": episode,
+                "images": group_images,
+                "choose_url": section_choose_url,
+            }
+        )
 
     choose_url = reverse("choose:folder", kwargs={"folder": safe_name})
 
@@ -321,13 +318,13 @@ def load_folder_context(
     root: Path | None = None,
 ) -> FolderContext:
     """Load folder context for the chooser UI.
-    
+
     Args:
         folder: The folder name to load
         season: Optional season filter (e.g., "01")
         episode: Optional episode filter (e.g., "03", "IN", "OU")
         root: Optional root directory (defaults to wallpapers_root)
-        
+
     Returns:
         FolderContext with images (optionally filtered by section)
     """
@@ -339,7 +336,7 @@ def load_folder_context(
         files = list_image_files(target)
     except PermissionError:
         files = []
-    
+
     # Filter files by season/episode if specified
     # Note: Empty strings mean we want to filter for the General section (no season/episode)
     if season is not None or episode is not None:
@@ -392,13 +389,8 @@ def load_folder_context(
         if selected_index == -1:
             selected_index = start_index
 
-    selected_image_url = (
-        images[selected_index]["url"] if images and selected_index >= 0 else ""
-    )
-    selected_image_name = (
-        images[selected_index]["name"] if images and selected_index >= 0 else ""
-    )
-
+    selected_image_url = images[selected_index]["url"] if images and selected_index >= 0 else ""
+    selected_image_name = images[selected_index]["name"] if images and selected_index >= 0 else ""
 
     return FolderContext(
         folder=safe_name,
@@ -416,7 +408,7 @@ def _get_max_counters(folder_path: Path) -> dict[tuple[str, str], int]:
     counters: dict[tuple[str, str], int] = defaultdict(int)
     if not folder_path.exists():
         return counters
-        
+
     try:
         files = list_image_files(folder_path)
     except PermissionError:
@@ -425,10 +417,10 @@ def _get_max_counters(folder_path: Path) -> dict[tuple[str, str], int]:
     for fname in files:
         base_name = strip_version_suffix(fname)
         stem = os.path.splitext(base_name)[0]
-        
+
         # Parse Season/Episode
         season, episode = parse_season_episode(stem)
-        
+
         # Parse Counter
         counter_match = re.search(r"(\d+)$", stem)
         if counter_match:
@@ -444,11 +436,11 @@ def _get_max_counters(folder_path: Path) -> dict[tuple[str, str], int]:
 
 def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
     """Move decisions from Inbox to Library/Discard.
-    
+
     Kept files: Moved to Library, appended to existing series.
     Discarded files: Moved to Discard folder.
     Undecided files: Remain in Inbox.
-    
+
     If Inbox becomes empty, the folder is removed.
     """
     safe_name = validate_folder_name(folder_name)
@@ -477,51 +469,51 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
     try:
         # Check permission early
         if not source_path.exists():
-             return {"ok": False, "error": "folder_not_found"}
+            return {"ok": False, "error": "folder_not_found"}
     except PermissionError as exc:
         raise OSError(f"Permission denied scanning {safe_name}") from exc
 
     decisions_qs = ImageDecision.objects.filter(folder=safe_name)
-    
+
     # Prepare batch state
     base_title, parsed_year = parse_title_year_from_folder(safe_name)
     pattern = settings.EXTRACT_IMAGE_PATTERN
-    
+
     # Load existing library counters to append correctly
     current_counters = _get_max_counters(lib_path)
-    
+
     moved_keeps = 0
     moved_trash = 0
     errors: list[str] = []
-    
+
     # Process files
     # We iterate valid decisions first for order, then check file existence
-    
+
     # Sort keeps by decision time to respect user order
     sorted_keeps = decisions_qs.filter(decision=ImageDecision.DECISION_KEEP).order_by("decided_at", "filename")
     keep_filenames = [d.filename for d in sorted_keeps]
-    
+
     # Process Keeps
-    # We must group by base name to ensure versions get same counter? 
+    # We must group by base name to ensure versions get same counter?
     # Current policy: Treat versions as separate files with suffixes.
     # But they should share the counter if they are versions of same image.
     # Map base_name -> assigned_counter to reuse it for versions.
-    assigned_counters: dict[str, int] = {} # base_name_in_inbox -> assigned_counter
-    
+    assigned_counters: dict[str, int] = {}  # base_name_in_inbox -> assigned_counter
+
     for filename in keep_filenames:
         src = source_path / filename
         if not src.exists():
             continue
-            
+
         # Parse info
         suffix, _ = parse_version_suffix(filename)
         base_name_inbox = strip_version_suffix(filename)
         stem = os.path.splitext(base_name_inbox)[0]
         original_ext = os.path.splitext(base_name_inbox)[1]
-        
+
         season, episode = parse_season_episode(stem)
         key = (season, episode)
-        
+
         # Determine counter
         if base_name_inbox in assigned_counters:
             count = assigned_counters[base_name_inbox]
@@ -529,7 +521,7 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
             current_counters[key] += 1
             count = current_counters[key]
             assigned_counters[base_name_inbox] = count
-            
+
         # render new name
         values: dict[str, object] = {
             "title": base_title,
@@ -540,15 +532,15 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
             "counter": count,
         }
         new_base_name = render_pattern(pattern, values)
-        
+
         # Preserve original file extension by replacing pattern's extension
         pattern_stem = os.path.splitext(new_base_name)[0]
         new_base_name = pattern_stem + original_ext
-        
+
         new_name = add_version_suffix(new_base_name, suffix)
-        
+
         dest = lib_path / new_name
-        
+
         # Prevent overwriting existing library files
         if dest.exists():
             # This shouldn't happen with monotonic counters, but race conditions/manual changes exists
@@ -581,9 +573,9 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
         src = source_path / filename
         if not src.exists():
             continue
-            
+
         dest = trash_path / filename
-        
+
         # Handle existing files with the same name in trash folder
         if dest.exists():
             # Append timestamp to prevent collision
@@ -591,7 +583,7 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
             suffix = dest.suffix
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             dest = trash_path / f"{stem}_{timestamp}{suffix}"
-        
+
         try:
             shutil.move(str(src), str(dest))
             moved_trash += 1
@@ -605,14 +597,14 @@ def ingest_inbox_folder(folder_name: str) -> dict[str, Any]:
         # If empty (ignoring hidden files), delete folder
         try:
             shutil.rmtree(source_path)
-            shutil.rmtree(trash_path, ignore_errors=True) # Optional: clean empty trash folder? No, keep history.
+            shutil.rmtree(trash_path, ignore_errors=True)  # Optional: clean empty trash folder? No, keep history.
         except OSError as exc:
             errors.append(f"Failed to remove empty inbox folder: {exc}")
-            
+
     return {
         "ok": len(errors) == 0,
         "moved_library": moved_keeps,
         "moved_trash": moved_trash,
         "remaining": len(remaining_files),
-        "errors": errors
+        "errors": errors,
     }

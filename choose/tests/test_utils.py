@@ -6,272 +6,267 @@ import pytest
 
 from choose.services import format_section_title
 from choose.utils import (
-	MediaFolder,
-	add_version_suffix,
-	list_media_folders,
-	parse_counter,
-	parse_folder_name,
-	parse_season_episode,
-	parse_title_year_from_folder,
-	parse_version_suffix,
-	strip_version_suffix,
-	validate_folder_name,
+    MediaFolder,
+    add_version_suffix,
+    list_media_folders,
+    parse_counter,
+    parse_folder_name,
+    parse_season_episode,
+    parse_title_year_from_folder,
+    parse_version_suffix,
+    strip_version_suffix,
+    validate_folder_name,
 )
 from kwc.utils.files import cache_token
 
 
 @pytest.fixture()
 def temp_wallpapers_dir(tmp_path: Path) -> Path:
-	return tmp_path
+    return tmp_path
 
 
 def _make_folder(root: Path, name: str, files: dict[str, bytes] | None = None) -> Path:
-	dir_path = root / name
-	dir_path.mkdir(parents=True, exist_ok=True)
-	files = files or {}
-	for rel, data in files.items():
-		file_path = dir_path / rel
-		file_path.write_bytes(data)
-	return dir_path
+    dir_path = root / name
+    dir_path.mkdir(parents=True, exist_ok=True)
+    files = files or {}
+    for rel, data in files.items():
+        file_path = dir_path / rel
+        file_path.write_bytes(data)
+    return dir_path
 
 
 def test_validate_folder_name_accepts_simple_names() -> None:
-	assert validate_folder_name("Movie 2024") == "Movie 2024"
+    assert validate_folder_name("Movie 2024") == "Movie 2024"
 
 
 def test_validate_folder_name_rejects_hidden_folder() -> None:
-	with pytest.raises(ValueError):
-		validate_folder_name(".hidden")
+    with pytest.raises(ValueError):
+        validate_folder_name(".hidden")
 
 
 def test_validate_folder_name_rejects_traversal() -> None:
-	with pytest.raises(ValueError):
-		validate_folder_name("../secret")
+    with pytest.raises(ValueError):
+        validate_folder_name("../secret")
 
 
 def test_parse_folder_name_with_year() -> None:
-	title, year = parse_folder_name("My Film (2022)")
-	assert title == "My Film"
-	assert year == 2022
+    title, year = parse_folder_name("My Film (2022)")
+    assert title == "My Film"
+    assert year == 2022
 
 
 def test_parse_folder_name_without_year() -> None:
-	title, year = parse_folder_name("Plain Title")
-	assert title == "Plain Title"
-	assert year is None
+    title, year = parse_folder_name("Plain Title")
+    assert title == "Plain Title"
+    assert year is None
 
 
 def test_parse_title_year_from_folder_returns_raw_year() -> None:
-	title, year_raw = parse_title_year_from_folder("Movie (2024)")
-	assert title == "Movie"
-	assert year_raw == 2024
+    title, year_raw = parse_title_year_from_folder("Movie (2024)")
+    assert title == "Movie"
+    assert year_raw == 2024
 
 
 def test_list_media_folders_collects_metadata(temp_wallpapers_dir: Path) -> None:
-	_make_folder(
-		temp_wallpapers_dir,
-		"Show (1999)",
-		{
-			"frame1.jpg": b"x",
-			".cover.jpg": b"y",
-		},
-	)
-	_make_folder(
-		temp_wallpapers_dir,
-		"Another", {"still.png": b"z"}
-	)
+    _make_folder(
+        temp_wallpapers_dir,
+        "Show (1999)",
+        {
+            "frame1.jpg": b"x",
+            ".cover.jpg": b"y",
+        },
+    )
+    _make_folder(temp_wallpapers_dir, "Another", {"still.png": b"z"})
 
-	entries, root = list_media_folders(root=temp_wallpapers_dir)
-	assert root == temp_wallpapers_dir
-	assert len(entries) == 2
+    entries, root = list_media_folders(root=temp_wallpapers_dir)
+    assert root == temp_wallpapers_dir
+    assert len(entries) == 2
 
-	entries_by_name = {entry['name']: entry for entry in entries}
-	sample: MediaFolder = entries_by_name['Show (1999)']
-	assert "name" in sample
-	assert "cover_url" in sample
-	assert "cover_thumb_url" in sample
-	assert sample['year'] == '1999'
-	assert sample['year_raw'] == 1999
-	assert isinstance(sample['mtime'], int)
+    entries_by_name = {entry["name"]: entry for entry in entries}
+    sample: MediaFolder = entries_by_name["Show (1999)"]
+    assert "name" in sample
+    assert "cover_url" in sample
+    assert "cover_thumb_url" in sample
+    assert sample["year"] == "1999"
+    assert sample["year_raw"] == 1999
+    assert isinstance(sample["mtime"], int)
 
 
 def test_cache_token_is_stable(temp_wallpapers_dir: Path) -> None:
-	file_path = temp_wallpapers_dir / "sample.txt"
-	file_path.write_text("hello")
+    file_path = temp_wallpapers_dir / "sample.txt"
+    file_path.write_text("hello")
 
-	first = cache_token(file_path)
-	second = cache_token(file_path)
-	assert first == second
+    first = cache_token(file_path)
+    second = cache_token(file_path)
+    assert first == second
 
 
 def test_parse_season_episode_with_numeric_episode() -> None:
-	season, episode = parse_season_episode("Show Title S01E03.jpg")
-	assert season == "01"
-	assert episode == "03"
+    season, episode = parse_season_episode("Show Title S01E03.jpg")
+    assert season == "01"
+    assert episode == "03"
 
 
 def test_parse_season_episode_with_intro() -> None:
-	season, episode = parse_season_episode("Show S02EIN.jpg")
-	assert season == "02"
-	assert episode == "IN"
+    season, episode = parse_season_episode("Show S02EIN.jpg")
+    assert season == "02"
+    assert episode == "IN"
 
 
 def test_parse_season_episode_with_outro() -> None:
-	season, episode = parse_season_episode("Show S01EOU.png")
-	assert season == "01"
-	assert episode == "OU"
+    season, episode = parse_season_episode("Show S01EOU.png")
+    assert season == "01"
+    assert episode == "OU"
 
 
 def test_parse_season_episode_no_match() -> None:
-	season, episode = parse_season_episode("Movie.jpg")
-	assert season == ""
-	assert episode == ""
+    season, episode = parse_season_episode("Movie.jpg")
+    assert season == ""
+    assert episode == ""
 
 
 def test_parse_season_episode_case_insensitive() -> None:
-	season, episode = parse_season_episode("Show s03e12.jpg")
-	assert season == "03"
-	assert episode == "12"
+    season, episode = parse_season_episode("Show s03e12.jpg")
+    assert season == "03"
+    assert episode == "12"
 
 
 def test_parse_season_episode_season_only() -> None:
-	season, episode = parse_season_episode("Show S01 ~ 0001.jpg")
-	assert season == "01"
-	assert episode == ""
+    season, episode = parse_season_episode("Show S01 ~ 0001.jpg")
+    assert season == "01"
+    assert episode == ""
 
 
 def test_parse_season_episode_episode_only() -> None:
-	season, episode = parse_season_episode("Show E03 ~ 0001.jpg")
-	assert season == ""
-	assert episode == "03"
+    season, episode = parse_season_episode("Show E03 ~ 0001.jpg")
+    assert season == ""
+    assert episode == "03"
 
 
 def test_parse_season_episode_episode_only_intro() -> None:
-	season, episode = parse_season_episode("Show EIN ~ 0001.jpg")
-	assert season == ""
-	assert episode == "IN"
+    season, episode = parse_season_episode("Show EIN ~ 0001.jpg")
+    assert season == ""
+    assert episode == "IN"
 
 
 def test_parse_season_episode_episode_only_outro() -> None:
-	season, episode = parse_season_episode("Show EOU ~ 0001.jpg")
-	assert season == ""
-	assert episode == "OU"
+    season, episode = parse_season_episode("Show EOU ~ 0001.jpg")
+    assert season == ""
+    assert episode == "OU"
 
 
 def test_parse_counter_standard_filename() -> None:
-	assert parse_counter("Movie 〜 0005.jpg") == "0005"
+    assert parse_counter("Movie 〜 0005.jpg") == "0005"
 
 
 def test_parse_counter_with_suffix() -> None:
-	assert parse_counter("Show 〜 0210U.jpg") == "0210"
+    assert parse_counter("Show 〜 0210U.jpg") == "0210"
 
 
 def test_parse_counter_missing() -> None:
-	assert parse_counter("Random.jpg") == ""
+    assert parse_counter("Random.jpg") == ""
 
 
 def test_format_section_title_general() -> None:
-	assert format_section_title("", "") == "General"
+    assert format_section_title("", "") == "General"
 
 
 def test_format_section_title_season_only() -> None:
-	assert format_section_title("01", "") == "Season 1"
+    assert format_section_title("01", "") == "Season 1"
 
 
 def test_format_section_title_season_and_episode() -> None:
-	assert format_section_title("01", "03") == "Season 1 Episode 3"
+    assert format_section_title("01", "03") == "Season 1 Episode 3"
 
 
 def test_format_section_title_intro() -> None:
-	assert format_section_title("02", "IN") == "Season 2 Intro"
+    assert format_section_title("02", "IN") == "Season 2 Intro"
 
 
 def test_format_section_title_outro() -> None:
-	assert format_section_title("01", "OU") == "Season 1 Outro"
+    assert format_section_title("01", "OU") == "Season 1 Outro"
 
 
 def test_format_section_title_non_numeric() -> None:
-	assert format_section_title("01", "special") == "Season 1 Episode special"
+    assert format_section_title("01", "special") == "Season 1 Episode special"
 
 
 def test_format_section_title_episode_only() -> None:
-	assert format_section_title("", "03") == "Episode 3"
+    assert format_section_title("", "03") == "Episode 3"
 
 
 def test_format_section_title_episode_only_intro() -> None:
-	assert format_section_title("", "IN") == "Intro"
+    assert format_section_title("", "IN") == "Intro"
 
 
 def test_format_section_title_episode_only_outro() -> None:
-	assert format_section_title("", "OU") == "Outro"
+    assert format_section_title("", "OU") == "Outro"
 
 
 def test_parse_version_suffix_no_suffix() -> None:
-	valid, invalid = parse_version_suffix("Title ~ 0001.jpg")
-	assert valid == ""
-	assert invalid == ""
+    valid, invalid = parse_version_suffix("Title ~ 0001.jpg")
+    assert valid == ""
+    assert invalid == ""
 
 
 def test_parse_version_suffix_single_letter() -> None:
-	valid, invalid = parse_version_suffix("Title ~ 0001U.jpg")
-	assert valid == "U"
-	assert invalid == ""
+    valid, invalid = parse_version_suffix("Title ~ 0001U.jpg")
+    assert valid == "U"
+    assert invalid == ""
 
 
 def test_parse_version_suffix_two_letters() -> None:
-	valid, invalid = parse_version_suffix("Title ~ 0001UM.jpg")
-	assert valid == "UM"
-	assert invalid == ""
+    valid, invalid = parse_version_suffix("Title ~ 0001UM.jpg")
+    assert valid == "UM"
+    assert invalid == ""
 
 
 def test_parse_version_suffix_lowercase_invalid() -> None:
-	valid, invalid = parse_version_suffix("Title ~ 0001e.jpg")
-	assert valid == ""
-	assert invalid == "e"
+    valid, invalid = parse_version_suffix("Title ~ 0001e.jpg")
+    assert valid == ""
+    assert invalid == "e"
 
 
 def test_parse_version_suffix_repeated_invalid() -> None:
-	valid, invalid = parse_version_suffix("Title ~ 0001EE.jpg")
-	assert valid == ""
-	assert invalid == "EE"
+    valid, invalid = parse_version_suffix("Title ~ 0001EE.jpg")
+    assert valid == ""
+    assert invalid == "EE"
 
 
 def test_parse_version_suffix_too_long_invalid() -> None:
-	valid, invalid = parse_version_suffix("Title ~ 0001EPU.jpg")
-	assert valid == ""
-	assert invalid == "EPU"
+    valid, invalid = parse_version_suffix("Title ~ 0001EPU.jpg")
+    assert valid == ""
+    assert invalid == "EPU"
 
 
 def test_parse_version_suffix_mixed_case_invalid() -> None:
-	valid, invalid = parse_version_suffix("Title ~ 0001Ue.jpg")
-	assert valid == ""
-	assert invalid == "Ue"
+    valid, invalid = parse_version_suffix("Title ~ 0001Ue.jpg")
+    assert valid == ""
+    assert invalid == "Ue"
 
 
 def test_strip_version_suffix_with_valid_suffix() -> None:
-	assert strip_version_suffix("Title ~ 0001U.jpg") == "Title ~ 0001.jpg"
-	assert strip_version_suffix("Title ~ 0001UM.jpg") == "Title ~ 0001.jpg"
+    assert strip_version_suffix("Title ~ 0001U.jpg") == "Title ~ 0001.jpg"
+    assert strip_version_suffix("Title ~ 0001UM.jpg") == "Title ~ 0001.jpg"
 
 
 def test_strip_version_suffix_with_invalid_suffix() -> None:
-	assert strip_version_suffix("Title ~ 0001e.jpg") == "Title ~ 0001.jpg"
-	assert strip_version_suffix("Title ~ 0001EE.jpg") == "Title ~ 0001.jpg"
-	assert strip_version_suffix("Title ~ 0001EPU.jpg") == "Title ~ 0001.jpg"
+    assert strip_version_suffix("Title ~ 0001e.jpg") == "Title ~ 0001.jpg"
+    assert strip_version_suffix("Title ~ 0001EE.jpg") == "Title ~ 0001.jpg"
+    assert strip_version_suffix("Title ~ 0001EPU.jpg") == "Title ~ 0001.jpg"
 
 
 def test_strip_version_suffix_no_suffix() -> None:
-	assert strip_version_suffix("Title ~ 0001.jpg") == "Title ~ 0001.jpg"
+    assert strip_version_suffix("Title ~ 0001.jpg") == "Title ~ 0001.jpg"
 
 
 def test_add_version_suffix_single_letter() -> None:
-	assert add_version_suffix("Title ~ 0001.jpg", "U") == "Title ~ 0001U.jpg"
+    assert add_version_suffix("Title ~ 0001.jpg", "U") == "Title ~ 0001U.jpg"
 
 
 def test_add_version_suffix_two_letters() -> None:
-	assert add_version_suffix("Title ~ 0001.jpg", "UM") == "Title ~ 0001UM.jpg"
+    assert add_version_suffix("Title ~ 0001.jpg", "UM") == "Title ~ 0001UM.jpg"
 
 
 def test_add_version_suffix_empty() -> None:
-	assert add_version_suffix("Title ~ 0001.jpg", "") == "Title ~ 0001.jpg"
-
-
+    assert add_version_suffix("Title ~ 0001.jpg", "") == "Title ~ 0001.jpg"
