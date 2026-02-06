@@ -111,7 +111,12 @@ def delete_folder(request: HttpRequest, folder: str) -> HttpResponse:
     except (ValueError, FileNotFoundError):
         raise Http404("Folder not found") from None
 
-    shutil.rmtree(target)
+    try:
+        shutil.rmtree(target)
+    except OSError as exc:
+        logger.error("Failed to delete folder %s: %s", safe_name, exc)
+        raise Http404("Folder could not be deleted. Please check permissions and try again.") from None
+
     return redirect("choose:inbox")
 
 
