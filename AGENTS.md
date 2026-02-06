@@ -54,8 +54,13 @@ Key .env variables: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `KWC_WALLPAPERS_FOLDER`
 **Agent Contribution Workflow**:
 1. **Start**: Always create a new branch `git checkout -b <branch-name>` (e.g., `feat/...` or `fix/...`).
 2. **Work**: Commit atomically as you progress.
-3. **Finish**: Push to origin and create a PR to `main`.
-4. **Verify**: Check PR checks (CI). If they fail, get results and fix the issues until green.
+3. **Verify Locally**: Run full repository checks before pushing:
+   - Format: `uv run ruff format .`
+   - Lint: `uv run ruff check .`
+   - Type check: `uv run mypy .`
+   - Test: `uv run pytest`
+4. **Finish**: Push to origin and create a PR to `main`.
+5. **Verify CI**: Check PR checks (CI). If they fail, get results and fix the issues until green.
 
 ## Key Patterns & Guidelines
 
