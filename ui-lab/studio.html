@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>03 Studio · KWC UI lab</title>
+  <link rel="stylesheet" href="assets/vendor/bulma.min.css">
+  <link rel="stylesheet" href="assets/lab.css">
+  <link rel="stylesheet" href="assets/studio.css">
+</head>
+<body class="lab">
+  <div class="labbar">
+    <a class="lab-brand" href="index.html">KWC <span>UI lab</span></a>
+    <nav class="lab-nav" aria-label="Directions">
+      <a href="noir.html">01 Noir</a>
+      <a href="paper.html">02 Paper</a>
+      <a href="studio.html" aria-current="page">03 Studio</a>
+    </nav>
+    <div class="lab-controls">
+      <div class="seg" role="group" aria-label="Application">
+        <button type="button" data-app="browser">Browser</button>
+        <button type="button" data-app="manager">Manager</button>
+      </div>
+      <div class="seg" data-screens="browser" role="group" aria-label="Browser screen">
+        <button type="button" data-screen="library">Library</button>
+        <button type="button" data-screen="frame">Frame</button>
+      </div>
+      <div class="seg" data-screens="manager" role="group" aria-label="Manager screen" hidden>
+        <button type="button" data-screen="folders">Folders</button>
+        <button type="button" data-screen="jobs">Jobs</button>
+      </div>
+      <div class="seg view-toggle" role="group" aria-label="Preview size">
+        <button type="button" data-view="desktop">Desktop</button>
+        <button type="button" data-view="mobile">Mobile</button>
+      </div>
+    </div>
+  </div>
+  <p class="lab-note"><strong>Studio</strong> — a calm working tool: cool neutrals, one indigo accent, dense but unhurried.</p>
+
+  <main class="preview">
+    <section data-app-panel="browser">
+      <div class="studio-app" data-screen-panel="library">
+        <header class="topbar">
+          <a class="brand" href="#">KWC</a>
+          <label class="search"><svg aria-hidden="true" viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><input type="search" placeholder="Search folders and frames" aria-label="Search"></label>
+          <div class="top-actions">
+            <div class="seg2" role="group" aria-label="Frame selection"><button type="button" class="is-on">Curated</button><button type="button">All</button></div>
+            <button class="button is-primary is-small" type="button">Download</button>
+          </div>
+        </header>
+
+        <main class="browse">
+          <div class="page-bar">
+            <div><p class="eyebrow">Public archive</p><h1>Library</h1><p class="subtle">41 folders · 612 frames</p></div>
+            <div class="sort"><span>Sort</span><select aria-label="Sort"><option>Newest first</option><option>Title A–Z</option><option>Most frames</option></select></div>
+          </div>
+
+          <div class="card-grid">
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-01.webp" alt="Night sky over a city"><span class="chip"><span>★</span> 13 picks</span></div>
+                <div class="media-info"><strong>Your Name.</strong><span>2016 · 21 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-02.webp" alt="Clouds above the city"><span class="chip"><span>★</span> 11 picks</span></div>
+                <div class="media-info"><strong>Weathering with You</strong><span>2019 · 18 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-03.webp" alt="A road at dusk"><span class="chip"><span>★</span> 9 picks</span></div>
+                <div class="media-info"><strong>Suzume</strong><span>2022 · 14 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-04.webp" alt="A bright interior"><span class="chip"><span>★</span> 10 picks</span></div>
+                <div class="media-info"><strong>A Silent Voice</strong><span>2016 · 16 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-05.webp" alt="Rain on a window"><span class="chip"><span>★</span> 6 picks</span></div>
+                <div class="media-info"><strong>The Garden of Words</strong><span>2013 · 9 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-06.webp" alt="A figure in a corridor"><span class="chip"><span>★</span> 7 picks</span></div>
+                <div class="media-info"><strong>Paprika</strong><span>2006 · 12 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-07.webp" alt="A blue room"><span class="chip"><span>★</span> 6 picks</span></div>
+                <div class="media-info"><strong>Perfect Blue</strong><span>1997 · 10 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-08.webp" alt="A skyline at night"><span class="chip"><span>★</span> 8 picks</span></div>
+                <div class="media-info"><strong>Ghost in the Shell</strong><span>1995 · 13 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+            <div class="media-card">
+              <a class="media-link" href="#">
+                <div class="media-thumb"><img src="assets/images/frame-09.webp" alt="A train crossing water"><span class="chip"><span>★</span> 7 picks</span></div>
+                <div class="media-info"><strong>Millennium Actress</strong><span>2001 · 11 frames</span></div>
+              </a>
+              <div class="quick"><button type="button" aria-label="Select">✓</button><button type="button" aria-label="Download">↓</button></div>
+            </div>
+          </div>
+
+          <footer class="browse-foot"><span>Personal use only.</span><a href="#">Request a takedown</a></footer>
+        </main>
+      </div>
+
+      <div class="studio-app frame-app" data-screen-panel="frame" hidden>
+        <header class="topbar">
+          <a class="brand" href="#">KWC</a>
+          <label class="search"><svg aria-hidden="true" viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><input type="search" placeholder="Search folders and frames" aria-label="Search"></label>
+          <div class="top-actions"><div class="seg2" role="group" aria-label="Frame selection"><button type="button" class="is-on">Curated</button><button type="button">All</button></div></div>
+        </header>
+
+        <div class="frame-layout">
+          <section class="stage">
+            <div class="stage-top"><a href="#">← Your Name.</a><span>Frame 04 of 21</span></div>
+            <img src="assets/images/lens-04.webp" alt="A wide still from Your Name.">
+            <button class="stage-btn prev" type="button" aria-label="Previous frame">←</button>
+            <button class="stage-btn next" type="button" aria-label="Next frame">→</button>
+            <div class="stage-foot"><span>#04</span><span>2560 × 1440</span><span class="gold">★ Picked</span></div>
+          </section>
+
+          <aside class="inspector">
+            <a class="back" href="#">← Back to folder</a>
+            <p class="eyebrow">Your Name. · 2016</p>
+            <h1>Frame 04</h1>
+            <p class="subtle">Lossless JPEG XL · 2560 × 1440</p>
+
+            <div class="inspector-block">
+              <h2>Variants</h2>
+              <div class="variant-grid">
+                <button type="button" class="is-on"><img src="assets/images/frame-04.webp" alt=""><span>Base</span></button>
+                <button type="button"><img src="assets/images/frame-04.webp" alt=""><span>[M]</span></button>
+                <button type="button"><img src="assets/images/frame-04.webp" alt=""><span>[U]</span></button>
+                <button type="button"><img src="assets/images/frame-04.webp" alt=""><span>[A]</span></button>
+              </div>
+            </div>
+
+            <div class="inspector-block">
+              <h2>Download</h2>
+              <div class="field"><label for="studio-format">Format</label><div class="select is-fullwidth"><select id="studio-format"><option>Original JXL</option><option>JPEG</option><option>WebP</option><option>PNG</option></select></div></div>
+              <div class="field"><label for="studio-size">Resolution</label><div class="select is-fullwidth"><select id="studio-size"><option>Original</option><option>3840</option><option>2560</option><option>1920</option></select></div></div>
+              <button class="button is-primary is-fullwidth" type="button">Download frame</button>
+            </div>
+
+            <div class="inspector-block">
+              <h2>Details</h2>
+              <dl>
+                <div><dt>Released</dt><dd>2016-08-26</dd></div>
+                <div><dt>Original title</dt><dd>君の名は。</dd></div>
+                <div><dt>Copyright</dt><dd>© 2016 CoMix Wave Films</dd></div>
+                <div><dt>Curated</dt><dd>13 of 21 in folder</dd></div>
+              </dl>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <section data-app-panel="manager" hidden>
+      <div class="studio-app manager-app" data-screen-panel="folders">
+        <aside class="sidebar">
+          <a class="brand" href="#">KWC <span>Manager</span></a>
+          <nav>
+            <a href="#" aria-current="page">Library</a>
+            <a href="#">Importer</a>
+            <a href="#">Jobs <span class="count">2</span></a>
+            <a href="#">Doctor</a>
+          </nav>
+          <div class="sidebar-foot"><span class="avatar">K</span><div><strong>kiinami</strong><span>Owner</span></div></div>
+        </aside>
+
+        <div class="workspace">
+          <header class="workspace-top">
+            <button class="burger" type="button" data-burger aria-label="Menu">☰</button>
+            <span class="crumb">Workspace / Library</span>
+            <div class="top-actions">
+              <label class="search"><svg aria-hidden="true" viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M10.6 10.6 14 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg><input type="search" placeholder="Filter folders…" aria-label="Filter folders"></label>
+            </div>
+          </header>
+          <nav class="mobile-menu" data-menu hidden>
+            <a href="#" aria-current="page">Library</a><a href="#">Importer</a><a href="#">Jobs <span class="count">2</span></a><a href="#">Doctor</a>
+          </nav>
+
+          <main class="workspace-main">
+            <div class="page-bar">
+              <div><p class="eyebrow">Workspace</p><h1>Library</h1><p class="subtle">41 folders · 612 frames · 377 curated</p></div>
+              <div class="page-actions"><button class="button is-small is-light" type="button">Doctor</button><button class="button is-primary is-small" type="button">New folder</button></div>
+            </div>
+
+            <div class="stat-grid">
+              <div class="stat"><strong>41</strong><span>Folders</span></div>
+              <div class="stat"><strong>612</strong><span>Frames</span></div>
+              <div class="stat"><strong>377</strong><span>Curated</span></div>
+              <div class="stat"><strong>2</strong><span>Hidden</span></div>
+            </div>
+
+            <section class="panel">
+              <div class="panel-head">
+                <h2>All folders</h2>
+                <div class="panel-tools">
+                  <div class="seg2" role="group" aria-label="Folder type"><button type="button" class="is-on">All</button><button type="button">Movies</button><button type="button">Series</button></div>
+                  <span class="subtle">Newest first</span>
+                </div>
+              </div>
+
+              <table class="table folder-table">
+                <thead><tr><th>Folder</th><th>Kind</th><th>Year</th><th class="num">Frames</th><th class="num">Curated</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/poster.webp" alt=""><div><strong>Your Name.</strong><span>TMDB 372058</span></div></div></td>
+                    <td>Movie</td><td>2016</td><td class="num">21</td><td class="num">13</td><td><span class="status-tag">Visible</span></td><td class="num"><button class="icon-more" type="button">⋯</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-02.webp" alt=""><div><strong>Weathering with You</strong><span>TMDB 568160</span></div></div></td>
+                    <td>Movie</td><td>2019</td><td class="num">18</td><td class="num">11</td><td><span class="status-tag">Visible</span></td><td class="num"><button class="icon-more" type="button">⋯</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-03.webp" alt=""><div><strong>Suzume</strong><span>TMDB 940551</span></div></div></td>
+                    <td>Movie</td><td>2022</td><td class="num">14</td><td class="num">9</td><td><span class="status-tag">Visible</span></td><td class="num"><button class="icon-more" type="button">⋯</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-04.webp" alt=""><div><strong>A Silent Voice</strong><span>TMDB 378064</span></div></div></td>
+                    <td>Movie</td><td>2016</td><td class="num">16</td><td class="num">10</td><td><span class="status-tag">Visible</span></td><td class="num"><button class="icon-more" type="button">⋯</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-07.webp" alt=""><div><strong>Perfect Blue</strong><span>TMDB 10494</span></div></div></td>
+                    <td>Movie</td><td>1997</td><td class="num">10</td><td class="num">6</td><td><span class="status-tag is-muted">Hidden</span></td><td class="num"><button class="icon-more" type="button">⋯</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-08.webp" alt=""><div><strong>Ghost in the Shell</strong><span>TMDB 9323</span></div></div></td>
+                    <td>Movie</td><td>1995</td><td class="num">13</td><td class="num">8</td><td><span class="status-tag">Visible</span></td><td class="num"><button class="icon-more" type="button">⋯</button></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <div class="mobile-rows">
+                <a class="mobile-row" href="#"><img src="assets/images/poster.webp" alt=""><div><strong>Your Name.</strong><span>Movie · 2016 · 21 frames</span></div><span class="status-tag">Visible</span></a>
+                <a class="mobile-row" href="#"><img src="assets/images/frame-02.webp" alt=""><div><strong>Weathering with You</strong><span>Movie · 2019 · 18 frames</span></div><span class="status-tag">Visible</span></a>
+                <a class="mobile-row" href="#"><img src="assets/images/frame-03.webp" alt=""><div><strong>Suzume</strong><span>Movie · 2022 · 14 frames</span></div><span class="status-tag">Visible</span></a>
+                <a class="mobile-row" href="#"><img src="assets/images/frame-04.webp" alt=""><div><strong>A Silent Voice</strong><span>Movie · 2016 · 16 frames</span></div><span class="status-tag">Visible</span></a>
+                <a class="mobile-row" href="#"><img src="assets/images/frame-07.webp" alt=""><div><strong>Perfect Blue</strong><span>Movie · 1997 · 10 frames</span></div><span class="status-tag is-muted">Hidden</span></a>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+
+      <div class="studio-app manager-app" data-screen-panel="jobs" hidden>
+        <aside class="sidebar">
+          <a class="brand" href="#">KWC <span>Manager</span></a>
+          <nav>
+            <a href="#">Library</a>
+            <a href="#">Importer</a>
+            <a href="#" aria-current="page">Jobs <span class="count">2</span></a>
+            <a href="#">Doctor</a>
+          </nav>
+          <div class="sidebar-foot"><span class="avatar">K</span><div><strong>kiinami</strong><span>Owner</span></div></div>
+        </aside>
+
+        <div class="workspace">
+          <header class="workspace-top">
+            <button class="burger" type="button" data-burger aria-label="Menu">☰</button>
+            <span class="crumb">Workspace / Jobs</span>
+          </header>
+          <nav class="mobile-menu" data-menu hidden>
+            <a href="#">Library</a><a href="#">Importer</a><a href="#" aria-current="page">Jobs <span class="count">2</span></a><a href="#">Doctor</a>
+          </nav>
+
+          <main class="workspace-main">
+            <div class="page-bar">
+              <div><p class="eyebrow">Operations</p><h1>Jobs</h1><p class="subtle">2 active · 34 done · 1 failed</p></div>
+              <div class="page-actions"><button class="button is-small is-light" type="button">Refresh</button></div>
+            </div>
+
+            <div class="stat-grid">
+              <div class="stat"><strong>2</strong><span>Active</span></div>
+              <div class="stat"><strong>34</strong><span>Done</span></div>
+              <div class="stat"><strong>1</strong><span>Failed</span></div>
+              <div class="stat"><strong>0</strong><span>Queued</span></div>
+            </div>
+
+            <div class="job-list">
+              <article class="job">
+                <div class="job-head"><div><strong>importer.run</strong><span class="status-tag is-running">Running</span></div><span class="job-time">Started 2 min ago</span></div>
+                <p class="job-msg">Encoding 18 of 24 · Your Name. [2016][tmdb-372058]</p>
+                <div class="progress"><span style="width:75%"></span></div>
+                <div class="job-foot"><span>18 / 24 · source /import/Your Name</span><button class="button is-small is-danger is-light" type="button">Cancel</button></div>
+              </article>
+
+              <article class="job">
+                <div class="job-head"><div><strong>folders.rename</strong><span class="status-tag">Queued</span></div><span class="job-time">Created 1 min ago</span></div>
+                <p class="job-msg">Waiting for the worker · A Silent Voice → A Silent Voice [2016][tmdb-378064]</p>
+                <div class="job-foot"><span>0 / 1</span><button class="button is-small is-danger is-light" type="button">Cancel</button></div>
+              </article>
+
+              <article class="job is-failed">
+                <div class="job-head"><div><strong>importer.run</strong><span class="status-tag is-failed">Error</span></div><span class="job-time">Failed 18 min ago</span></div>
+                <p class="job-msg">ImageTooLarge: 612,000,000 pixels exceeds the import budget of 500,000,000.</p>
+                <pre class="job-trace">File "importer/services.py", line 214, in run_plan
+    encode_jxl(match.source, temporary, pixel_budget=pixel_budget)
+media.jxl.ImageTooLarge: 612000000 &gt; 500000000</pre>
+                <div class="job-foot"><span>3 of 11 imported before the failure</span><button class="button is-small is-light" type="button">Retry</button></div>
+              </article>
+
+              <article class="job">
+                <div class="job-head"><div><strong>folders.delete</strong><span class="status-tag is-done">Done</span></div><span class="job-time">Finished 1 h ago</span></div>
+                <p class="job-msg">Moved to .trash/20261109T143349681841Z/Your Name. [2016][tmdb-372058]</p>
+                <div class="progress is-done"><span style="width:100%"></span></div>
+                <div class="job-foot"><span>Took 0.4 s</span><button class="button is-small is-light" type="button">View</button></div>
+              </article>
+            </div>
+          </main>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="device-wrap" hidden>
+    <div class="device"><iframe title="Mobile preview"></iframe></div>
+    <span class="device-hint">390 × 844 · the page is a real responsive viewport</span>
+  </div>
+
+  <script src="assets/studio.js"></script>
+  <script src="assets/lab.js"></script>
+</body>
+</html>

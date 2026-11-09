@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>01 Noir · KWC UI lab</title>
+  <link rel="stylesheet" href="assets/vendor/pico.min.css">
+  <link rel="stylesheet" href="assets/lab.css">
+  <link rel="stylesheet" href="assets/noir.css">
+</head>
+<body class="lab">
+  <div class="labbar">
+    <a class="lab-brand" href="index.html">KWC <span>UI lab</span></a>
+    <nav class="lab-nav" aria-label="Directions">
+      <a href="noir.html" aria-current="page">01 Noir</a>
+      <a href="paper.html">02 Paper</a>
+      <a href="studio.html">03 Studio</a>
+    </nav>
+    <div class="lab-controls">
+      <div class="seg" role="group" aria-label="Application">
+        <button type="button" data-app="browser">Browser</button>
+        <button type="button" data-app="manager">Manager</button>
+      </div>
+      <div class="seg" data-screens="browser" role="group" aria-label="Browser screen">
+        <button type="button" data-screen="library">Library</button>
+        <button type="button" data-screen="frame">Frame</button>
+      </div>
+      <div class="seg" data-screens="manager" role="group" aria-label="Manager screen" hidden>
+        <button type="button" data-screen="folders">Folders</button>
+        <button type="button" data-screen="jobs">Jobs</button>
+      </div>
+      <div class="seg view-toggle" role="group" aria-label="Preview size">
+        <button type="button" data-view="desktop">Desktop</button>
+        <button type="button" data-view="mobile">Mobile</button>
+      </div>
+    </div>
+  </div>
+  <p class="lab-note"><strong>Noir</strong> — images carry the interface; no cards, hairline rules, warm gold only for curation.</p>
+
+  <main class="preview">
+    <section data-app-panel="browser">
+      <div class="app noir-app" data-screen-panel="library">
+        <div class="topbar">
+          <a class="wordmark" href="#">KWC</a>
+          <span class="topbar-sep" aria-hidden="true"></span>
+          <nav class="topnav"><a href="#" aria-current="page">Library</a><a href="#">Contact</a></nav>
+          <div class="topbar-right"><span class="muted tiny">41 folders · 612 frames</span><button class="iconbtn" aria-label="Download curated picks">↓</button></div>
+        </div>
+
+        <div class="lib-head">
+          <p class="eyebrow">Public archive</p>
+          <h1>Frames worth keeping.</h1>
+          <div class="toolbar">
+            <div class="filters" role="group" aria-label="Frame selection">
+              <button type="button" class="is-on">Curated <span>377</span></button>
+              <button type="button">All frames <span>612</span></button>
+            </div>
+            <div class="toolbar-right">
+              <span class="muted tiny">Newest first</span>
+              <button class="ghostbtn" type="button">Download picks</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="gallery">
+          <a class="shot" href="#">
+            <img src="assets/images/frame-01.webp" alt="Night sky over a city" loading="lazy">
+            <span class="shot-star" title="Curated">★</span>
+            <span class="shot-meta"><span><strong>Your Name.</strong><em>2016 · 21 frames</em></span><span class="shot-picked">13 picked</span></span>
+          </a>
+          <a class="shot" href="#">
+            <img src="assets/images/frame-02.webp" alt="Clouds above the city" loading="lazy">
+            <span class="shot-star" title="Curated">★</span>
+            <span class="shot-meta"><span><strong>Weathering with You</strong><em>2019 · 18 frames</em></span><span class="shot-picked">11 picked</span></span>
+          </a>
+          <a class="shot" href="#">
+            <img src="assets/images/frame-03.webp" alt="A road at dusk" loading="lazy">
+            <span class="shot-star" title="Curated">★</span>
+            <span class="shot-meta"><span><strong>Suzume</strong><em>2022 · 14 frames</em></span><span class="shot-picked">9 picked</span></span>
+          </a>
+          <a class="shot" href="#">
+            <img src="assets/images/frame-04.webp" alt="A bright interior" loading="lazy">
+            <span class="shot-star" title="Curated">★</span>
+            <span class="shot-meta"><span><strong>A Silent Voice</strong><em>2016 · 16 frames</em></span><span class="shot-picked">10 picked</span></span>
+          </a>
+          <a class="shot" href="#">
+            <img src="assets/images/frame-05.webp" alt="Rain on a window" loading="lazy">
+            <span class="shot-meta"><span><strong>The Garden of Words</strong><em>2013 · 9 frames</em></span><span class="shot-picked">6 picked</span></span>
+          </a>
+          <a class="shot" href="#">
+            <img src="assets/images/frame-06.webp" alt="A figure in a corridor" loading="lazy">
+            <span class="shot-meta"><span><strong>Paprika</strong><em>2006 · 12 frames</em></span><span class="shot-picked">7 picked</span></span>
+          </a>
+          <a class="shot" href="#">
+            <img src="assets/images/frame-07.webp" alt="A blue room" loading="lazy">
+            <span class="shot-meta"><span><strong>Perfect Blue</strong><em>1997 · 10 frames</em></span><span class="shot-picked">6 picked</span></span>
+          </a>
+          <a class="shot" href="#">
+            <img src="assets/images/frame-08.webp" alt="A skyline at night" loading="lazy">
+            <span class="shot-meta"><span><strong>Ghost in the Shell</strong><em>1995 · 13 frames</em></span><span class="shot-picked">8 picked</span></span>
+          </a>
+          <a class="shot" href="#">
+            <img src="assets/images/frame-09.webp" alt="A train crossing water" loading="lazy">
+            <span class="shot-meta"><span><strong>Millennium Actress</strong><em>2001 · 11 frames</em></span><span class="shot-picked">7 picked</span></span>
+          </a>
+        </div>
+        <footer class="foot"><span>Wallpapers are shared for personal use.</span><a href="#">Request a takedown</a></footer>
+      </div>
+
+      <div class="app noir-app" data-screen-panel="frame" hidden>
+        <div class="topbar">
+          <a class="wordmark" href="#">KWC</a>
+          <span class="topbar-sep" aria-hidden="true"></span>
+          <nav class="topnav"><a href="#" aria-current="page">Library</a><a href="#">Contact</a></nav>
+          <div class="topbar-right"><span class="muted tiny">Frame 04 / 21</span></div>
+        </div>
+
+        <div class="frame-wrap">
+          <div class="frame-crumb"><a href="#">← Your Name.</a><span class="muted tiny">2016 · 13 of 21 picked</span></div>
+          <figure class="stage">
+            <button class="stage-nav prev" type="button" aria-label="Previous frame">←</button>
+            <img src="assets/images/lens-04.webp" alt="A wide still from Your Name.">
+            <button class="stage-nav next" type="button" aria-label="Next frame">→</button>
+            <figcaption><span>#04</span><span>2560 × 1440</span><span class="gold">★ Picked</span></figcaption>
+          </figure>
+
+          <div class="frame-bar">
+            <div class="thumbs" role="group" aria-label="Variants">
+              <button type="button" class="thumb is-on"><img src="assets/images/frame-04.webp" alt=""><span>Base</span></button>
+              <button type="button" class="thumb"><img src="assets/images/frame-04.webp" alt=""><span>[M]</span></button>
+              <button type="button" class="thumb"><img src="assets/images/frame-04.webp" alt=""><span>[U]</span></button>
+              <button type="button" class="thumb"><img src="assets/images/frame-04.webp" alt=""><span>[A]</span></button>
+            </div>
+            <div class="frame-actions">
+              <label class="field-inline">Format
+                <select><option>Original JXL</option><option>JPEG</option><option>WebP</option><option>PNG</option></select>
+              </label>
+              <label class="field-inline">Size
+                <select><option>Original</option><option>3840</option><option>2560</option><option>1920</option></select>
+              </label>
+              <button class="solidbtn" type="button">Download</button>
+            </div>
+          </div>
+
+          <div class="frame-meta">
+            <div><span class="eyebrow">Film</span><strong>Your Name.</strong></div>
+            <div><span class="eyebrow">Original title</span><span>君の名は。</span></div>
+            <div><span class="eyebrow">Released</span><span>2016-08-26</span></div>
+            <div><span class="eyebrow">Copyright</span><span>© 2016 CoMix Wave Films</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section data-app-panel="manager" hidden>
+      <div class="app noir-app manager" data-screen-panel="folders">
+        <aside class="rail">
+          <a class="wordmark" href="#">KWC</a>
+          <nav>
+            <a href="#" aria-current="page">Library</a>
+            <a href="#">Importer</a>
+            <a href="#">Jobs <span class="rail-badge">2</span></a>
+            <a href="#">Doctor</a>
+          </nav>
+          <div class="rail-foot"><span class="avatar">K</span><span>kiinami</span></div>
+        </aside>
+
+        <div class="work">
+          <div class="work-head">
+            <div><p class="eyebrow">Manager</p><h1>Library</h1></div>
+            <div class="work-actions"><button class="ghostbtn" type="button">Doctor</button><button class="solidbtn" type="button">New folder</button></div>
+          </div>
+
+          <div class="stats">
+            <div><strong>41</strong><span>Folders</span></div>
+            <div><strong>612</strong><span>Frames</span></div>
+            <div><strong>377</strong><span>Curated</span></div>
+            <div><strong>2</strong><span>Hidden</span></div>
+          </div>
+
+          <div class="list-tools">
+            <input type="search" placeholder="Filter folders…" aria-label="Filter folders">
+            <div class="filters" role="group" aria-label="Folder type">
+              <button type="button" class="is-on">All</button><button type="button">Movies</button><button type="button">Series</button>
+            </div>
+            <span class="muted tiny">Newest first</span>
+          </div>
+
+          <div class="folder-list">
+            <a class="folder-row" href="#">
+              <img src="assets/images/poster.webp" alt="">
+              <div class="folder-main"><strong>Your Name.</strong><span>Movie · 2016 · TMDB 372058</span></div>
+              <div class="num"><strong>21</strong><span>frames</span></div>
+              <div class="num"><strong>13</strong><span>curated</span></div>
+              <span class="pill">Visible</span>
+              <button class="iconbtn" type="button" aria-label="More actions">⋯</button>
+            </a>
+            <a class="folder-row" href="#">
+              <img src="assets/images/frame-02.webp" alt="">
+              <div class="folder-main"><strong>Weathering with You</strong><span>Movie · 2019 · TMDB 568160</span></div>
+              <div class="num"><strong>18</strong><span>frames</span></div>
+              <div class="num"><strong>11</strong><span>curated</span></div>
+              <span class="pill">Visible</span>
+              <button class="iconbtn" type="button" aria-label="More actions">⋯</button>
+            </a>
+            <a class="folder-row" href="#">
+              <img src="assets/images/frame-03.webp" alt="">
+              <div class="folder-main"><strong>Suzume</strong><span>Movie · 2022 · TMDB 940551</span></div>
+              <div class="num"><strong>14</strong><span>frames</span></div>
+              <div class="num"><strong>9</strong><span>curated</span></div>
+              <span class="pill">Visible</span>
+              <button class="iconbtn" type="button" aria-label="More actions">⋯</button>
+            </a>
+            <a class="folder-row" href="#">
+              <img src="assets/images/frame-04.webp" alt="">
+              <div class="folder-main"><strong>A Silent Voice</strong><span>Movie · 2016 · TMDB 378064</span></div>
+              <div class="num"><strong>16</strong><span>frames</span></div>
+              <div class="num"><strong>10</strong><span>curated</span></div>
+              <span class="pill">Visible</span>
+              <button class="iconbtn" type="button" aria-label="More actions">⋯</button>
+            </a>
+            <a class="folder-row" href="#">
+              <img src="assets/images/frame-07.webp" alt="">
+              <div class="folder-main"><strong>Perfect Blue</strong><span>Movie · 1997 · TMDB 10494</span></div>
+              <div class="num"><strong>10</strong><span>frames</span></div>
+              <div class="num"><strong>6</strong><span>curated</span></div>
+              <span class="pill muted-pill">Hidden</span>
+              <button class="iconbtn" type="button" aria-label="More actions">⋯</button>
+            </a>
+            <a class="folder-row" href="#">
+              <img src="assets/images/frame-08.webp" alt="">
+              <div class="folder-main"><strong>Ghost in the Shell</strong><span>Movie · 1995 · TMDB 9323</span></div>
+              <div class="num"><strong>13</strong><span>frames</span></div>
+              <div class="num"><strong>8</strong><span>curated</span></div>
+              <span class="pill">Visible</span>
+              <button class="iconbtn" type="button" aria-label="More actions">⋯</button>
+            </a>
+          </div>
+        </div>
+
+        <nav class="tabbar" aria-label="Manager">
+          <a href="#" aria-current="page">Library</a><a href="#">Import</a><a href="#">Jobs <span>2</span></a><a href="#">Doctor</a>
+        </nav>
+      </div>
+
+      <div class="app noir-app manager" data-screen-panel="jobs" hidden>
+        <aside class="rail">
+          <a class="wordmark" href="#">KWC</a>
+          <nav>
+            <a href="#">Library</a>
+            <a href="#">Importer</a>
+            <a href="#" aria-current="page">Jobs <span class="rail-badge">2</span></a>
+            <a href="#">Doctor</a>
+          </nav>
+          <div class="rail-foot"><span class="avatar">K</span><span>kiinami</span></div>
+        </aside>
+
+        <div class="work">
+          <div class="work-head">
+            <div><p class="eyebrow">Operations</p><h1>Jobs</h1></div>
+            <div class="work-actions"><button class="ghostbtn" type="button">Refresh</button></div>
+          </div>
+
+          <div class="stats">
+            <div><strong>2</strong><span>Active</span></div>
+            <div><strong>34</strong><span>Done</span></div>
+            <div><strong>1</strong><span>Failed</span></div>
+            <div><strong>0</strong><span>Queued</span></div>
+          </div>
+
+          <div class="jobs">
+            <article class="job">
+              <div class="job-head"><strong>importer.run</strong><span class="pill running">Running</span><span class="job-time">Started 2 min ago</span></div>
+              <p>Encoding 18 of 24 · Your Name. [2016][tmdb-372058]</p>
+              <div class="bar"><span style="width:75%"></span></div>
+              <div class="job-foot"><span class="muted tiny">18 / 24 · source /import/Your Name</span><button class="dangerbtn" type="button">Cancel</button></div>
+            </article>
+
+            <article class="job">
+              <div class="job-head"><strong>folders.rename</strong><span class="pill queued">Queued</span><span class="job-time">Created 1 min ago</span></div>
+              <p>Waiting for the worker · A Silent Voice → A Silent Voice [2016][tmdb-378064]</p>
+              <div class="job-foot"><span class="muted tiny">0 / 1</span><button class="dangerbtn" type="button">Cancel</button></div>
+            </article>
+
+            <article class="job">
+              <div class="job-head"><strong>importer.run</strong><span class="pill failed">Error</span><span class="job-time">Failed 18 min ago</span></div>
+              <p>ImageTooLarge: 612,000,000 pixels exceeds the import budget of 500,000,000.</p>
+              <pre class="trace">File "importer/services.py", line 214, in run_plan
+    encode_jxl(match.source, temporary, pixel_budget=pixel_budget)
+media.jxl.ImageTooLarge: 612000000 &gt; 500000000</pre>
+              <div class="job-foot"><span class="muted tiny">3 of 11 imported before the failure</span><button class="ghostbtn" type="button">Retry</button></div>
+            </article>
+
+            <article class="job">
+              <div class="job-head"><strong>folders.delete</strong><span class="pill done">Done</span><span class="job-time">Finished 1 h ago</span></div>
+              <p>Moved to .trash/20261109T143349681841Z/Your Name. [2016][tmdb-372058]</p>
+              <div class="bar done"><span style="width:100%"></span></div>
+              <div class="job-foot"><span class="muted tiny">Took 0.4 s</span><button class="ghostbtn" type="button">View</button></div>
+            </article>
+          </div>
+        </div>
+
+        <nav class="tabbar" aria-label="Manager">
+          <a href="#">Library</a><a href="#">Import</a><a href="#" aria-current="page">Jobs <span>2</span></a><a href="#">Doctor</a>
+        </nav>
+      </div>
+    </section>
+  </main>
+
+  <div class="device-wrap" hidden>
+    <div class="device"><iframe title="Mobile preview"></iframe></div>
+    <span class="device-hint">390 × 844 · the page is a real responsive viewport</span>
+  </div>
+
+  <script src="assets/lab.js"></script>
+</body>
+</html>

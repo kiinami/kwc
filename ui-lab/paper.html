@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>02 Paper · KWC UI lab</title>
+  <link rel="stylesheet" href="assets/vendor/bootstrap.min.css">
+  <link rel="stylesheet" href="assets/lab.css">
+  <link rel="stylesheet" href="assets/paper.css">
+</head>
+<body class="lab">
+  <div class="labbar">
+    <a class="lab-brand" href="index.html">KWC <span>UI lab</span></a>
+    <nav class="lab-nav" aria-label="Directions">
+      <a href="noir.html">01 Noir</a>
+      <a href="paper.html" aria-current="page">02 Paper</a>
+      <a href="studio.html">03 Studio</a>
+    </nav>
+    <div class="lab-controls">
+      <div class="seg" role="group" aria-label="Application">
+        <button type="button" data-app="browser">Browser</button>
+        <button type="button" data-app="manager">Manager</button>
+      </div>
+      <div class="seg" data-screens="browser" role="group" aria-label="Browser screen">
+        <button type="button" data-screen="library">Library</button>
+        <button type="button" data-screen="frame">Frame</button>
+      </div>
+      <div class="seg" data-screens="manager" role="group" aria-label="Manager screen" hidden>
+        <button type="button" data-screen="folders">Folders</button>
+        <button type="button" data-screen="jobs">Jobs</button>
+      </div>
+      <div class="seg view-toggle" role="group" aria-label="Preview size">
+        <button type="button" data-view="desktop">Desktop</button>
+        <button type="button" data-view="mobile">Mobile</button>
+      </div>
+    </div>
+  </div>
+  <p class="lab-note"><strong>Paper</strong> — an editorial print room: serif display type, matte frames, warm ink on cream.</p>
+
+  <main class="preview">
+    <section data-app-panel="browser">
+      <div class="paper-app" data-screen-panel="library">
+        <header class="masthead">
+          <div class="container">
+            <div class="masthead-rule"><span>Vol. 01 — A private archive</span><span>November 2026</span></div>
+            <div class="masthead-main">
+              <a class="wordmark" href="#">Wallpapers<span>.</span></a>
+              <nav class="masthead-nav"><a href="#" aria-current="page">Library</a><a href="#">Contact</a></nav>
+            </div>
+            <div class="masthead-rule bottom"></div>
+          </div>
+        </header>
+
+        <main class="container">
+          <section class="lede row align-items-end g-4">
+            <div class="col-lg-8">
+              <p class="kicker">The collection</p>
+              <h1>Frames worth<br>keeping.</h1>
+              <p class="dek">Curated stills from films and series, kept at full resolution and arranged to be lived with.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+              <a class="btn btn-ink" href="#">Download curated picks</a>
+              <p class="lede-note">41 folders · 612 frames · 377 curated</p>
+            </div>
+          </section>
+
+          <div class="filter-row">
+            <div class="filter-links" role="group" aria-label="Frame selection">
+              <button type="button" class="is-on">Curated</button>
+              <button type="button">All frames</button>
+            </div>
+            <span class="filter-note">Newest first</span>
+          </div>
+
+          <figure class="feature">
+            <div class="feature-frame">
+              <img src="assets/images/hero.webp" alt="A wide still of a night sky over a city">
+            </div>
+            <figcaption>
+              <div>
+                <span class="kicker">Featured folder</span>
+                <span class="feature-title">Your Name.</span>
+                <span class="feature-meta">2016 · 21 frames · 13 curated</span>
+              </div>
+              <a class="text-link" href="#">Open folder →</a>
+            </figcaption>
+          </figure>
+
+          <div class="section-head">
+            <h2>More from the archive</h2>
+            <span>41 folders</span>
+          </div>
+
+          <div class="row g-4 plates">
+            <div class="col-12 col-sm-6 col-lg-4">
+              <a class="plate" href="#">
+                <div class="plate-frame"><img src="assets/images/frame-02.webp" alt="Clouds above the city"></div>
+                <div class="plate-cap"><span class="plate-title">Weathering with You</span><span class="plate-meta">2019 · 18 frames</span></div>
+              </a>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+              <a class="plate" href="#">
+                <div class="plate-frame"><img src="assets/images/frame-03.webp" alt="A road at dusk"></div>
+                <div class="plate-cap"><span class="plate-title">Suzume</span><span class="plate-meta">2022 · 14 frames</span></div>
+              </a>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+              <a class="plate" href="#">
+                <div class="plate-frame"><img src="assets/images/frame-04.webp" alt="A bright interior"></div>
+                <div class="plate-cap"><span class="plate-title">A Silent Voice</span><span class="plate-meta">2016 · 16 frames</span></div>
+              </a>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+              <a class="plate" href="#">
+                <div class="plate-frame"><img src="assets/images/frame-05.webp" alt="Rain on a window"></div>
+                <div class="plate-cap"><span class="plate-title">The Garden of Words</span><span class="plate-meta">2013 · 9 frames</span></div>
+              </a>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+              <a class="plate" href="#">
+                <div class="plate-frame"><img src="assets/images/frame-06.webp" alt="A figure in a corridor"></div>
+                <div class="plate-cap"><span class="plate-title">Paprika</span><span class="plate-meta">2006 · 12 frames</span></div>
+              </a>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-4">
+              <a class="plate" href="#">
+                <div class="plate-frame"><img src="assets/images/frame-08.webp" alt="A skyline at night"></div>
+                <div class="plate-cap"><span class="plate-title">Ghost in the Shell</span><span class="plate-meta">1995 · 13 frames</span></div>
+              </a>
+            </div>
+          </div>
+        </main>
+
+        <footer class="colophon">
+          <div class="container">
+            <span>Wallpapers are shared for personal use.</span>
+            <a href="#">Request a takedown</a>
+          </div>
+        </footer>
+      </div>
+
+      <div class="paper-app" data-screen-panel="frame" hidden>
+        <header class="masthead compact">
+          <div class="container">
+            <div class="masthead-rule"><span>Vol. 01 — A private archive</span><span>Frame study</span></div>
+            <div class="masthead-main">
+              <a class="wordmark small" href="#">Wallpapers<span>.</span></a>
+              <nav class="masthead-nav"><a href="#">Library</a><a href="#">Contact</a></nav>
+            </div>
+            <div class="masthead-rule bottom"></div>
+          </div>
+        </header>
+
+        <main class="container frame-page">
+          <nav class="crumbs"><a href="#">Library</a><span>/</span><a href="#">Your Name.</a><span>/</span><span>Frame 04</span></nav>
+
+          <div class="row justify-content-center">
+            <div class="col-lg-11">
+              <figure class="print">
+                <div class="print-mat"><img src="assets/images/lens-04.webp" alt="A wide still from Your Name."></div>
+                <figcaption>Plate 04 · <em>Your Name.</em> (2016)</figcaption>
+              </figure>
+
+              <div class="print-meta row g-4">
+                <div class="col-md-7">
+                  <p class="kicker">Your Name.</p>
+                  <h1 class="print-title">Frame 04</h1>
+                  <p class="print-sub">Original title 君の名は。 · Released 2016-08-26 · © 2016 CoMix Wave Films</p>
+                  <dl class="print-facts">
+                    <div><dt>Resolution</dt><dd>2560 × 1440</dd></div>
+                    <div><dt>Master</dt><dd>Lossless JPEG XL</dd></div>
+                    <div><dt>In folder</dt><dd>13 of 21 curated</dd></div>
+                  </dl>
+                </div>
+                <div class="col-md-5">
+                  <div class="variant-block">
+                    <p class="kicker">Variants</p>
+                    <div class="variant-row">
+                      <button type="button" class="variant is-on"><img src="assets/images/frame-04.webp" alt=""><span>Base</span></button>
+                      <button type="button" class="variant"><img src="assets/images/frame-04.webp" alt=""><span>[M]</span></button>
+                      <button type="button" class="variant"><img src="assets/images/frame-04.webp" alt=""><span>[U]</span></button>
+                      <button type="button" class="variant"><img src="assets/images/frame-04.webp" alt=""><span>[A]</span></button>
+                    </div>
+                  </div>
+                  <div class="download-box">
+                    <p class="kicker">Download</p>
+                    <div class="row g-2">
+                      <div class="col-6"><label class="form-label" for="paper-format">Format</label><select class="form-select" id="paper-format"><option>Original JXL</option><option>JPEG</option><option>WebP</option><option>PNG</option></select></div>
+                      <div class="col-6"><label class="form-label" for="paper-size">Size</label><select class="form-select" id="paper-size"><option>Original</option><option>3840</option><option>2560</option><option>1920</option></select></div>
+                    </div>
+                    <button class="btn btn-ink w-100 mt-3" type="button">Download frame</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pager"><a href="#">← Frame 03</a><span>04 / 21</span><a href="#">Frame 05 →</a></div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </section>
+
+    <section data-app-panel="manager" hidden>
+      <div class="paper-app manager" data-screen-panel="folders">
+        <nav class="navbar navbar-expand-lg manager-nav">
+          <div class="container-fluid px-3 px-lg-4">
+            <a class="navbar-brand" href="#">KWC <span>Manager</span></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#managerNav" aria-controls="managerNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="managerNav">
+              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link active" href="#">Library</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Importer</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Jobs <span class="nav-count">2</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Doctor</a></li>
+              </ul>
+            </div>
+          </div>
+        </nav>
+
+        <main class="container-fluid manager-main">
+          <div class="page-head">
+            <div><p class="kicker">Workspace</p><h1>Library</h1><p class="muted">41 folders · 612 frames · 377 curated</p></div>
+            <div class="page-actions"><a class="btn btn-outline-ink btn-sm" href="#">Doctor</a><a class="btn btn-ink btn-sm" href="#">New folder</a></div>
+          </div>
+
+          <div class="row g-3 stat-row">
+            <div class="col-6 col-lg-3"><div class="stat"><strong>41</strong><span>Folders</span></div></div>
+            <div class="col-6 col-lg-3"><div class="stat"><strong>612</strong><span>Frames</span></div></div>
+            <div class="col-6 col-lg-3"><div class="stat"><strong>377</strong><span>Curated</span></div></div>
+            <div class="col-6 col-lg-3"><div class="stat"><strong>2</strong><span>Hidden</span></div></div>
+          </div>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Folders</h2>
+              <div class="panel-tools">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Folder type">
+                  <button type="button" class="btn btn-outline-ink active">All</button>
+                  <button type="button" class="btn btn-outline-ink">Movies</button>
+                  <button type="button" class="btn btn-outline-ink">Series</button>
+                </div>
+                <input class="form-control form-control-sm" type="search" placeholder="Filter folders…" aria-label="Filter folders">
+              </div>
+            </div>
+
+            <div class="table-responsive d-none d-md-block">
+              <table class="table table-paper align-middle mb-0">
+                <thead><tr><th>Folder</th><th>Kind</th><th>Year</th><th class="text-end">Frames</th><th class="text-end">Curated</th><th>Status</th><th></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/poster.webp" alt=""><div><strong>Your Name.</strong><span>TMDB 372058</span></div></div></td>
+                    <td>Movie</td><td>2016</td><td class="text-end">21</td><td class="text-end">13</td><td><span class="stamp">Visible</span></td><td class="text-end"><button class="btn btn-sm btn-quiet" type="button">•••</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-02.webp" alt=""><div><strong>Weathering with You</strong><span>TMDB 568160</span></div></div></td>
+                    <td>Movie</td><td>2019</td><td class="text-end">18</td><td class="text-end">11</td><td><span class="stamp">Visible</span></td><td class="text-end"><button class="btn btn-sm btn-quiet" type="button">•••</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-03.webp" alt=""><div><strong>Suzume</strong><span>TMDB 940551</span></div></div></td>
+                    <td>Movie</td><td>2022</td><td class="text-end">14</td><td class="text-end">9</td><td><span class="stamp">Visible</span></td><td class="text-end"><button class="btn btn-sm btn-quiet" type="button">•••</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-04.webp" alt=""><div><strong>A Silent Voice</strong><span>TMDB 378064</span></div></div></td>
+                    <td>Movie</td><td>2016</td><td class="text-end">16</td><td class="text-end">10</td><td><span class="stamp">Visible</span></td><td class="text-end"><button class="btn btn-sm btn-quiet" type="button">•••</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-07.webp" alt=""><div><strong>Perfect Blue</strong><span>TMDB 10494</span></div></div></td>
+                    <td>Movie</td><td>1997</td><td class="text-end">10</td><td class="text-end">6</td><td><span class="stamp muted">Hidden</span></td><td class="text-end"><button class="btn btn-sm btn-quiet" type="button">•••</button></td>
+                  </tr>
+                  <tr>
+                    <td><div class="row-title"><img src="assets/images/frame-08.webp" alt=""><div><strong>Ghost in the Shell</strong><span>TMDB 9323</span></div></div></td>
+                    <td>Movie</td><td>1995</td><td class="text-end">13</td><td class="text-end">8</td><td><span class="stamp">Visible</span></td><td class="text-end"><button class="btn btn-sm btn-quiet" type="button">•••</button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mobile-rows d-md-none">
+              <a class="mobile-row" href="#">
+                <img src="assets/images/poster.webp" alt="">
+                <div><strong>Your Name.</strong><span>Movie · 2016 · 21 frames</span></div>
+                <span class="stamp">Visible</span>
+              </a>
+              <a class="mobile-row" href="#">
+                <img src="assets/images/frame-02.webp" alt="">
+                <div><strong>Weathering with You</strong><span>Movie · 2019 · 18 frames</span></div>
+                <span class="stamp">Visible</span>
+              </a>
+              <a class="mobile-row" href="#">
+                <img src="assets/images/frame-03.webp" alt="">
+                <div><strong>Suzume</strong><span>Movie · 2022 · 14 frames</span></div>
+                <span class="stamp">Visible</span>
+              </a>
+              <a class="mobile-row" href="#">
+                <img src="assets/images/frame-04.webp" alt="">
+                <div><strong>A Silent Voice</strong><span>Movie · 2016 · 16 frames</span></div>
+                <span class="stamp">Visible</span>
+              </a>
+              <a class="mobile-row" href="#">
+                <img src="assets/images/frame-07.webp" alt="">
+                <div><strong>Perfect Blue</strong><span>Movie · 1997 · 10 frames</span></div>
+                <span class="stamp muted">Hidden</span>
+              </a>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <div class="paper-app manager" data-screen-panel="jobs" hidden>
+        <nav class="navbar navbar-expand-lg manager-nav">
+          <div class="container-fluid px-3 px-lg-4">
+            <a class="navbar-brand" href="#">KWC <span>Manager</span></a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#managerJobsNav" aria-controls="managerJobsNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="managerJobsNav">
+              <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="#">Library</a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Importer</a></li>
+                <li class="nav-item"><a class="nav-link active" href="#">Jobs <span class="nav-count">2</span></a></li>
+                <li class="nav-item"><a class="nav-link" href="#">Doctor</a></li>
+              </ul>
+            </div>
+          </div>
+        </nav>
+
+        <main class="container-fluid manager-main">
+          <div class="page-head">
+            <div><p class="kicker">Operations</p><h1>Jobs</h1><p class="muted">2 active · 34 done · 1 failed</p></div>
+            <div class="page-actions"><a class="btn btn-outline-ink btn-sm" href="#">Refresh</a></div>
+          </div>
+
+          <div class="job-list">
+            <article class="job-paper">
+              <div class="job-top"><div><span class="job-kind">importer.run</span><span class="stamp running">Running</span></div><span class="job-time">Started 2 min ago</span></div>
+              <p class="job-msg">Encoding 18 of 24 · Your Name. [2016][tmdb-372058]</p>
+              <div class="progress job-progress" role="progressbar" aria-label="Import progress" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width: 75%"></div></div>
+              <div class="job-foot"><span>18 / 24 · source /import/Your Name</span><button class="btn btn-sm btn-outline-danger" type="button">Cancel job</button></div>
+            </article>
+
+            <article class="job-paper">
+              <div class="job-top"><div><span class="job-kind">folders.rename</span><span class="stamp">Queued</span></div><span class="job-time">Created 1 min ago</span></div>
+              <p class="job-msg">Waiting for the worker · A Silent Voice → A Silent Voice [2016][tmdb-378064]</p>
+              <div class="job-foot"><span>0 / 1</span><button class="btn btn-sm btn-outline-danger" type="button">Cancel job</button></div>
+            </article>
+
+            <article class="job-paper failed">
+              <div class="job-top"><div><span class="job-kind">importer.run</span><span class="stamp failed">Error</span></div><span class="job-time">Failed 18 min ago</span></div>
+              <p class="job-msg">ImageTooLarge: 612,000,000 pixels exceeds the import budget of 500,000,000.</p>
+              <pre class="job-trace">File "importer/services.py", line 214, in run_plan
+    encode_jxl(match.source, temporary, pixel_budget=pixel_budget)
+media.jxl.ImageTooLarge: 612000000 &gt; 500000000</pre>
+              <div class="job-foot"><span>3 of 11 imported before the failure</span><button class="btn btn-sm btn-outline-ink" type="button">Retry</button></div>
+            </article>
+
+            <article class="job-paper">
+              <div class="job-top"><div><span class="job-kind">folders.delete</span><span class="stamp done">Done</span></div><span class="job-time">Finished 1 h ago</span></div>
+              <p class="job-msg">Moved to .trash/20261109T143349681841Z/Your Name. [2016][tmdb-372058]</p>
+              <div class="progress job-progress" role="progressbar" aria-label="Delete progress" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar done" style="width: 100%"></div></div>
+              <div class="job-foot"><span>Took 0.4 s</span><button class="btn btn-sm btn-quiet" type="button">View</button></div>
+            </article>
+          </div>
+        </main>
+      </div>
+    </section>
+  </main>
+
+  <div class="device-wrap" hidden>
+    <div class="device"><iframe title="Mobile preview"></iframe></div>
+    <span class="device-hint">390 × 844 · the page is a real responsive viewport</span>
+  </div>
+
+  <script src="assets/vendor/bootstrap.bundle.min.js"></script>
+  <script src="assets/lab.js"></script>
+</body>
+</html>
