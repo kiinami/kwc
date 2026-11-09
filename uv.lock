@@ -54,7 +54,7 @@ wheels = [
 
 [[package]]
 name = "browser"
-version = "0.1.0"
+version = "1.0.0"
 source = { editable = "apps/browser" }
 dependencies = [
     { name = "django" },

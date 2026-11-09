@@ -1,6 +1,6 @@
 [project]
 name = "browser"
-version = "0.1.0"
+version = "1.0.0"
 description = "Read-only wallpaper browser"
 readme = "README.md"
 authors = [
