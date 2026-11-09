@@ -9,6 +9,7 @@ members = [
     "kwc",
     "manager",
     "media",
+    "tmdb",
 ]
 
 [[package]]
@@ -461,6 +462,7 @@ dependencies = [
     { name = "filesystem" },
     { name = "manager" },
     { name = "media" },
+    { name = "tmdb" },
 ]
 
 [package.dev-dependencies]
@@ -479,6 +481,7 @@ requires-dist = [
     { name = "filesystem", editable = "libs/filesystem" },
     { name = "manager", editable = "apps/manager" },
     { name = "media", editable = "libs/media" },
+    { name = "tmdb", editable = "libs/tmdb" },
 ]
 
 [package.metadata.requires-dev]
@@ -1004,6 +1007,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/7e/e0/361c764ea58cc1a75
 wheels = [
     { url = "https://files.pythonhosted.org/packages/df/ff/2fee788e82e75be8f210c65c5d103bf44c880e3769c884652a4cd911b8ba/sqlparse-0.6.1-py3-none-any.whl", hash = "sha256:3be5a72d04c873d690d7c6dedd33d6fae2ef82759881ceec02fc2efd0cba564f", size = 51200, upload-time = "2026-11-01T18:06:47.434Z" },
 ]
+
+[[package]]
+name = "tmdb"
+version = "0.1.0"
+source = { editable = "libs/tmdb" }
+dependencies = [
+    { name = "requests" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "requests", specifier = ">=2.32" }]
 
 [[package]]
 name = "tomli-w"

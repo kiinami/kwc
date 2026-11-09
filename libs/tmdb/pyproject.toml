@@ -1,0 +1,16 @@
+[project]
+name = "tmdb"
+version = "0.1.0"
+description = "Read-only TMDB client"
+readme = "README.md"
+authors = [
+    { name = "kiinami", email = "kinami@posteo.net" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "requests>=2.32",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.5,<0.14.0"]
+build-backend = "uv_build"

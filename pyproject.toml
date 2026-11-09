@@ -12,6 +12,7 @@ dependencies = [
     "filesystem",
     "manager",
     "media",
+    "tmdb",
 ]
 
 [dependency-groups]
@@ -35,6 +36,7 @@ browser = { workspace = true }
 manager = { workspace = true }
 filesystem = { workspace = true }
 media = { workspace = true }
+tmdb = { workspace = true }
 
 [tool.ruff]
 target-version = "py314"
