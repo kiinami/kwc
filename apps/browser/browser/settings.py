@@ -38,6 +38,7 @@ if env_bool("DJANGO_BEHIND_PROXY", False):
 WALLPAPER_ROOT = Path(os.environ.get("KWC_WALLPAPER_ROOT", REPO_ROOT / "data" / "wallpapers"))
 KWC_BROWSER_CACHE_ROOT = Path(os.environ.get("KWC_BROWSER_CACHE_ROOT", REPO_ROOT / "data" / "browser-cache"))
 KWC_BROWSER_CACHE_MAX_BYTES = int(os.environ.get("KWC_BROWSER_CACHE_MAX_BYTES", str(5 * 1024**3)))
+KWC_TAKEDOWN_EMAIL = os.environ.get("KWC_TAKEDOWN_EMAIL", "")
 STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", BASE_DIR / "staticfiles"))
 
 # The browser is deliberately stateless: it only reads the wallpaper folder.
