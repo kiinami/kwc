@@ -13,7 +13,7 @@
     <div class="grid">
       {% for row in children %}
         <a class="card" href="{% url 'gallery-folder' path=row.rel %}">
-          {% if row.cover %}<img loading="lazy" src="{% url 'gallery-original' path=row.cover %}" alt="">{% endif %}
+          {% if row.cover %}<img loading="lazy" src="{% url 'gallery-thumb' path=row.cover %}" alt="">{% endif %}
           <span>{{ row.entity.title }}</span>
         </a>
       {% endfor %}
@@ -22,8 +22,8 @@
 
   <div class="grid images">
     {% for group in groups %}
-      <a class="tile" data-index="{{ group.index }}" href="{% url 'gallery-original' path=group.rel %}">
-        <img loading="lazy" src="{% url 'gallery-original' path=group.rel %}" alt="">
+      <a class="tile" data-index="{{ group.index }}" href="{% url 'gallery-lens' path=rel %}?index={{ group.index }}">
+        <img loading="lazy" src="{% url 'gallery-thumb' path=group.rel %}" alt="">
         {% if group.picked %}<span class="pick">★</span>{% endif %}
         {% if group.count > 1 %}<span class="variants">{{ group.count }} variants</span>{% endif %}
       </a>

@@ -1,36 +1,43 @@
 from pathlib import Path
 from urllib.parse import quote
 
+import pillow_jxl  # noqa: F401  (registers the JXL plugin with Pillow)
 import pytest
+from PIL import Image
 
 from filesystem.metadata import FolderMetadata, write_metadata
 
 
-def touch(path: Path, payload: bytes = b"") -> None:
+def jxl(path: Path, color: tuple[int, int, int] = (10, 20, 30)) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_bytes(payload)
+    Image.new("RGB", (32, 24), color).save(path, format="JXL", lossless=True)
 
 
 @pytest.fixture
 def library(tmp_path, settings):
     settings.WALLPAPER_ROOT = tmp_path
+    settings.KWC_BROWSER_CACHE_ROOT = tmp_path / "cache"
     film = tmp_path / "Film [2001][tmdb-1]"
     film.mkdir()
-    write_metadata(film, FolderMetadata(kind="movie", title="Film", tmdb_id=1))
-    touch(film / "Film [2001][tmdb-1] - 0001+.jxl", b"one")
-    touch(film / "Film [2001][tmdb-1] - 0002.jxl", b"two")
-    touch(film / "Film [2001][tmdb-1] - 0002 [M].jxl", b"mobile")
-    touch(film / ".cover.jxl", b"cover")
+    write_metadata(film, FolderMetadata(kind="movie", title="Film", tmdb_id=1, copyright="(c) Studio"))
+    jxl(film / "Film [2001][tmdb-1] - 0001+.jxl", (10, 20, 30))
+    jxl(film / "Film [2001][tmdb-1] - 0002.jxl", (40, 50, 60))
+    jxl(film / "Film [2001][tmdb-1] - 0002 [M].jxl", (70, 80, 90))
+    jxl(film / ".cover.jxl", (1, 2, 3))
 
     hidden = tmp_path / "Hidden"
     hidden.mkdir()
     write_metadata(hidden, FolderMetadata(kind="other", title="Hidden", hidden=True))
-    touch(hidden / "Hidden - 0001.jxl")
+    jxl(hidden / "Hidden - 0001.jxl")
 
     empty = tmp_path / "Empty"
     empty.mkdir()
     write_metadata(empty, FolderMetadata(kind="other", title="Empty"))
     return tmp_path
+
+
+def image_url(path: str) -> str:
+    return "/i/" + quote(path)
 
 
 def test_index_lists_visible_entities(client, library):
@@ -57,17 +64,36 @@ def test_folder_curated_filter(client, library):
 
 
 def test_original_serves_the_file(client, library):
-    url = "/i/" + quote("Film [2001][tmdb-1]/Film [2001][tmdb-1] - 0001+.jxl")
-    response = client.get(url)
+    response = client.get(image_url("Film [2001][tmdb-1]/Film [2001][tmdb-1] - 0001+.jxl"))
     assert response.status_code == 200
-    assert b"".join(response.streaming_content) == b"one"
     assert response["Content-Type"] == "image/jxl"
+    assert b"".join(response.streaming_content)
 
 
 def test_original_download_sets_attachment(client, library):
-    url = "/i/" + quote("Film [2001][tmdb-1]/Film [2001][tmdb-1] - 0001+.jxl") + "?download=1"
-    response = client.get(url)
+    response = client.get(image_url("Film [2001][tmdb-1]/Film [2001][tmdb-1] - 0001+.jxl") + "?download=1")
     assert response["Content-Disposition"].startswith("attachment")
+
+
+def test_thumbnail_endpoint_is_cached_avif(client, library):
+    response = client.get("/t/" + quote("Film [2001][tmdb-1]/Film [2001][tmdb-1] - 0001+.jxl"))
+    assert response.status_code == 200
+    assert response["Content-Type"] == "image/avif"
+    assert "immutable" in response["Cache-Control"]
+
+
+def test_lens_derivative_is_avif(client, library):
+    response = client.get("/l/" + quote("Film [2001][tmdb-1]/Film [2001][tmdb-1] - 0001+.jxl"))
+    assert response.status_code == 200
+    assert response["Content-Type"] == "image/avif"
+
+
+def test_lens_page_lists_variants(client, library):
+    response = client.get("/view/" + quote("Film [2001][tmdb-1]") + "?index=2")
+    assert response.status_code == 200
+    assert b"#2" in response.content
+    assert b"0002 [M].jxl" in response.content
+    assert b"(c) Studio" in response.content
 
 
 def test_traversal_is_rejected(client, library):

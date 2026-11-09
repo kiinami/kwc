@@ -7,6 +7,8 @@ from django.shortcuts import render
 from filesystem.metadata import MetadataError, read_metadata
 from filesystem.operations import PathEscape, resolve_under
 from filesystem.scan import Entity, scan_archive, scan_entity
+from media.derivatives import DerivativeCache
+from media.metadata import read_image_metadata
 
 
 def _visible(entity: Entity) -> bool:
@@ -113,6 +115,93 @@ def folder(request, path: str):
             "curated_count": sum(1 for group in groups if group["picked"]),
             "curated": curated,
             "children": [_row(root, child) for child in entity.children if _visible(child)],
+        },
+    )
+
+
+def _target(request, path: str) -> Path:
+    root = settings.WALLPAPER_ROOT
+    try:
+        target = resolve_under(root, path)
+    except PathEscape as exc:
+        raise Http404 from exc
+    if not target.is_file() or target.suffix.lower() != ".jxl":
+        raise Http404
+    return target
+
+
+def _cache() -> DerivativeCache:
+    return DerivativeCache(
+        settings.KWC_BROWSER_CACHE_ROOT,
+        max_bytes=settings.KWC_BROWSER_CACHE_MAX_BYTES,
+    )
+
+
+def _derivative(request, path: str, kind: str):
+    target = _target(request, path)
+    relative = target.relative_to(settings.WALLPAPER_ROOT).as_posix()
+    cache = _cache()
+    try:
+        output = cache.thumb(target, relative) if kind == "thumb" else cache.lens(target, relative)
+    except Exception as exc:
+        raise Http404 from exc
+    response = FileResponse(output.open("rb"), content_type="image/avif")
+    response["Cache-Control"] = "public, max-age=31536000, immutable"
+    response["ETag"] = f'"{output.stem}"'
+    return response
+
+
+def thumb(request, path: str):
+    return _derivative(request, path, "thumb")
+
+
+def lens_image(request, path: str):
+    return _derivative(request, path, "lens")
+
+
+def lens(request, path: str):
+    root = settings.WALLPAPER_ROOT
+    try:
+        folder = resolve_under(root, path)
+    except PathEscape as exc:
+        raise Http404 from exc
+    if not folder.is_dir() or _hidden_in_path(root, folder):
+        raise Http404
+    entity = scan_entity(folder)
+    groups = _groups(entity)
+    if not groups:
+        raise Http404
+    try:
+        index = int(request.GET.get("index", groups[0]["index"]))
+    except ValueError as exc:
+        raise Http404 from exc
+    selected = next((group for group in groups if group["index"] == index), None)
+    if selected is None:
+        raise Http404
+    position = [group["index"] for group in groups].index(index)
+    folder_rel = entity.path.relative_to(root).as_posix()
+    variants = [
+        {
+            "image": image,
+            "rel": f"{folder_rel}/{image.name}",
+        }
+        for image in entity.images
+        if image.index == index
+    ]
+    return render(
+        request,
+        "gallery/lens.html",
+        {
+            "entity": entity,
+            "selected": selected,
+            "selected_rel": f"{folder_rel}/{selected['image'].name}",
+            "variants": variants,
+            "index": index,
+            "prev_index": groups[position - 1]["index"] if position > 0 else None,
+            "next_index": groups[position + 1]["index"] if position + 1 < len(groups) else None,
+            "folder_rel": folder_rel,
+            "image_metadata": read_image_metadata(selected["image"].path),
+            "copyright": entity.metadata.copyright if entity.metadata else "",
         },
     )
 

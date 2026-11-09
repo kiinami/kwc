@@ -1,0 +1,34 @@
+{% extends "gallery/base.html" %}
+{% load static %}
+{% block title %}{{ entity.title }} · #{{ index }}{% endblock %}
+{% block content %}
+  <p><a href="{% url 'gallery-folder' path=folder_rel %}">← {{ entity.title }}</a></p>
+  <figure class="lens">
+    <img id="lens-image"
+         src="{% url 'gallery-lens-image' path=selected_rel %}"
+         data-original="{% url 'gallery-original' path=selected_rel %}"
+         data-fallback="{% url 'gallery-lens-image' path=selected_rel %}"
+         alt="">
+  </figure>
+  <p class="lens-nav">
+    {% if prev_index %}<a href="?index={{ prev_index }}">← Previous</a>{% endif %}
+    <span class="muted">#{{ index }}</span>
+    {% if next_index %}<a href="?index={{ next_index }}">Next →</a>{% endif %}
+  </p>
+  {% if variants|length > 1 %}
+    <p class="variants">
+      {% for variant in variants %}
+        <button type="button"
+                class="variant"
+                data-original="{% url 'gallery-original' path=variant.rel %}"
+                data-fallback="{% url 'gallery-lens-image' path=variant.rel %}">{{ variant.image.name }}</button>
+      {% endfor %}
+    </p>
+  {% endif %}
+  <p class="muted">
+    {% if copyright %}{{ copyright }}{% endif %}
+    {% if image_metadata.timestamp %} · {{ image_metadata.timestamp }}s{% endif %}
+  </p>
+  <p><a href="{% url 'gallery-original' path=selected_rel %}?download=1">Download original</a></p>
+  <script src="{% static 'gallery/lens.js' %}"></script>
+{% endblock %}

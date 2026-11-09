@@ -6,7 +6,7 @@
     <div class="grid">
       {% for row in rows %}
         <a class="card" href="{% url 'gallery-folder' path=row.rel %}">
-          {% if row.cover %}<img loading="lazy" src="{% url 'gallery-original' path=row.cover %}" alt="">{% endif %}
+          {% if row.cover %}<img loading="lazy" src="{% url 'gallery-thumb' path=row.cover %}" alt="">{% endif %}
           <span>{{ row.entity.title }}</span>
           <small class="muted">{{ row.entity.images|length }} images</small>
         </a>
