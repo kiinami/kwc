@@ -9,6 +9,8 @@ from pathlib import Path
 import pillow_jxl  # noqa: F401  (registers the JXL plugin with Pillow)
 from PIL import Image
 
+from .jxl import DEFAULT_PIXEL_BUDGET, ImageTooLarge, probe_dimensions
+
 _USER_COMMENT = 0x9286
 _ASCII_PREFIX = b"ASCII\x00\x00\x00"
 _UNICODE_PREFIX = b"UNICODE\x00"
@@ -56,7 +58,10 @@ def _decode_comment(value: object) -> str | None:
         return data.decode("latin-1", "replace")
 
 
-def write_image_metadata(path: Path, meta: ImageMetadata) -> None:
+def write_image_metadata(path: Path, meta: ImageMetadata, *, pixel_budget: int = DEFAULT_PIXEL_BUDGET) -> None:
+    width, height = probe_dimensions(path)
+    if width * height > pixel_budget:
+        raise ImageTooLarge(f"{path.name} is {width}x{height}, over the {pixel_budget} pixel budget")
     payload = _ASCII_PREFIX + _serialize(meta)
     temporary = path.with_name(f"{path.name}.tmp")
     try:

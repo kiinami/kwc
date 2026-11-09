@@ -115,6 +115,7 @@ AUTHENTICATION_BACKENDS = [
 LOGIN_REDIRECT_URL = "/"
 ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 ACCOUNT_EMAIL_VERIFICATION = "none"
+ACCOUNT_ADAPTER = "manager.adapters.ManagerAccountAdapter"
 SOCIALACCOUNT_ADAPTER = "manager.adapters.ManagerSocialAccountAdapter"
 SOCIALACCOUNT_PROVIDERS = {
     "openid_connect": {

@@ -30,6 +30,13 @@
       {{ delete_form.as_p }}
       <button type="submit">Delete</button>
     </form>
+    {% if entity.kind == "series" %}
+      <form method="post" action="{% url 'folder-add-season' path=rel %}">
+        {% csrf_token %}
+        {{ add_season_form.as_p }}
+        <button type="submit">Add season from TMDB</button>
+      </form>
+    {% endif %}
   </div>
 
   {% if entity.metadata %}

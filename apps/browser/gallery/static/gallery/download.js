@@ -28,6 +28,21 @@
     }
   }
 
+  async function totalBytes(items) {
+    let total = 0;
+    for (const item of items) {
+      try {
+        const response = await fetch(item.url, { method: "HEAD" });
+        const length = Number(response.headers.get("Content-Length") || 0);
+        if (!length) return null;
+        total += length;
+      } catch (error) {
+        return null;
+      }
+    }
+    return total;
+  }
+
   async function libraryItems(scope) {
     const response = await fetch(`/downloads.json?curated=${scope === "curated" ? "1" : "0"}`);
     return (await response.json()).images;
@@ -46,6 +61,7 @@
     const format = form.querySelector("[name=format]").value;
     const resolution = form.querySelector("[name=resolution]").value;
     const maxEdge = resolution === "original" ? null : Number(resolution);
+    const maxBytes = Number(form.dataset.maxBytes || 0);
     const progress = form.querySelector("[data-progress]");
     const cancel = form.querySelector("[data-cancel]");
     let cancelled = false;
@@ -61,6 +77,18 @@
     }
     if (items.length > 100 && !window.confirm(`Convert ${items.length} images? This may be slow on a phone.`)) {
       return;
+    }
+    if (maxBytes) {
+      const total = await totalBytes(items);
+      if (total && total > maxBytes) {
+        if (total > maxBytes * 2) {
+          progress.textContent = `Selection is too large (${Math.round(total / 1048576)} MB). Narrow it down.`;
+          return;
+        }
+        if (!window.confirm(`This selection is about ${Math.round(total / 1048576)} MB. Continue?`)) {
+          return;
+        }
+      }
     }
 
     cancel.hidden = false;

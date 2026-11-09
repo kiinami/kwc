@@ -33,6 +33,11 @@ def library(tmp_path, settings):
     empty = tmp_path / "Empty"
     empty.mkdir()
     write_metadata(empty, FolderMetadata(kind="other", title="Empty"))
+
+    broken = tmp_path / "Broken"
+    broken.mkdir()
+    (broken / ".metadata.toml").write_bytes(b'title = "\xff"')
+    jxl(broken / "Broken - 0001.jxl")
     return tmp_path
 
 
@@ -46,6 +51,7 @@ def test_index_lists_visible_entities(client, library):
     assert b"Film" in response.content
     assert b"Hidden" not in response.content
     assert b"Empty" not in response.content
+    assert b"Broken" in response.content
     assert b".metadata.toml" not in response.content
 
 
@@ -106,8 +112,13 @@ def test_downloads_json_lists_curated_images(client, library):
 def test_downloads_json_lists_all_images(client, library):
     response = client.get("/downloads.json?curated=0")
     names = [item["name"] for item in response.json()["images"]]
-    assert len(names) == 3
+    assert len(names) == 4
     assert all(not name.startswith("Hidden") for name in names)
+
+
+def test_head_supports_download_preflight(client, library):
+    response = client.head(image_url("Film [2001][tmdb-1]/Film [2001][tmdb-1] - 0001+.jxl"))
+    assert response.status_code == 200
 
 
 def test_folder_page_has_download_controls(client, library):
@@ -115,6 +126,14 @@ def test_folder_page_has_download_controls(client, library):
     assert b"data-download" in response.content
     assert b"download.js" in response.content
     assert b"zip.js" in response.content
+    assert b"data-max-bytes" in response.content
+
+
+def test_hidden_and_trash_images_are_rejected(client, library):
+    hidden = "Hidden/Hidden - 0001.jxl"
+    assert client.get(image_url(hidden)).status_code == 404
+    assert client.get("/t/" + quote(hidden)).status_code == 404
+    assert client.get("/i/" + quote(".trash/Old/Old - 0001.jxl")).status_code == 404
 
 
 def test_traversal_is_rejected(client, library):

@@ -86,3 +86,17 @@ def test_scan_entity_reads_a_single_folder(tmp_path):
     assert entity.kind == "movie"
     assert entity.title == "Film"
     assert len(entity.images) == 3
+
+
+def test_scan_skips_symlinked_directories(tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    _touch(outside / "Outside [2001][tmdb-1]" / ".metadata.toml")
+    (outside / "Outside [2001][tmdb-1]" / ".metadata.toml").write_text('kind = "movie"\ntitle = "Outside"\n')
+    root = tmp_path / "root"
+    root.mkdir()
+    (root / "Link").symlink_to(outside / "Outside [2001][tmdb-1]", target_is_directory=True)
+    archive = scan_archive(root)
+    assert archive.movies == ()
+    assert archive.series == ()
+    assert archive.others == ()

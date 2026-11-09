@@ -17,7 +17,7 @@
   {% endfor %}
 
   {% if sections %}
-    <form class="download" data-download="library">
+    <form class="download" data-download="library" data-max-bytes="{{ download_max_bytes }}">
       <select name="scope"><option value="curated">Curated</option><option value="all">All frames</option></select>
       <select name="format"><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="png">PNG</option></select>
       <select name="resolution"><option value="original">Original</option><option value="3840">3840</option><option value="2560">2560</option><option value="1920">1920</option><option value="1280">1280</option></select>

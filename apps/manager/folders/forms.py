@@ -40,3 +40,7 @@ class RenameForm(forms.Form):
 
 class DeleteForm(forms.Form):
     confirm = forms.CharField(max_length=255, label="Type the title to confirm deletion")
+
+
+class AddSeasonForm(forms.Form):
+    season_number = forms.IntegerField(min_value=0, max_value=99)

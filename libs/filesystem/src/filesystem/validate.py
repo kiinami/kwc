@@ -31,7 +31,10 @@ def _hidden(name: str) -> bool:
 
 
 def _dirs(path: Path) -> list[Path]:
-    return sorted((p for p in path.iterdir() if p.is_dir() and not _hidden(p.name)), key=lambda p: p.name.casefold())
+    return sorted(
+        (p for p in path.iterdir() if p.is_dir() and not p.is_symlink() and not _hidden(p.name)),
+        key=lambda p: p.name.casefold(),
+    )
 
 
 def _metadata(path: Path, issues: list[Issue]) -> FolderMetadata | None:
@@ -50,7 +53,12 @@ def _images(path: Path, scope: NameScope, issues: list[Issue]) -> int:
     seen: dict[tuple[int, frozenset[str], int | None], str] = {}
     count = 0
     for entry in sorted(path.iterdir(), key=lambda p: p.name.casefold()):
-        if not entry.is_file() or _hidden(entry.name) or entry.name in {".metadata.toml", ".cover.jxl"}:
+        if (
+            not entry.is_file()
+            or entry.is_symlink()
+            or _hidden(entry.name)
+            or entry.name in {".metadata.toml", ".cover.jxl"}
+        ):
             continue
         parsed = parse_image_filename(entry.name, scope)
         if parsed is None:

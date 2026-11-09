@@ -51,7 +51,7 @@ def read_metadata(folder: Path) -> FolderMetadata | None:
         return None
     try:
         raw = tomllib.loads(path.read_text(encoding="utf-8"))
-    except (tomllib.TOMLDecodeError, OSError) as exc:
+    except (tomllib.TOMLDecodeError, OSError, UnicodeDecodeError) as exc:
         raise MetadataError(f"cannot read {path}: {exc}") from exc
     if not isinstance(raw, dict):
         raise MetadataError(f"{path} is not a TOML table")

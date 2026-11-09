@@ -85,10 +85,16 @@ def index(request):
         rows = [_row(root, entity) for entity in entities if _visible(entity)]
         if rows:
             sections.append((label, rows))
-    return render(request, "gallery/index.html", {"sections": sections})
+    return render(
+        request,
+        "gallery/index.html",
+        {"sections": sections, "download_max_bytes": settings.KWC_DOWNLOAD_MAX_BYTES},
+    )
 
 
 def folder(request, path: str):
+    if any(part.startswith(".") for part in Path(path).parts):
+        raise Http404
     root = settings.WALLPAPER_ROOT
     try:
         target = resolve_under(root, path)
@@ -116,17 +122,22 @@ def folder(request, path: str):
             "curated_count": sum(1 for group in groups if group["picked"]),
             "curated": curated,
             "children": [_row(root, child) for child in entity.children if _visible(child)],
+            "download_max_bytes": settings.KWC_DOWNLOAD_MAX_BYTES,
         },
     )
 
 
 def _target(request, path: str) -> Path:
+    if any(part.startswith(".") for part in Path(path).parts):
+        raise Http404
     root = settings.WALLPAPER_ROOT
     try:
         target = resolve_under(root, path)
     except PathEscape as exc:
         raise Http404 from exc
     if not target.is_file() or target.suffix.lower() != ".jxl":
+        raise Http404
+    if _hidden_in_path(root, target.parent):
         raise Http404
     return target
 
@@ -161,6 +172,8 @@ def lens_image(request, path: str):
 
 
 def lens(request, path: str):
+    if any(part.startswith(".") for part in Path(path).parts):
+        raise Http404
     root = settings.WALLPAPER_ROOT
     try:
         folder = resolve_under(root, path)
@@ -208,13 +221,7 @@ def lens(request, path: str):
 
 
 def original(request, path: str):
-    root = settings.WALLPAPER_ROOT
-    try:
-        target = resolve_under(root, path)
-    except PathEscape as exc:
-        raise Http404 from exc
-    if not target.is_file() or target.suffix.lower() != ".jxl":
-        raise Http404
+    target = _target(request, path)
     response = FileResponse(target.open("rb"), content_type="image/jxl")
     disposition = "attachment" if request.GET.get("download") else "inline"
     response["Content-Disposition"] = f'{disposition}; filename="{target.name}"'

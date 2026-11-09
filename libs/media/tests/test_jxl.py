@@ -1,8 +1,9 @@
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
-from media.jxl import encode_jxl, probe_dimensions
+from media.jxl import ImageTooLarge, encode_jxl, probe_dimensions
 
 
 def make_png(path: Path, size: tuple[int, int] = (32, 24), color: tuple[int, int, int] = (10, 20, 30)) -> Path:
@@ -20,6 +21,12 @@ def test_encode_jxl_round_trip_pixels(tmp_path):
     with Image.open(dest) as image:
         image.load()
         assert image.getpixel((1, 1)) == (200, 100, 50)
+
+
+def test_encode_rejects_over_budget(tmp_path):
+    source = make_png(tmp_path / "big.png")
+    with pytest.raises(ImageTooLarge):
+        encode_jxl(source, tmp_path / "big.jxl", pixel_budget=100)
 
 
 def test_encode_converts_palette_to_rgb(tmp_path):

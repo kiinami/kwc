@@ -12,7 +12,7 @@ from filesystem.validate import validate_archive
 from tmdb import TMDBClient, TMDBError
 
 from . import services
-from .forms import DeleteForm, FolderCreateForm, RenameForm, SearchForm
+from .forms import AddSeasonForm, DeleteForm, FolderCreateForm, RenameForm, SearchForm
 
 
 def _relative(root: Path, path: Path) -> str:
@@ -50,7 +50,15 @@ def _folder_or_404(path: str):
     return folder
 
 
-def _detail_context(root: Path, entity: Entity, *, rename_form=None, delete_form=None, error: str = "") -> dict:
+def _detail_context(  # noqa: PLR0913
+    root: Path,
+    entity: Entity,
+    *,
+    rename_form=None,
+    delete_form=None,
+    add_season_form=None,
+    error: str = "",
+) -> dict:
     return {
         "entity": entity,
         "rel": _relative(root, entity.path),
@@ -58,6 +66,7 @@ def _detail_context(root: Path, entity: Entity, *, rename_form=None, delete_form
         "rename_form": rename_form
         or RenameForm(initial={"new_title": entity.title, "new_year": entity.year, "new_tmdb_id": entity.tmdb_id}),
         "delete_form": delete_form or DeleteForm(),
+        "add_season_form": add_season_form or AddSeasonForm(),
         "cover_images": [image.name for image in entity.images],
         "error": error,
     }
@@ -90,13 +99,14 @@ def folder_create(request):
                     copyright=copyright,
                 )
             elif kind == "series":
-                folder = services.create_series(
-                    root=root,
-                    title=form.cleaned_data["title"],
-                    year=form.cleaned_data["year"],
-                    tmdb_id=form.cleaned_data["tmdb_id"],
-                    copyright=copyright,
-                )
+                if not getattr(settings, "TMDB_READ_TOKEN", ""):
+                    form.add_error(None, "TMDB_READ_TOKEN is not configured.")
+                else:
+                    enqueue(
+                        "folders.create_series",
+                        {"tmdb_id": form.cleaned_data["tmdb_id"], "copyright": copyright},
+                    )
+                    return redirect("folder-list")
             else:
                 folder = services.create_other(root=root, title=form.cleaned_data["title"], copyright=copyright)
         except (FileExistsError, ValueError) as exc:
@@ -155,6 +165,32 @@ def folder_rename(request, path: str):
         return redirect("folder-list")
     error = "Confirmation did not match the current title." if form.is_valid() else "Check the rename fields."
     return render(request, "folders/detail.html", _detail_context(root, entity, rename_form=form, error=error))
+
+
+@require_POST
+def folder_add_season(request, path: str):
+    root = settings.WALLPAPER_ROOT
+    folder = _folder_or_404(path)
+    entity = scan_entity(folder)
+    if entity.kind != "series":
+        raise Http404
+    form = AddSeasonForm(request.POST)
+    if form.is_valid() and getattr(settings, "TMDB_READ_TOKEN", ""):
+        enqueue(
+            "folders.add_season",
+            {
+                "series_path": _relative(root, folder),
+                "tmdb_id": entity.tmdb_id,
+                "season_number": form.cleaned_data["season_number"],
+            },
+        )
+        return redirect("folder-detail", path=path)
+    error = "TMDB_READ_TOKEN is not configured." if form.is_valid() else "Check the season number."
+    return render(
+        request,
+        "folders/detail.html",
+        _detail_context(root, entity, add_season_form=form, error=error),
+    )
 
 
 @require_POST

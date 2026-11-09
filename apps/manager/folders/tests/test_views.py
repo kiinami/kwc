@@ -1,7 +1,8 @@
 from urllib.parse import quote
 
 import pytest
-from folders.services import create_movie
+from folders.services import create_movie, create_series
+from jobs.models import Job
 
 from filesystem.metadata import FolderMetadata, write_metadata
 from tmdb import MovieDetail
@@ -68,3 +69,24 @@ def test_hidden_folder_is_marked_in_list(auth_client, library):
     write_metadata(folder, FolderMetadata(kind="other", title="Hidden", hidden=True))
     response = auth_client.get("/")
     assert b"hidden" in response.content
+
+
+@pytest.mark.django_db
+def test_create_series_enqueues_job(auth_client, library, settings):
+    settings.TMDB_READ_TOKEN = "token"
+    response = auth_client.post(
+        "/folders/new",
+        {"kind": "series", "title": "Show", "year": 2020, "tmdb_id": 2, "copyright": ""},
+    )
+    assert response.status_code == 302
+    assert Job.objects.filter(kind="folders.create_series").exists()
+    assert not (library / "Show [2020][tmdb-2]").exists()
+
+
+@pytest.mark.django_db
+def test_add_season_enqueues_job(auth_client, library, settings):
+    settings.TMDB_READ_TOKEN = "token"
+    series = create_series(root=library, title="Show", year=2020, tmdb_id=2)
+    response = auth_client.post(f"/folders/{quote(series.name)}/add-season", {"season_number": 2})
+    assert response.status_code == 302
+    assert Job.objects.filter(kind="folders.add_season").exists()

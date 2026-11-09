@@ -28,3 +28,29 @@ def test_healthz_is_exempt(client):
 
 def test_logged_in_user_can_access(auth_client):
     assert auth_client.get("/").status_code == 200
+
+
+@pytest.mark.django_db
+def test_local_signup_is_disabled(client, django_user_model):
+    client.post(
+        "/accounts/signup/",
+        {
+            "username": "intruder",
+            "email": "intruder@example.com",
+            "password1": "Passw0rd!intruder",
+            "password2": "Passw0rd!intruder",
+        },
+    )
+    assert not django_user_model.objects.filter(username="intruder").exists()
+
+
+@pytest.mark.django_db
+def test_non_allowlisted_authenticated_user_is_rejected(client, django_user_model, settings):
+    settings.MANAGER_ALLOWED_EMAILS = ["owner@example.com"]
+    user = django_user_model.objects.create_user(
+        username="stranger",
+        email="stranger@example.com",
+        password="test-password",
+    )
+    client.force_login(user)
+    assert client.get("/").status_code == 302

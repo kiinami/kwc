@@ -80,7 +80,7 @@ def _images(path: Path, scope: NameScope) -> tuple[ImageFile, ...]:
         return ()
     images: list[ImageFile] = []
     for entry in path.iterdir():
-        if not entry.is_file() or _hidden(entry.name):
+        if not entry.is_file() or entry.is_symlink() or _hidden(entry.name):
             continue
         parsed = parse_image_filename(entry.name, scope)
         if parsed is None:
@@ -101,7 +101,10 @@ def _images(path: Path, scope: NameScope) -> tuple[ImageFile, ...]:
 def _child_dirs(path: Path) -> list[Path]:
     if not path.is_dir():
         return []
-    return sorted((p for p in path.iterdir() if p.is_dir() and not _hidden(p.name)), key=lambda p: p.name.casefold())
+    return sorted(
+        (p for p in path.iterdir() if p.is_dir() and not p.is_symlink() and not _hidden(p.name)),
+        key=lambda p: p.name.casefold(),
+    )
 
 
 def _has_structure(path: Path) -> bool:
@@ -242,7 +245,7 @@ def scan_archive(root: Path) -> Archive:
     movies: list[Entity] = []
     series: list[Entity] = []
     others: list[Entity] = []
-    entries = (p for p in root.iterdir() if p.is_dir() and not _hidden(p.name))
+    entries = (p for p in root.iterdir() if p.is_dir() and not p.is_symlink() and not _hidden(p.name))
     for entry in sorted(entries, key=lambda p: p.name.casefold()):
         entity = scan_entity(entry)
         if entity.kind == "movie":

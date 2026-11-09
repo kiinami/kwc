@@ -11,6 +11,11 @@ import pillow_jxl  # noqa: F401  (registers the JXL plugin with Pillow)
 from PIL import Image
 
 _SIZE_RE = re.compile(r"(\d+)x(\d+)")
+DEFAULT_PIXEL_BUDGET = 200_000_000
+
+
+class ImageTooLarge(ValueError):
+    """The source exceeds the configured decode budget."""
 
 
 def _normalize(image: Image.Image) -> Image.Image:
@@ -21,7 +26,16 @@ def _normalize(image: Image.Image) -> Image.Image:
     return image.convert("RGB")
 
 
-def encode_jxl(source: Path, dest: Path, *, lossless: bool = True) -> None:
+def encode_jxl(
+    source: Path,
+    dest: Path,
+    *,
+    lossless: bool = True,
+    pixel_budget: int = DEFAULT_PIXEL_BUDGET,
+) -> None:
+    width, height = probe_dimensions(source)
+    if width * height > pixel_budget:
+        raise ImageTooLarge(f"{source.name} is {width}x{height}, over the {pixel_budget} pixel budget")
     with Image.open(source) as image:
         _normalize(image).save(dest, format="JXL", lossless=lossless)
 

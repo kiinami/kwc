@@ -23,6 +23,12 @@ def test_malformed_raises(tmp_path):
         read_metadata(tmp_path)
 
 
+def test_invalid_utf8_raises_metadata_error(tmp_path):
+    (tmp_path / ".metadata.toml").write_bytes(b'title = "\xff"')
+    with pytest.raises(MetadataError):
+        read_metadata(tmp_path)
+
+
 def test_round_trips_all_fields(tmp_path):
     data = FolderMetadata(
         kind="series",
