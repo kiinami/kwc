@@ -1,4 +1,5 @@
 import pytest
+
 from filesystem.naming import (
     FolderRef,
     ImageName,

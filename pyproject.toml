@@ -52,5 +52,8 @@ ignore = [
     "SIM117",   # multiple-with-statements - style preference
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["browser", "manager", "filesystem", "media", "tmdb"]
+
 [tool.ruff.format]
 quote-style = "double"
