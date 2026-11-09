@@ -1,39 +1,43 @@
 [project]
 name = "kwc"
 version = "0.1.0"
-description = "Add your description here"
+description = "Wallpaper collection"
 readme = "README.md"
-requires-python = ">=3.13,<3.14"
+authors = [
+    { name = "kiinami", email = "kinami@posteo.net" }
+]
+requires-python = ">=3.14"
 dependencies = [
-    "django>=5.2.7",
-    "guessit>=3.8.0",
-    "python-ffmpeg>=2.0.12",
-    "python-dotenv>=1.0.1",
-    "pillow>=11.3.0",
-    "tmdbsimple>=2.9.1",
-    "gunicorn>=23.0.0",
-    "whitenoise>=6.6.0",
-    "imagededup>=0.3.2",
-    "tensorflow>=2.15.0",
+    "browser",
+    "manager",
 ]
 
 [dependency-groups]
 dev = [
-    "django-debug-toolbar>=6.0.0",
-    "pytest>=8.3.3",
-    "pytest-django>=4.9.0",
-    "ruff>=0.4.4",
-    "pre-commit>=3.7.0",
-    "mypy>=1.10.0",
+    "bump-my-version>=1.1.2",
+    "prek>=0.5.6",
+    "ruff>=0.17.1",
 ]
 
-[tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = "kwc.settings"
-python_files = ["tests.py", "test_*.py", "*_tests.py"]
+[tool.uv.workspace]
+members = [
+    "apps/*",
+    "libs/*",
+]
+
+[tool.uv.sources]
+browser = { workspace = true }
+manager = { workspace = true }
+filesystem = { workspace = true }
 
 [tool.ruff]
-lint.select = ["E", "F", "I", "UP", "B", "C4", "T20", "SIM", "PL", "RUF"]
-lint.ignore = [
+target-version = "py314"
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "T20", "SIM", "PL", "RUF"]
+ignore = [
     "PLR2004",  # magic-value-comparison - common pattern in Django
     "PLR0911",  # too-many-return-statements - style preference
     "PLR0912",  # too-many-branches - style preference
@@ -43,27 +47,6 @@ lint.ignore = [
     "RUF012",   # mutable-class-default - mostly in auto-generated migrations
     "SIM117",   # multiple-with-statements - style preference
 ]
-fix = true
-line-length = 120
-indent-width = 4
 
-[tool.mypy]
-python_version = "3.13"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-disallow_any_generics = false
-exclude = [
-    "migrations",
-    ".venv",
-]
-
-[[tool.mypy.overrides]]
-module = [
-    "django.*",
-    "guessit.*",
-    "tmdbsimple.*",
-    "ffmpeg.*",
-    "requests.*",
-]
-ignore_missing_imports = true
+[tool.ruff.format]
+quote-style = "double"
