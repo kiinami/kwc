@@ -19,7 +19,10 @@ def library(tmp_path, settings):
     settings.KWC_BROWSER_CACHE_ROOT = tmp_path / "cache"
     film = tmp_path / "Film [2001][tmdb-1]"
     film.mkdir()
-    write_metadata(film, FolderMetadata(kind="movie", title="Film", tmdb_id=1, copyright="(c) Studio"))
+    write_metadata(
+        film,
+        FolderMetadata(original_title="Original Film", release_date="2001-01-01", copyright="(c) Studio"),
+    )
     jxl(film / "Film [2001][tmdb-1] - 0001+.jxl", (10, 20, 30))
     jxl(film / "Film [2001][tmdb-1] - 0002.jxl", (40, 50, 60))
     jxl(film / "Film [2001][tmdb-1] - 0002 [M].jxl", (70, 80, 90))
@@ -27,12 +30,12 @@ def library(tmp_path, settings):
 
     hidden = tmp_path / "Hidden"
     hidden.mkdir()
-    write_metadata(hidden, FolderMetadata(kind="other", title="Hidden", hidden=True))
+    write_metadata(hidden, FolderMetadata(hidden=True))
     jxl(hidden / "Hidden - 0001.jxl")
 
     empty = tmp_path / "Empty"
     empty.mkdir()
-    write_metadata(empty, FolderMetadata(kind="other", title="Empty"))
+    write_metadata(empty, FolderMetadata())
 
     broken = tmp_path / "Broken"
     broken.mkdir()
@@ -60,6 +63,12 @@ def test_folder_hides_variants_and_shows_counts(client, library):
     assert response.status_code == 200
     assert response.content.count(b"data-index=") == 2
     assert b"1 / 2" in response.content
+
+
+def test_folder_shows_tmdb_metadata(client, library):
+    response = client.get("/browse/" + quote("Film [2001][tmdb-1]"))
+    assert b"Original Film" in response.content
+    assert b"2001-01-01" in response.content
 
 
 def test_folder_curated_filter(client, library):

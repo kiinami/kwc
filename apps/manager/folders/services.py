@@ -10,13 +10,14 @@ from media.jxl import encode_jxl_bytes
 from tmdb import SeasonDetail, SeriesDetail
 
 
-def _make_folder(root: Path, name: str, metadata: FolderMetadata) -> Path:
+def _make_folder(root: Path, name: str, metadata: FolderMetadata | None) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     folder = root / name
     if folder.exists():
         raise FileExistsError(f"folder already exists: {folder.name}")
     folder.mkdir()
-    write_metadata(folder, metadata)
+    if metadata is not None and metadata.has_data():
+        write_metadata(folder, metadata)
     return folder
 
 
@@ -31,6 +32,8 @@ def create_movie(  # noqa: PLR0913
     title: str,
     year: int,
     tmdb_id: int,
+    original_title: str | None = None,
+    release_date: str | None = None,
     copyright: str = "",
     cover_bytes: bytes | None = None,
 ) -> Path:
@@ -38,9 +41,8 @@ def create_movie(  # noqa: PLR0913
         root,
         folder_name(title, year=year, tmdb_id=tmdb_id),
         FolderMetadata(
-            kind="movie",
-            title=title,
-            tmdb_id=tmdb_id,
+            original_title=original_title,
+            release_date=release_date,
             copyright=copyright or None,
         ),
     )
@@ -52,39 +54,16 @@ def create_series(*, root: Path, title: str, year: int, tmdb_id: int, copyright:
     return _make_folder(
         root,
         folder_name(title, year=year, tmdb_id=tmdb_id),
-        FolderMetadata(
-            kind="series",
-            title=title,
-            tmdb_id=tmdb_id,
-            copyright=copyright or None,
-        ),
+        FolderMetadata(copyright=copyright or None),
     )
 
 
 def create_other(*, root: Path, title: str, copyright: str = "") -> Path:
-    return _make_folder(
-        root,
-        folder_name(title),
-        FolderMetadata(kind="other", title=title, copyright=copyright or None),
-    )
+    return _make_folder(root, folder_name(title), FolderMetadata(copyright=copyright or None))
 
 
 def _episode_token(number: int) -> str:
     return episode_folder(f"E{number:02d}")
-
-
-def _write_episode(folder: Path, season: SeasonDetail, number: int, name: str, air_date: str | None) -> None:
-    write_metadata(
-        folder,
-        FolderMetadata(
-            kind="episode",
-            title=name,
-            season=season.season_number,
-            episode=_episode_token(number),
-            first_release_date=air_date,
-            last_release_date=air_date,
-        ),
-    )
 
 
 def _create_episodes(parent: Path, season: SeasonDetail) -> None:
@@ -94,7 +73,6 @@ def _create_episodes(parent: Path, season: SeasonDetail) -> None:
         if folder.exists():
             raise FileExistsError(f"episode already exists: {folder}")
         folder.mkdir()
-        _write_episode(folder, season, episode.episode_number, episode.name, episode.air_date)
 
 
 def _create_season(series_path: Path, season: SeasonDetail) -> Path:
@@ -102,15 +80,12 @@ def _create_season(series_path: Path, season: SeasonDetail) -> Path:
     if folder.exists():
         raise FileExistsError(f"season already exists: {folder.name}")
     folder.mkdir()
+    air_dates = [episode.air_date for episode in season.episodes if episode.air_date]
+    first = season.air_date or (min(air_dates) if air_dates else None)
+    last = max(air_dates) if air_dates else first
     write_metadata(
         folder,
-        FolderMetadata(
-            kind="season",
-            title=season.name or f"Season {season.season_number}",
-            season=season.season_number,
-            first_release_date=season.air_date,
-            last_release_date=season.air_date,
-        ),
+        FolderMetadata(first_release_date=first, last_release_date=last),
     )
     _create_episodes(folder, season)
     return folder
@@ -133,12 +108,12 @@ def build_series_from_tmdb(
         tmdb_id=detail.id,
         copyright=copyright,
     )
-    metadata = read_metadata(path)
-    if metadata is not None:
-        metadata.original_title = detail.original_name
-        metadata.first_release_date = detail.first_air_date
-        metadata.last_release_date = detail.last_air_date
-        write_metadata(path, metadata)
+    metadata = read_metadata(path) or FolderMetadata()
+    metadata.original_title = detail.original_name
+    metadata.first_release_date = detail.first_air_date
+    metadata.last_release_date = detail.last_air_date
+    metadata.copyright = metadata.copyright or copyright or None
+    write_metadata(path, metadata)
     _write_cover(path, cover_bytes)
 
     if len(detail.seasons) <= 1:
@@ -158,13 +133,17 @@ def promote_flat_series(series_path: Path) -> None:
     groups: dict[int, list] = {}
     for episode in episodes:
         groups.setdefault(episode.season or 1, []).append(episode)
+    series_metadata = read_metadata(series_path) or FolderMetadata()
     for number, members in groups.items():
         season_dir = series_path / season_folder(number)
         if not season_dir.exists():
             season_dir.mkdir()
             write_metadata(
                 season_dir,
-                FolderMetadata(kind="season", title=f"Season {number}", season=number),
+                FolderMetadata(
+                    first_release_date=series_metadata.first_release_date,
+                    last_release_date=series_metadata.last_release_date,
+                ),
             )
         for episode in members:
             target = season_dir / episode.path.name
@@ -192,9 +171,7 @@ def delete_entity(*, folder: Path, trash_root: Path) -> Path:
 
 
 def set_hidden(*, folder: Path, hidden: bool) -> None:
-    metadata = read_metadata(folder)
-    if metadata is None:
-        raise FileNotFoundError(f"{folder} has no .metadata.toml")
+    metadata = read_metadata(folder) or FolderMetadata()
     metadata.hidden = hidden
     write_metadata(folder, metadata)
 

@@ -130,14 +130,20 @@ def folder_create(request):
         if not form.errors:
             try:
                 if kind == "movie":
-                    folder = services.create_movie(
-                        root=root,
-                        title=form.cleaned_data["title"],
-                        year=form.cleaned_data["year"],
-                        tmdb_id=form.cleaned_data["tmdb_id"],
-                        copyright=copyright,
-                        cover_bytes=cover_bytes,
-                    )
+                    if poster_client is None:
+                        form.add_error(None, "TMDB_READ_TOKEN is not configured.")
+                    else:
+                        detail = poster_client.movie(form.cleaned_data["tmdb_id"])
+                        folder = services.create_movie(
+                            root=root,
+                            title=form.cleaned_data["title"],
+                            year=form.cleaned_data["year"],
+                            tmdb_id=form.cleaned_data["tmdb_id"],
+                            original_title=detail.original_title,
+                            release_date=detail.release_date,
+                            copyright=copyright,
+                            cover_bytes=cover_bytes,
+                        )
                 elif kind == "series":
                     if not getattr(settings, "TMDB_READ_TOKEN", ""):
                         form.add_error(None, "TMDB_READ_TOKEN is not configured.")
@@ -221,8 +227,6 @@ def folder_add_season(request, path: str):
     root = settings.WALLPAPER_ROOT
     folder = _folder_or_404(path)
     entity = scan_entity(folder)
-    if entity.kind != "series":
-        raise Http404
     form = AddSeasonForm(request.POST)
     if form.is_valid() and getattr(settings, "TMDB_READ_TOKEN", ""):
         enqueue(

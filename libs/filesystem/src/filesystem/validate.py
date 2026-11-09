@@ -37,10 +37,11 @@ def _dirs(path: Path) -> list[Path]:
     )
 
 
-def _metadata(path: Path, issues: list[Issue]) -> FolderMetadata | None:
+def _metadata(path: Path, issues: list[Issue], *, required: bool) -> FolderMetadata | None:
     marker = path / ".metadata.toml"
     if not marker.exists():
-        issues.append(Issue(path, "missing-metadata", "folder has no .metadata.toml"))
+        if required:
+            issues.append(Issue(path, "missing-metadata", "folder has no .metadata.toml"))
         return None
     try:
         return read_metadata(path)
@@ -93,9 +94,8 @@ def _validate_episode(path: Path, series_ref: FolderRef, default_season: int, is
     if episode is None:
         issues.append(Issue(path, "unparsed-folder", "episode folder token is invalid"))
         return
-    meta = _metadata(path, issues)
-    season = meta.season if meta is not None and meta.season is not None else default_season
-    scope = NameScope(series_ref.title, series_ref.year, series_ref.tmdb_id, season, episode)
+    _metadata(path, issues, required=False)
+    scope = NameScope(series_ref.title, series_ref.year, series_ref.tmdb_id, default_season, episode)
     count = _images(path, scope, issues)
     _cover(path, count > 0, issues)
 
@@ -105,7 +105,7 @@ def _validate_season(path: Path, series_ref: FolderRef, issues: list[Issue]) -> 
     if season is None:
         issues.append(Issue(path, "unparsed-folder", "season folder token is invalid"))
         return
-    _metadata(path, issues)
+    _metadata(path, issues, required=True)
     for child in _dirs(path):
         if parse_episode_folder(child.name) is not None:
             _validate_episode(child, series_ref, season, issues)
@@ -140,14 +140,12 @@ def validate_archive(root: Path) -> list[Issue]:
         if ref is None:
             issues.append(Issue(top, "unparsed-folder", "folder name does not match the archive grammar"))
             continue
-        meta = _metadata(top, issues)
-        kind = meta.kind if meta is not None and meta.kind in {"movie", "series", "other"} else None
-        if kind is None:
-            structure = any(
-                parse_season_folder(child.name) is not None or parse_episode_folder(child.name) is not None
-                for child in _dirs(top)
-            )
-            kind = "series" if structure else ("movie" if ref.tmdb_id is not None else "other")
+        structure = any(
+            parse_season_folder(child.name) is not None or parse_episode_folder(child.name) is not None
+            for child in _dirs(top)
+        )
+        kind = "series" if structure else ("movie" if ref.tmdb_id is not None else "other")
+        meta = _metadata(top, issues, required=kind in {"movie", "series"})
         if kind == "series":
             _validate_series(top, ref, issues)
         else:

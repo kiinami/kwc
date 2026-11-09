@@ -6,7 +6,7 @@ from folders.services import create_movie, create_series
 from jobs.models import Job
 from PIL import Image
 
-from filesystem.metadata import FolderMetadata, write_metadata
+from filesystem.metadata import FolderMetadata, read_metadata, write_metadata
 from tmdb import MovieDetail, Poster
 
 
@@ -23,6 +23,9 @@ class FakePosterClient:
     def posters(self, tmdb_id, kind="movie"):
         return [Poster("/p.jpg", "en", 10.0, 5)]
 
+    def movie(self, tmdb_id):
+        return MovieDetail(tmdb_id, "Covered", "Original Covered", "2002-01-01")
+
     def image_url(self, path, size="w500"):
         return f"https://image.tmdb.org/t/p/{size}{path}"
 
@@ -33,7 +36,14 @@ class FakePosterClient:
 @pytest.fixture
 def library(tmp_path, settings):
     settings.WALLPAPER_ROOT = tmp_path
-    folder = create_movie(root=tmp_path, title="Film", year=2001, tmdb_id=1)
+    folder = create_movie(
+        root=tmp_path,
+        title="Film",
+        year=2001,
+        tmdb_id=1,
+        original_title="Original Film",
+        release_date="2001-01-01",
+    )
     (folder / "Film [2001][tmdb-1] - 0001.jxl").write_text("")
     return tmp_path
 
@@ -55,7 +65,9 @@ def test_detail_rejects_traversal(auth_client, library):
     assert response.status_code == 404
 
 
-def test_create_view_creates_folder(auth_client, library):
+def test_create_view_creates_folder(auth_client, library, settings, monkeypatch):
+    settings.TMDB_READ_TOKEN = "token"
+    monkeypatch.setattr("folders.views.TMDBClient", FakePosterClient)
     response = auth_client.post(
         "/folders/new",
         {"kind": "movie", "title": "New", "year": 2002, "tmdb_id": 2, "copyright": "(c) Studio"},
@@ -88,7 +100,7 @@ def test_search_uses_tmdb(auth_client, library, settings, monkeypatch):
 def test_hidden_folder_is_marked_in_list(auth_client, library):
     folder = library / "Hidden"
     folder.mkdir()
-    write_metadata(folder, FolderMetadata(kind="other", title="Hidden", hidden=True))
+    write_metadata(folder, FolderMetadata(hidden=True))
     response = auth_client.get("/")
     assert b"hidden" in response.content
 
@@ -129,8 +141,11 @@ def test_create_movie_with_tmdb_cover(auth_client, library, settings, monkeypatc
         },
     )
     assert response.status_code == 302
-    with Image.open(library / "Covered [2002][tmdb-2]" / ".cover.jxl") as cover:
+    folder = library / "Covered [2002][tmdb-2]"
+    with Image.open(folder / ".cover.jxl") as cover:
         assert cover.size == (32, 48)
+    metadata = read_metadata(folder)
+    assert (metadata.original_title, metadata.release_date) == ("Original Covered", "2002-01-01")
 
 
 def test_create_page_lists_posters(auth_client, library, settings, monkeypatch):

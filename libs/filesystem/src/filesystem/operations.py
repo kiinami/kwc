@@ -124,9 +124,6 @@ def rename_entity(
     except MetadataError:
         metadata = None
     if metadata is not None:
-        metadata.title = new_title
-        if tmdb_id is not None:
-            metadata.tmdb_id = tmdb_id
         write_metadata(folder, metadata)
 
     if target_folder != folder:

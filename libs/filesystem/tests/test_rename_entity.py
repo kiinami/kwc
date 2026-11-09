@@ -15,22 +15,21 @@ def _touch(path: Path, text: str = "") -> None:
 def make_movie(root: Path) -> Path:
     folder = root / "Old Name [2001][tmdb-1]"
     _touch(folder / "Old Name [2001][tmdb-1] - 0001.jxl")
-    write_metadata(folder, FolderMetadata(kind="movie", title="Old Name", tmdb_id=1))
+    write_metadata(folder, FolderMetadata(original_title="Old Name Original", release_date="2001-01-01"))
     return folder
 
 
 def make_series(root: Path) -> Path:
     folder = root / "Old Show [2016][tmdb-3]"
     folder.mkdir()
-    write_metadata(folder, FolderMetadata(kind="series", title="Old Show", tmdb_id=3))
+    write_metadata(folder, FolderMetadata(original_title="Old Show Original", first_release_date="2016-01-01"))
     (folder / "S01").mkdir()
     write_metadata(
         folder / "S01",
-        FolderMetadata(kind="season", title="Season 1", season=1),
+        FolderMetadata(first_release_date="2016-01-01", last_release_date="2016-06-01"),
     )
     episode = folder / "S01" / "E01"
     _touch(episode / "Old Show [2016][tmdb-3] - S01E01 - 0001.jxl")
-    write_metadata(episode, FolderMetadata(kind="episode", title="Pilot", season=1, episode="E01"))
     return folder
 
 
@@ -40,8 +39,7 @@ def test_rename_cascades_to_every_image(tmp_path):
     assert new.name == "New Name [2002][tmdb-2]"
     assert (new / "New Name [2002][tmdb-2] - 0001.jxl").exists()
     assert not movie.exists()
-    assert read_metadata(new).title == "New Name"
-    assert read_metadata(new).tmdb_id == 2
+    assert read_metadata(new).original_title == "Old Name Original"
 
 
 def test_series_rename_keeps_season_and_episode_folders(tmp_path):
@@ -49,7 +47,7 @@ def test_series_rename_keeps_season_and_episode_folders(tmp_path):
     new = rename_entity(series, new_title="New Series")
     assert (new / "S01" / "E01" / "New Series [2016][tmdb-3] - S01E01 - 0001.jxl").exists()
     assert not series.exists()
-    assert read_metadata(new).title == "New Series"
+    assert read_metadata(new).original_title == "Old Show Original"
 
 
 def test_rename_refuses_existing_target(tmp_path):

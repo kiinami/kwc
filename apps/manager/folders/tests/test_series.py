@@ -48,15 +48,16 @@ def test_single_season_series_skips_season_folder(tmp_path):
     assert (path / "E01").is_dir()
     assert (path / "E02").is_dir()
     assert not (path / "S01").exists()
-    assert read_metadata(path / "E01").title == "Episode 1-1"
+    assert read_metadata(path / "E01") is None
     assert read_metadata(path).first_release_date == "2021-01-01"
+    assert read_metadata(path).original_title == "Show Original"
 
 
 def test_two_season_series_uses_season_folders(tmp_path):
     path = build_series_from_tmdb(root=tmp_path, detail=series(season(1), season(2)))
     assert (path / "S01" / "E01").is_dir()
     assert (path / "S02" / "E01").is_dir()
-    assert read_metadata(path / "S02").season == 2
+    assert read_metadata(path / "S02").first_release_date == "2022-01-01"
     assert not (path / "E01").exists()
 
 

@@ -16,7 +16,14 @@ PATTERN = re.compile(r" - (?P<index>\d{4})(?P<type>[A-Z]{0,2})$")
 def setup(tmp_path, settings):
     settings.WALLPAPER_ROOT = tmp_path / "wallpapers"
     settings.IMPORT_ROOT = tmp_path / "incoming"
-    target = create_movie(root=settings.WALLPAPER_ROOT, title="Film", year=2001, tmdb_id=1)
+    target = create_movie(
+        root=settings.WALLPAPER_ROOT,
+        title="Film",
+        year=2001,
+        tmdb_id=1,
+        original_title="Original Film",
+        release_date="2001-01-01",
+    )
     settings.IMPORT_ROOT.mkdir()
     Image.new("RGB", (8, 8), (1, 2, 3)).save(settings.IMPORT_ROOT / "Film - 0001.png")
     return target

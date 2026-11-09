@@ -14,10 +14,17 @@ def png_bytes() -> bytes:
 
 
 def test_create_movie_writes_metadata(tmp_path):
-    path = create_movie(root=tmp_path, title="Film", year=2001, tmdb_id=1)
+    path = create_movie(
+        root=tmp_path,
+        title="Film",
+        year=2001,
+        tmdb_id=1,
+        original_title="Original Film",
+        release_date="2001-01-01",
+    )
     assert path.name == "Film [2001][tmdb-1]"
     data = read_metadata(path)
-    assert (data.kind, data.title, data.tmdb_id) == ("movie", "Film", 1)
+    assert (data.original_title, data.release_date) == ("Original Film", "2001-01-01")
 
 
 def test_create_movie_can_write_a_cover(tmp_path):
@@ -26,15 +33,16 @@ def test_create_movie_can_write_a_cover(tmp_path):
         assert cover.size == (32, 48)
 
 
-def test_create_series_writes_metadata(tmp_path):
+def test_create_series_starts_without_metadata(tmp_path):
     path = create_series(root=tmp_path, title="Show", year=2020, tmdb_id=2)
-    assert read_metadata(path).kind == "series"
+    assert path.name == "Show [2020][tmdb-2]"
+    assert read_metadata(path) is None
 
 
-def test_create_other_has_no_tmdb(tmp_path):
+def test_create_other_has_no_metadata(tmp_path):
     path = create_other(root=tmp_path, title="Other")
     assert path.name == "Other"
-    assert read_metadata(path).kind == "other"
+    assert read_metadata(path) is None
 
 
 def test_create_refuses_duplicate(tmp_path):

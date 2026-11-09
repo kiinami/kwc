@@ -43,6 +43,9 @@
     <div class="card">
       <table>
         {% if entity.metadata.original_title %}<tr><th>Original title</th><td>{{ entity.metadata.original_title }}</td></tr>{% endif %}
+        {% if entity.metadata.release_date %}<tr><th>Release date</th><td>{{ entity.metadata.release_date }}</td></tr>{% endif %}
+        {% if entity.metadata.first_release_date %}<tr><th>First air date</th><td>{{ entity.metadata.first_release_date }}</td></tr>{% endif %}
+        {% if entity.metadata.last_release_date %}<tr><th>Last air date</th><td>{{ entity.metadata.last_release_date }}</td></tr>{% endif %}
         {% if entity.metadata.copyright %}<tr><th>Copyright</th><td>{{ entity.metadata.copyright }}</td></tr>{% endif %}
         <tr><th>Hidden</th><td>{{ entity.metadata.hidden|yesno:"yes,no" }}</td></tr>
       </table>

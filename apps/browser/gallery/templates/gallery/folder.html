@@ -4,6 +4,14 @@
   <p><a href="{% url 'gallery-index' %}">← Wallpapers</a></p>
   <h1>{{ entity.title }}</h1>
   <p class="muted">{{ curated_count }} / {{ total }} curated</p>
+  {% if entity.metadata %}
+    <p class="muted">
+      {% if entity.metadata.original_title %}{{ entity.metadata.original_title }}{% endif %}
+      {% if entity.metadata.release_date %} · Released {{ entity.metadata.release_date }}{% endif %}
+      {% if entity.metadata.first_release_date %} · First aired {{ entity.metadata.first_release_date }}{% endif %}
+      {% if entity.metadata.last_release_date %} · Last aired {{ entity.metadata.last_release_date }}{% endif %}
+    </p>
+  {% endif %}
   <p class="filters">
     <a href="?curated=1" {% if curated %}aria-current="page"{% endif %}>Curated</a>
     <a href="?curated=0" {% if not curated %}aria-current="page"{% endif %}>All frames</a>

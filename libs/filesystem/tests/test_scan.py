@@ -19,22 +19,21 @@ def make_tree(root: Path) -> Path:
         "bad.jxl",
     ):
         _touch(movie / name)
-    (movie / ".metadata.toml").write_text('kind = "movie"\ntitle = "Film"\n')
+    (movie / ".metadata.toml").write_text('original_title = "Original Film"\nrelease_date = "2001-01-01"\n')
 
     series = root / "Show [2020][tmdb-2]"
     (series / ".metadata.toml").parent.mkdir(parents=True, exist_ok=True)
-    (series / ".metadata.toml").write_text('kind = "series"\ntitle = "Show"\n')
+    (series / ".metadata.toml").write_text(
+        'original_title = "Original Show"\nfirst_release_date = "2020-01-01"\nlast_release_date = "2021-01-01"\n'
+    )
     episode = series / "S01" / "E01"
     _touch(episode / "Show [2020][tmdb-2] - S01E01 - 0001.jxl")
-    (episode / ".metadata.toml").write_text('kind = "episode"\ntitle = "Pilot"\n')
 
     other = root / "Other"
     _touch(other / ".metadata.toml")
-    (other / ".metadata.toml").write_text('kind = "other"\ntitle = "Other"\n')
     _touch(other / "Other - 0001.jxl")
 
     _touch(root / "Empty" / ".metadata.toml")
-    (root / "Empty" / ".metadata.toml").write_text('kind = "other"\ntitle = "Empty"\n')
 
     broken = root / "ZOther"
     _touch(broken / "ZOther - 0001.jxl")
@@ -54,6 +53,8 @@ def test_scan_orders_images_and_finds_cover(tmp_path):
         "Film [2001][tmdb-1] - 0002 [M].jxl",
     ]
     assert movie.cover is not None
+    assert movie.metadata.original_title == "Original Film"
+    assert movie.metadata.release_date == "2001-01-01"
 
 
 def test_scan_skips_dotfiles_trash_and_bad_names(tmp_path):

@@ -118,9 +118,11 @@ def _ref_for(path: Path) -> FolderRef:
     return parse_folder_name(path.name) or FolderRef(path.name)
 
 
-def _kind_for(path: Path, ref: FolderRef, meta: FolderMetadata | None) -> str:
-    if meta is not None and meta.kind in {"movie", "series", "season", "episode", "other"}:
-        return meta.kind
+def _kind_for(path: Path, ref: FolderRef) -> str:
+    if parse_season_folder(path.name) is not None:
+        return "season"
+    if parse_episode_folder(path.name) is not None:
+        return "episode"
     if _has_structure(path):
         return "series"
     return "movie" if ref.tmdb_id is not None else "other"
@@ -129,14 +131,14 @@ def _kind_for(path: Path, ref: FolderRef, meta: FolderMetadata | None) -> str:
 def scan_entity(path: Path, *, kind: str | None = None) -> Entity:
     ref = _ref_for(path)
     meta = _read_meta(path)
-    resolved_kind = kind or _kind_for(path, ref, meta)
+    resolved_kind = kind or _kind_for(path, ref)
 
     if resolved_kind in {"movie", "other"}:
         scope = NameScope(ref.title, ref.year, ref.tmdb_id) if resolved_kind == "movie" else NameScope(ref.title)
         return Entity(
             kind=resolved_kind,
             path=path,
-            title=meta.title if meta else ref.title,
+            title=ref.title,
             year=ref.year,
             tmdb_id=ref.tmdb_id,
             season=None,
@@ -183,7 +185,7 @@ def _scan_series(path: Path, ref: FolderRef, meta: FolderMetadata | None) -> Ent
     return Entity(
         kind="series",
         path=path,
-        title=meta.title if meta else ref.title,
+        title=ref.title,
         year=ref.year,
         tmdb_id=ref.tmdb_id,
         season=None,
@@ -206,7 +208,7 @@ def _scan_season(path: Path, series_ref: FolderRef, meta: FolderMetadata | None)
     return Entity(
         kind="season",
         path=path,
-        title=meta.title if meta else f"S{season:02d}",
+        title=f"S{season:02d}",
         year=series_ref.year,
         tmdb_id=series_ref.tmdb_id,
         season=season,
@@ -227,7 +229,7 @@ def _scan_episode(path: Path, series_ref: FolderRef, default_season: int, meta: 
     return Entity(
         kind="episode",
         path=path,
-        title=meta.title if meta else episode,
+        title=episode,
         year=series_ref.year,
         tmdb_id=series_ref.tmdb_id,
         season=season,
