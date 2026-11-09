@@ -1,11 +1,33 @@
+from io import BytesIO
 from urllib.parse import quote
 
 import pytest
 from folders.services import create_movie, create_series
 from jobs.models import Job
+from PIL import Image
 
 from filesystem.metadata import FolderMetadata, write_metadata
 from tmdb import MovieDetail
+
+
+def png_bytes() -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", (32, 48), (10, 20, 30)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+class FakePosterClient:
+    def __init__(self, token):
+        assert token == "token"
+
+    def posters(self, tmdb_id, kind="movie"):
+        return ["/p.jpg"]
+
+    def image_url(self, path, size="w500"):
+        return f"https://image.tmdb.org/t/p/{size}{path}"
+
+    def download_image(self, path, size="original"):
+        return png_bytes()
 
 
 @pytest.fixture
@@ -72,15 +94,54 @@ def test_hidden_folder_is_marked_in_list(auth_client, library):
 
 
 @pytest.mark.django_db
-def test_create_series_enqueues_job(auth_client, library, settings):
+def test_create_series_enqueues_job(auth_client, library, settings, monkeypatch):
     settings.TMDB_READ_TOKEN = "token"
+    monkeypatch.setattr("folders.views.TMDBClient", FakePosterClient)
     response = auth_client.post(
         "/folders/new",
-        {"kind": "series", "title": "Show", "year": 2020, "tmdb_id": 2, "copyright": ""},
+        {
+            "kind": "series",
+            "title": "Show",
+            "year": 2020,
+            "tmdb_id": 2,
+            "copyright": "",
+            "cover_path": "/p.jpg",
+        },
     )
     assert response.status_code == 302
-    assert Job.objects.filter(kind="folders.create_series").exists()
+    job = Job.objects.get(kind="folders.create_series")
+    assert job.params["cover_path"] == "/p.jpg"
     assert not (library / "Show [2020][tmdb-2]").exists()
+
+
+def test_create_movie_with_tmdb_cover(auth_client, library, settings, monkeypatch):
+    settings.TMDB_READ_TOKEN = "token"
+    monkeypatch.setattr("folders.views.TMDBClient", FakePosterClient)
+    response = auth_client.post(
+        "/folders/new",
+        {
+            "kind": "movie",
+            "title": "Covered",
+            "year": 2002,
+            "tmdb_id": 2,
+            "copyright": "",
+            "cover_path": "/p.jpg",
+        },
+    )
+    assert response.status_code == 302
+    with Image.open(library / "Covered [2002][tmdb-2]" / ".cover.jxl") as cover:
+        assert cover.size == (32, 48)
+
+
+def test_create_page_lists_posters(auth_client, library, settings, monkeypatch):
+    settings.TMDB_READ_TOKEN = "token"
+    monkeypatch.setattr("folders.views.TMDBClient", FakePosterClient)
+    response = auth_client.get(
+        "/folders/new",
+        {"kind": "movie", "title": "Covered", "year": 2002, "tmdb_id": 2},
+    )
+    assert b"/p.jpg" in response.content
+    assert b"w185" in response.content
 
 
 @pytest.mark.django_db

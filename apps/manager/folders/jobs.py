@@ -11,10 +11,14 @@ from .services import add_season, build_series_from_tmdb, delete_entity
 def create_series_job(job, ctx):
     client = TMDBClient(settings.TMDB_READ_TOKEN)
     detail = client.series(int(job.params["tmdb_id"]))
+    cover_bytes = None
+    if job.params.get("cover_path"):
+        cover_bytes = client.download_image(job.params["cover_path"])
     path = build_series_from_tmdb(
         root=settings.WALLPAPER_ROOT,
         detail=detail,
         copyright=job.params.get("copyright", ""),
+        cover_bytes=cover_bytes,
     )
     return {"path": path.name}
 

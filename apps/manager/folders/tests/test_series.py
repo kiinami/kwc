@@ -1,5 +1,8 @@
+from io import BytesIO
+
 import pytest
 from folders.services import add_season, build_series_from_tmdb, promote_flat_series
+from PIL import Image
 
 from filesystem.metadata import read_metadata
 from tmdb import EpisodeDetail, SeasonDetail, SeriesDetail
@@ -26,6 +29,18 @@ def series(*seasons: SeasonDetail) -> SeriesDetail:
         last_air_date="2022-06-01",
         seasons=tuple(seasons),
     )
+
+
+def png_bytes() -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", (32, 48), (10, 20, 30)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def test_series_cover_is_written(tmp_path):
+    path = build_series_from_tmdb(root=tmp_path, detail=series(season(1)), cover_bytes=png_bytes())
+    with Image.open(path / ".cover.jxl") as cover:
+        assert cover.size == (32, 48)
 
 
 def test_single_season_series_skips_season_folder(tmp_path):

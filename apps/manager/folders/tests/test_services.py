@@ -1,7 +1,16 @@
+from io import BytesIO
+
 import pytest
 from folders.services import create_movie, create_other, create_series
+from PIL import Image
 
 from filesystem.metadata import read_metadata
+
+
+def png_bytes() -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", (32, 48), (10, 20, 30)).save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
 def test_create_movie_writes_metadata(tmp_path):
@@ -9,6 +18,12 @@ def test_create_movie_writes_metadata(tmp_path):
     assert path.name == "Film [2001][tmdb-1]"
     data = read_metadata(path)
     assert (data.kind, data.title, data.tmdb_id) == ("movie", "Film", 1)
+
+
+def test_create_movie_can_write_a_cover(tmp_path):
+    path = create_movie(root=tmp_path, title="Film", year=2001, tmdb_id=1, cover_bytes=png_bytes())
+    with Image.open(path / ".cover.jxl") as cover:
+        assert cover.size == (32, 48)
 
 
 def test_create_series_writes_metadata(tmp_path):

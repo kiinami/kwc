@@ -1,3 +1,4 @@
+import pytest
 import responses
 
 from tmdb import MovieDetail, TMDBClient, TMDBError
@@ -72,6 +73,32 @@ def test_retries_once_on_429(monkeypatch):
     responses.get(f"{BASE}/movie/1", status=429)
     responses.get(f"{BASE}/movie/1", json={"id": 1, "title": "Film", "original_title": "Film"})
     assert make_client().movie(1).title == "Film"
+
+
+@responses.activate
+def test_posters_are_english_and_ordered_by_votes():
+    responses.get(
+        f"{BASE}/movie/1/images",
+        json={
+            "posters": [
+                {"file_path": "/a.jpg", "iso_639_1": "en", "vote_average": 5, "vote_count": 10},
+                {"file_path": "/b.jpg", "iso_639_1": None, "vote_average": 8, "vote_count": 20},
+                {"file_path": "/c.jpg", "iso_639_1": "fr", "vote_average": 9, "vote_count": 30},
+            ]
+        },
+    )
+    assert make_client().posters(1) == ["/b.jpg", "/a.jpg"]
+
+
+@responses.activate
+def test_download_image_returns_bytes():
+    responses.get("https://image.tmdb.org/t/p/original/p.jpg", body=b"image-bytes")
+    assert make_client().download_image("/p.jpg") == b"image-bytes"
+
+
+def test_download_image_rejects_traversal():
+    with pytest.raises(ValueError):
+        make_client().download_image("../etc/passwd")
 
 
 @responses.activate

@@ -9,6 +9,7 @@ class FolderCreateForm(forms.Form):
     year = forms.IntegerField(required=False, min_value=1000, max_value=9999)
     tmdb_id = forms.IntegerField(required=False, min_value=1)
     copyright = forms.CharField(max_length=500, required=False)
+    cover_path = forms.CharField(required=False)
 
     def clean(self):
         cleaned = super().clean()

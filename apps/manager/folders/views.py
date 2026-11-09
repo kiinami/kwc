@@ -82,41 +82,79 @@ def folder_detail(request, path: str):
     return render(request, "folders/detail.html", _detail_context(root, entity))
 
 
+def _poster_data(kind: str, tmdb_id: str | None):
+    token = getattr(settings, "TMDB_READ_TOKEN", "")
+    if not token or not tmdb_id or kind not in {"movie", "series"}:
+        return [], "", None
+    client = TMDBClient(token)
+    try:
+        paths = client.posters(int(tmdb_id), kind)
+    except TMDBError as exc:
+        return [], str(exc), client
+    return [{"path": path, "url": client.image_url(path, "w185")} for path in paths], "", client
+
+
 def folder_create(request):
     initial = {key: request.GET[key] for key in ("kind", "title", "year", "tmdb_id") if request.GET.get(key)}
     form = FolderCreateForm(request.POST or None, initial=initial)
+    kind = request.POST.get("kind") or request.GET.get("kind") or "movie"
+    tmdb_id = request.POST.get("tmdb_id") or request.GET.get("tmdb_id")
+    poster_options, poster_message, poster_client = _poster_data(kind, tmdb_id)
+
     if request.method == "POST" and form.is_valid():
         root = settings.WALLPAPER_ROOT
         kind = form.cleaned_data["kind"]
         copyright = form.cleaned_data.get("copyright", "")
-        try:
-            if kind == "movie":
-                folder = services.create_movie(
-                    root=root,
-                    title=form.cleaned_data["title"],
-                    year=form.cleaned_data["year"],
-                    tmdb_id=form.cleaned_data["tmdb_id"],
-                    copyright=copyright,
-                )
-            elif kind == "series":
-                if not getattr(settings, "TMDB_READ_TOKEN", ""):
-                    form.add_error(None, "TMDB_READ_TOKEN is not configured.")
-                else:
-                    enqueue(
-                        "folders.create_series",
-                        {"tmdb_id": form.cleaned_data["tmdb_id"], "copyright": copyright},
-                    )
-                    return redirect("folder-list")
+        cover_path = form.cleaned_data.get("cover_path", "")
+        cover_bytes = None
+        if cover_path:
+            if poster_client is None or cover_path not in {option["path"] for option in poster_options}:
+                form.add_error("cover_path", "Choose one of the TMDB posters.")
             else:
-                folder = services.create_other(root=root, title=form.cleaned_data["title"], copyright=copyright)
-        except (FileExistsError, ValueError) as exc:
-            form.add_error(None, str(exc))
-        else:
-            return redirect("folder-detail", path=_relative(root, folder))
+                try:
+                    cover_bytes = poster_client.download_image(cover_path)
+                except TMDBError as exc:
+                    form.add_error(None, str(exc))
+
+        if not form.errors:
+            try:
+                if kind == "movie":
+                    folder = services.create_movie(
+                        root=root,
+                        title=form.cleaned_data["title"],
+                        year=form.cleaned_data["year"],
+                        tmdb_id=form.cleaned_data["tmdb_id"],
+                        copyright=copyright,
+                        cover_bytes=cover_bytes,
+                    )
+                elif kind == "series":
+                    if not getattr(settings, "TMDB_READ_TOKEN", ""):
+                        form.add_error(None, "TMDB_READ_TOKEN is not configured.")
+                    else:
+                        enqueue(
+                            "folders.create_series",
+                            {
+                                "tmdb_id": form.cleaned_data["tmdb_id"],
+                                "copyright": copyright,
+                                "cover_path": cover_path,
+                            },
+                        )
+                        return redirect("folder-list")
+                else:
+                    folder = services.create_other(root=root, title=form.cleaned_data["title"], copyright=copyright)
+            except (FileExistsError, ValueError) as exc:
+                form.add_error(None, str(exc))
+            else:
+                return redirect("folder-detail", path=_relative(root, folder))
     return render(
         request,
         "folders/create.html",
-        {"form": form, "search_form": SearchForm(initial={"kind": request.GET.get("kind", "movie")})},
+        {
+            "form": form,
+            "search_form": SearchForm(initial={"kind": request.GET.get("kind", "movie")}),
+            "poster_options": poster_options,
+            "poster_message": poster_message,
+        },
     )
 
 
@@ -221,7 +259,13 @@ def folder_search(request):
                 if kind == "series":
                     hits = client.search_series(form.cleaned_data["query"])
                     results = [
-                        {"id": hit.id, "title": hit.name, "year": (hit.first_air_date or "")[:4], "kind": "series"}
+                        {
+                            "id": hit.id,
+                            "title": hit.name,
+                            "year": (hit.first_air_date or "")[:4],
+                            "kind": "series",
+                            "poster": client.image_url(hit.poster_path, "w185") if hit.poster_path else "",
+                        }
                         for hit in hits
                     ]
                 else:
@@ -232,6 +276,7 @@ def folder_search(request):
                             "title": hit.title,
                             "year": (hit.release_date or "")[:4],
                             "kind": "movie",
+                            "poster": client.image_url(hit.poster_path, "w185") if hit.poster_path else "",
                         }
                         for hit in hits
                     ]

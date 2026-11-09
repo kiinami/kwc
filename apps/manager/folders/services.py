@@ -6,6 +6,7 @@ from uuid import uuid4
 from filesystem.metadata import FolderMetadata, read_metadata, write_metadata
 from filesystem.naming import episode_folder, folder_name, season_folder
 from filesystem.scan import scan_entity
+from media.jxl import encode_jxl_bytes
 from tmdb import SeasonDetail, SeriesDetail
 
 
@@ -19,8 +20,21 @@ def _make_folder(root: Path, name: str, metadata: FolderMetadata) -> Path:
     return folder
 
 
-def create_movie(*, root: Path, title: str, year: int, tmdb_id: int, copyright: str = "") -> Path:
-    return _make_folder(
+def _write_cover(folder: Path, cover_bytes: bytes | None) -> None:
+    if cover_bytes is not None:
+        encode_jxl_bytes(cover_bytes, folder / ".cover.jxl")
+
+
+def create_movie(  # noqa: PLR0913
+    *,
+    root: Path,
+    title: str,
+    year: int,
+    tmdb_id: int,
+    copyright: str = "",
+    cover_bytes: bytes | None = None,
+) -> Path:
+    folder = _make_folder(
         root,
         folder_name(title, year=year, tmdb_id=tmdb_id),
         FolderMetadata(
@@ -30,6 +44,8 @@ def create_movie(*, root: Path, title: str, year: int, tmdb_id: int, copyright: 
             copyright=copyright or None,
         ),
     )
+    _write_cover(folder, cover_bytes)
+    return folder
 
 
 def create_series(*, root: Path, title: str, year: int, tmdb_id: int, copyright: str = "") -> Path:
@@ -100,7 +116,13 @@ def _create_season(series_path: Path, season: SeasonDetail) -> Path:
     return folder
 
 
-def build_series_from_tmdb(*, root: Path, detail: SeriesDetail, copyright: str = "") -> Path:
+def build_series_from_tmdb(
+    *,
+    root: Path,
+    detail: SeriesDetail,
+    copyright: str = "",
+    cover_bytes: bytes | None = None,
+) -> Path:
     if not detail.first_air_date:
         raise ValueError("series has no first air date")
     year = int(detail.first_air_date[:4])
@@ -117,6 +139,7 @@ def build_series_from_tmdb(*, root: Path, detail: SeriesDetail, copyright: str =
         metadata.first_release_date = detail.first_air_date
         metadata.last_release_date = detail.last_air_date
         write_metadata(path, metadata)
+    _write_cover(path, cover_bytes)
 
     if len(detail.seasons) <= 1:
         for season in detail.seasons:

@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from media.jxl import ImageTooLarge, encode_jxl, probe_dimensions
+from media.jxl import ImageTooLarge, encode_jxl, encode_jxl_bytes, probe_dimensions
 
 
 def make_png(path: Path, size: tuple[int, int] = (32, 24), color: tuple[int, int, int] = (10, 20, 30)) -> Path:
@@ -17,6 +17,16 @@ def test_encode_jxl_round_trip_pixels(tmp_path):
     source = make_png(tmp_path / "a.png")
     dest = tmp_path / "a.jxl"
     encode_jxl(source, dest)
+    assert probe_dimensions(dest) == (32, 24)
+    with Image.open(dest) as image:
+        image.load()
+        assert image.getpixel((1, 1)) == (200, 100, 50)
+
+
+def test_encode_bytes_round_trip(tmp_path):
+    source = make_png(tmp_path / "a.png")
+    dest = tmp_path / "a.jxl"
+    encode_jxl_bytes(source.read_bytes(), dest)
     assert probe_dimensions(dest) == (32, 24)
     with Image.open(dest) as image:
         image.load()

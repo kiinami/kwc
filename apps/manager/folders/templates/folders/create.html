@@ -17,6 +17,7 @@
       {% for result in results %}
         <p>
           <a href="{% url 'folder-create' %}?kind={{ result.kind }}&title={{ result.title|urlencode }}&year={{ result.year }}&tmdb_id={{ result.id }}">
+            {% if result.poster %}<img src="{{ result.poster }}" alt="" width="46" height="69" style="vertical-align: middle;">{% endif %}
             {{ result.title }}{% if result.year %} ({{ result.year }}){% endif %}
           </a>
         </p>
@@ -28,8 +29,23 @@
     {% csrf_token %}
     {{ form.non_field_errors }}
     {% for field in form %}
-      <div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>
+      {% if field.name != "cover_path" %}
+        <div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>
+      {% endif %}
     {% endfor %}
+    {% if poster_message %}<p class="errorlist">{{ poster_message }}</p>{% endif %}
+    {% if poster_options %}
+      <fieldset class="posters">
+        <legend>Cover poster</legend>
+        {% for poster in poster_options %}
+          <label>
+            <input type="radio" name="cover_path" value="{{ poster.path }}" {% if form.cover_path.value == poster.path %}checked{% endif %}>
+            <img src="{{ poster.url }}" alt="">
+          </label>
+        {% endfor %}
+        {{ form.cover_path.errors }}
+      </fieldset>
+    {% endif %}
     <button type="submit">Create</button>
   </form>
 {% endblock %}

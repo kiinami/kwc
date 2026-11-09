@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+from io import BytesIO
 from pathlib import Path
 
 import pillow_jxl  # noqa: F401  (registers the JXL plugin with Pillow)
@@ -37,6 +38,19 @@ def encode_jxl(
     if width * height > pixel_budget:
         raise ImageTooLarge(f"{source.name} is {width}x{height}, over the {pixel_budget} pixel budget")
     with Image.open(source) as image:
+        _normalize(image).save(dest, format="JXL", lossless=lossless)
+
+
+def encode_jxl_bytes(
+    data: bytes,
+    dest: Path,
+    *,
+    lossless: bool = True,
+    pixel_budget: int = DEFAULT_PIXEL_BUDGET,
+) -> None:
+    with Image.open(BytesIO(data)) as image:
+        if image.width * image.height > pixel_budget:
+            raise ImageTooLarge(f"image is {image.width}x{image.height}, over the {pixel_budget} pixel budget")
         _normalize(image).save(dest, format="JXL", lossless=lossless)
 
 

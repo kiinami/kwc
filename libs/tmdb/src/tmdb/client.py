@@ -14,6 +14,7 @@ class MovieDetail:
     title: str
     original_title: str
     release_date: str | None
+    poster_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class SeriesDetail:
     first_air_date: str | None
     last_air_date: str | None
     seasons: tuple[SeasonDetail, ...]
+    poster_path: str | None = None
 
 
 class TMDBError(RuntimeError):
@@ -95,6 +97,7 @@ class TMDBClient:
                 first_air_date=item.get("first_air_date"),
                 last_air_date=item.get("last_air_date"),
                 seasons=(),
+                poster_path=item.get("poster_path"),
             )
             for item in payload.get("results", [])
         ]
@@ -117,7 +120,31 @@ class TMDBClient:
             first_air_date=payload.get("first_air_date"),
             last_air_date=payload.get("last_air_date"),
             seasons=seasons,
+            poster_path=payload.get("poster_path"),
         )
+
+    @staticmethod
+    def image_url(path: str, size: str = "w500") -> str:
+        return f"https://image.tmdb.org/t/p/{size}{path}"
+
+    def posters(self, tmdb_id: int, kind: str = "movie") -> list[str]:
+        endpoint = "movie" if kind == "movie" else "tv"
+        payload = self._get(f"/{endpoint}/{tmdb_id}/images", include_image_language="en,null")
+        items = [
+            item
+            for item in payload.get("posters", [])
+            if item.get("file_path") and item.get("iso_639_1") in (None, "en")
+        ]
+        items.sort(key=lambda item: (item.get("vote_average", 0), item.get("vote_count", 0)), reverse=True)
+        return [item["file_path"] for item in items]
+
+    def download_image(self, path: str, size: str = "original") -> bytes:
+        if not path.startswith("/") or ".." in path:
+            raise ValueError(f"invalid TMDB image path: {path}")
+        response = self.session.get(self.image_url(path, size), timeout=30)
+        if response.status_code >= 400:
+            raise TMDBError(f"TMDB image {response.status_code}: {response.text[:200]}")
+        return response.content
 
     def _movie(self, payload: dict) -> MovieDetail:
         return MovieDetail(
@@ -125,6 +152,7 @@ class TMDBClient:
             title=str(payload.get("title", "")),
             original_title=str(payload.get("original_title", "")),
             release_date=payload.get("release_date"),
+            poster_path=payload.get("poster_path"),
         )
 
     def _season(self, tmdb_id: int, season_number: int) -> SeasonDetail:
