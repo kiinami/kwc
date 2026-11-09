@@ -1,18 +1,15 @@
 {% extends "base.html" %}
 {% block title %}Library · KWC manager{% endblock %}
 {% block content %}
-  {% for heading, rows in sections %}
-    <h2>{{ heading }}</h2>
-    <div class="grid">
-      {% for row in rows %}
-        <a class="card" href="{% url 'folder-detail' path=row.rel %}">
-          <div>{{ row.entity.title }}</div>
-          <div class="muted">{{ row.entity.images|length }} images{% if row.entity.children %} · {{ row.entity.children|length }} folders{% endif %}</div>
-          {% if row.entity.metadata.hidden %}<div class="muted">hidden</div>{% endif %}
-        </a>
-      {% empty %}
-        <p class="muted">Nothing here yet.</p>
-      {% endfor %}
-    </div>
-  {% endfor %}
+  <div class="grid">
+    {% for row in rows %}
+      <a class="card" href="{% url 'folder-detail' path=row.rel %}">
+        <div>{{ row.entity.title }}</div>
+        <div class="muted">{{ row.entity.images|length }} images{% if row.entity.children %} · {{ row.entity.children|length }} folders{% endif %}</div>
+        {% if row.entity.metadata.hidden %}<div class="muted">hidden</div>{% endif %}
+      </a>
+    {% empty %}
+      <p class="muted">Nothing here yet.</p>
+    {% endfor %}
+  </div>
 {% endblock %}

@@ -7,6 +7,7 @@ from django.views.decorators.http import require_POST
 from jobs.models import enqueue
 
 from filesystem.operations import PathEscape, resolve_under
+from filesystem.ordering import sort_entities
 from filesystem.scan import Entity, scan_archive, scan_entity
 from filesystem.validate import validate_archive
 from tmdb import TMDBClient, TMDBError
@@ -26,16 +27,11 @@ def _entity_row(root: Path, entity: Entity) -> dict:
 def folder_list(request):
     archive = scan_archive(settings.WALLPAPER_ROOT)
     root = settings.WALLPAPER_ROOT
+    entities = sort_entities([*archive.movies, *archive.series, *archive.others])
     return render(
         request,
         "folders/list.html",
-        {
-            "sections": [
-                ("Movies", [_entity_row(root, entity) for entity in archive.movies]),
-                ("Series", [_entity_row(root, entity) for entity in archive.series]),
-                ("Others", [_entity_row(root, entity) for entity in archive.others]),
-            ]
-        },
+        {"rows": [_entity_row(root, entity) for entity in entities]},
     )
 
 

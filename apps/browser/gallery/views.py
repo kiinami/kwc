@@ -7,6 +7,7 @@ from django.shortcuts import render
 
 from filesystem.metadata import MetadataError, read_metadata
 from filesystem.operations import PathEscape, resolve_under
+from filesystem.ordering import sort_entities
 from filesystem.scan import Entity, scan_archive, scan_entity
 from media.derivatives import DerivativeCache
 from media.metadata import read_image_metadata
@@ -76,19 +77,12 @@ def _groups(entity: Entity) -> list[dict]:
 def index(request):
     root = settings.WALLPAPER_ROOT
     archive = scan_archive(root)
-    sections = []
-    for label, entities in (
-        ("Movies", archive.movies),
-        ("Series", archive.series),
-        ("Others", archive.others),
-    ):
-        rows = [_row(root, entity) for entity in entities if _visible(entity)]
-        if rows:
-            sections.append((label, rows))
+    entities = sort_entities([*archive.movies, *archive.series, *archive.others])
+    rows = [_row(root, entity) for entity in entities if _visible(entity)]
     return render(
         request,
         "gallery/index.html",
-        {"sections": sections, "download_max_bytes": settings.KWC_DOWNLOAD_MAX_BYTES},
+        {"rows": rows, "download_max_bytes": settings.KWC_DOWNLOAD_MAX_BYTES},
     )
 
 

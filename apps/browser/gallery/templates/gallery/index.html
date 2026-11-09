@@ -1,8 +1,7 @@
 {% extends "gallery/base.html" %}
 {% block title %}Wallpapers{% endblock %}
 {% block content %}
-  {% for label, rows in sections %}
-    <h2>{{ label }}</h2>
+  {% if rows %}
     <div class="grid">
       {% for row in rows %}
         <a class="card" href="{% url 'gallery-folder' path=row.rel %}">
@@ -12,11 +11,11 @@
         </a>
       {% endfor %}
     </div>
-  {% empty %}
+  {% else %}
     <p class="muted">Nothing to show yet.</p>
-  {% endfor %}
+  {% endif %}
 
-  {% if sections %}
+  {% if rows %}
     <form class="download" data-download="library" data-max-bytes="{{ download_max_bytes }}">
       <select name="scope"><option value="curated">Curated</option><option value="all">All frames</option></select>
       <select name="format"><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="png">PNG</option></select>

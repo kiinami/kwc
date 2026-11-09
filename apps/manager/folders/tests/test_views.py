@@ -54,6 +54,19 @@ def test_list_view_lists_entities(auth_client, library):
     assert b"Film" in response.content
 
 
+def test_list_orders_newest_first(auth_client, library):
+    newer = create_movie(
+        root=library,
+        title="Newer",
+        year=2020,
+        tmdb_id=9,
+        release_date="2020-01-01",
+    )
+    (newer / "Newer [2020][tmdb-9] - 0001.jxl").write_text("")
+    response = auth_client.get("/")
+    assert response.content.index(b"Newer") < response.content.index(b"Film")
+
+
 def test_detail_view_lists_images(auth_client, library):
     response = auth_client.get("/folders/" + quote("Film [2001][tmdb-1]"))
     assert response.status_code == 200

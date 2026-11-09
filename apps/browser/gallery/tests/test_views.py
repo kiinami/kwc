@@ -65,6 +65,15 @@ def test_folder_hides_variants_and_shows_counts(client, library):
     assert b"1 / 2" in response.content
 
 
+def test_index_orders_newest_first(client, library, tmp_path):
+    newer = tmp_path / "Newer [2020][tmdb-9]"
+    newer.mkdir()
+    write_metadata(newer, FolderMetadata(release_date="2020-01-01"))
+    jxl(newer / "Newer [2020][tmdb-9] - 0001.jxl")
+    response = client.get("/")
+    assert response.content.index(b"Newer") < response.content.index(b"Film")
+
+
 def test_folder_shows_tmdb_metadata(client, library):
     response = client.get("/browse/" + quote("Film [2001][tmdb-1]"))
     assert b"Original Film" in response.content
