@@ -4,14 +4,18 @@ from django import forms
 
 
 class ImportForm(forms.Form):
-    target = forms.CharField(max_length=1024, label="Target folder (relative to the wallpaper root)")
-    source = forms.CharField(max_length=1024, label="Source folder (relative to the import root)")
+    target = forms.ChoiceField(choices=(), label="Destination media")
+    source = forms.CharField(widget=forms.HiddenInput)
     regex = forms.CharField(
         max_length=1024,
         label="Filename regex",
         help_text="Must contain a named group: (?P<index>...) and may contain (?P<type>...).",
     )
     pick_all = forms.BooleanField(required=False, label="Mark imported images as picked")
+
+    def __init__(self, *args, targets=(), **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["target"].choices = targets
 
     def clean_regex(self):
         value = self.cleaned_data["regex"]

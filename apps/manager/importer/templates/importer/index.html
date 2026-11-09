@@ -5,8 +5,16 @@
   <form method="post" class="card">
     {% csrf_token %}
     {{ form.non_field_errors }}
+    <div class="field">
+      <label>Legacy images folder</label>
+      <input type="text" value="{{ form.source.value|default:'' }}" readonly>
+      <a class="button" href="{% url 'importer-browse' %}{% if form.source.value %}?path={{ form.source.value|urlencode }}{% endif %}">Browse…</a>
+      {{ form.source }}{{ form.source.errors }}
+    </div>
     {% for field in form %}
-      <div class="field">{{ field.label_tag }}{{ field }}{{ field.help_text }}{{ field.errors }}</div>
+      {% if field.name != "source" %}
+        <div class="field">{{ field.label_tag }}{{ field }}{{ field.help_text }}{{ field.errors }}</div>
+      {% endif %}
     {% endfor %}
     <button type="submit">Preview</button>
   </form>

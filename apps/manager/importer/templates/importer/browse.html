@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Choose import folder · KWC manager{% endblock %}
+{% block content %}
+  <p><a href="{% url 'importer-index' %}">← Importer</a></p>
+  <h1>Choose the legacy images folder</h1>
+  {% if missing %}
+    <p class="card">The import folder is not mounted. Set <code>KWC_IMPORT_HOST_DIR</code> and restart the manager.</p>
+  {% else %}
+    <p class="muted">
+      {% for crumb in crumbs %}<a href="?path={{ crumb.rel|urlencode }}">{{ crumb.name }}</a> / {% endfor %}
+    </p>
+    {% if parent is not None %}<p><a href="?path={{ parent|urlencode }}">← Up</a></p>{% endif %}
+    <ul class="card">
+      {% for entry in entries %}
+        <li>
+          <a href="?path={{ entry.rel|urlencode }}">{{ entry.name }}</a>
+          <a class="muted" href="{% url 'importer-index' %}?source={{ entry.rel|urlencode }}">Use this folder</a>
+        </li>
+      {% empty %}
+        <li class="muted">No subfolders.</li>
+      {% endfor %}
+    </ul>
+    <p>
+      <a class="button" href="{% url 'importer-index' %}?source={{ current|default:'.'|urlencode }}">Use this folder</a>
+    </p>
+  {% endif %}
+{% endblock %}
