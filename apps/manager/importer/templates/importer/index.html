@@ -30,6 +30,16 @@
         <h3>Unmatched</h3>
         <ul>{% for path in plan.unmatched %}<li>{{ path.name }}</li>{% endfor %}</ul>
       {% endif %}
+      {% if not plan.collisions %}
+        <form method="post" action="{% url 'importer-run' %}">
+          {% csrf_token %}
+          <input type="hidden" name="target" value="{{ form.target.value }}">
+          <input type="hidden" name="source" value="{{ form.source.value }}">
+          <input type="hidden" name="regex" value="{{ form.regex.value }}">
+          <label><input type="checkbox" name="pick_all" {% if form.cleaned_data.pick_all %}checked{% endif %}> Mark as picked</label>
+          <button type="submit">Run import</button>
+        </form>
+      {% endif %}
     </div>
   {% endif %}
 {% endblock %}

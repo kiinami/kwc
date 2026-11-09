@@ -5,8 +5,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
+from jobs.worker import JobContext
+
 from filesystem.naming import ImageName, NameScope, image_filename, parse_folder_name, parse_season_folder
 from filesystem.scan import Entity, scan_entity
+from media.hashing import sha256_file
+from media.jxl import encode_jxl
+from media.metadata import ImageMetadata, write_image_metadata
 
 DEFAULT_TYPE_MAP: dict[str, frozenset[str]] = {
     "U": frozenset({"U"}),
@@ -106,3 +111,38 @@ def build_plan(
         matches.append(ImportMatch(source=source, index=index, flags=flags, variant=None, target_name=name))
 
     return ImportPlan(tuple(matches), tuple(unmatched), tuple(collisions))
+
+
+def run_plan(*, plan: ImportPlan, target: Path, pick_all: bool, copyright: str, ctx: JobContext) -> dict:
+    if plan.collisions:
+        raise ValueError("import plan has collisions: " + "; ".join(plan.collisions[:5]))
+    target = target.resolve()
+    scope = _scope_for(target, scan_entity(target))
+    imported = 0
+    total = len(plan.matches)
+    for current, match in enumerate(plan.matches, start=1):
+        ctx.check_cancelled()
+        final = target / image_filename(
+            scope,
+            ImageName(match.index, pick_all, match.flags, match.variant),
+        )
+        if final.exists():
+            raise FileExistsError(f"target already exists: {final.name}")
+        temporary = target / f".import-{match.index:04d}-{current}.tmp"
+        try:
+            encode_jxl(match.source, temporary)
+            write_image_metadata(
+                temporary,
+                ImageMetadata(
+                    source_sha256=sha256_file(match.source),
+                    copyright=copyright or None,
+                    generator="import",
+                    source=match.source.name,
+                ),
+            )
+            temporary.replace(final)
+        finally:
+            temporary.unlink(missing_ok=True)
+        imported += 1
+        ctx.progress(current, total=total, message=f"imported {current}/{total}")
+    return {"imported": imported}
