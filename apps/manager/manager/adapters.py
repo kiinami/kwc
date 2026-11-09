@@ -29,7 +29,13 @@ class ManagerSocialAccountAdapter(DefaultSocialAccountAdapter):
     @staticmethod
     def _email(sociallogin) -> str:
         user = getattr(sociallogin, "user", None)
-        return getattr(user, "email", None) or sociallogin.account.extra_data.get("email") or ""
+        email = getattr(user, "email", None) or sociallogin.account.extra_data.get("email")
+        if email:
+            return email
+        for address in getattr(sociallogin, "email_addresses", []) or []:
+            if getattr(address, "email", None):
+                return address.email
+        return ""
 
     def is_open_for_signup(self, request, sociallogin) -> bool:
         return is_allowed(self._email(sociallogin))
