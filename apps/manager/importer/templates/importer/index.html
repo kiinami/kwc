@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Importer · KWC manager{% endblock %}
+{% block content %}
+  <h1>Importer</h1>
+  <form method="post" class="card">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="field">{{ field.label_tag }}{{ field }}{{ field.help_text }}{{ field.errors }}</div>
+    {% endfor %}
+    <button type="submit">Preview</button>
+  </form>
+
+  {% if plan %}
+    <div class="card">
+      <h2>Preview</h2>
+      <p>{{ plan.matches|length }} matches · {{ plan.collisions|length }} collisions · {{ plan.unmatched|length }} unmatched</p>
+      {% if plan.collisions %}
+        <h3>Collisions</h3>
+        <ul>{% for collision in plan.collisions %}<li>{{ collision }}</li>{% endfor %}</ul>
+      {% endif %}
+      <h3>Matches</h3>
+      <table>
+        <tr><th>Source</th><th>Target</th></tr>
+        {% for match in plan.matches %}
+          <tr><td>{{ match.source.name }}</td><td>{{ match.target_name }}</td></tr>
+        {% endfor %}
+      </table>
+      {% if plan.unmatched %}
+        <h3>Unmatched</h3>
+        <ul>{% for path in plan.unmatched %}<li>{{ path.name }}</li>{% endfor %}</ul>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}
