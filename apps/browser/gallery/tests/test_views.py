@@ -96,6 +96,27 @@ def test_lens_page_lists_variants(client, library):
     assert b"(c) Studio" in response.content
 
 
+def test_downloads_json_lists_curated_images(client, library):
+    response = client.get("/downloads.json?curated=1")
+    assert response.status_code == 200
+    names = [item["name"] for item in response.json()["images"]]
+    assert names == ["Film [2001][tmdb-1] - 0001+.jxl"]
+
+
+def test_downloads_json_lists_all_images(client, library):
+    response = client.get("/downloads.json?curated=0")
+    names = [item["name"] for item in response.json()["images"]]
+    assert len(names) == 3
+    assert all(not name.startswith("Hidden") for name in names)
+
+
+def test_folder_page_has_download_controls(client, library):
+    response = client.get("/browse/" + quote("Film [2001][tmdb-1]") + "?curated=0")
+    assert b"data-download" in response.content
+    assert b"download.js" in response.content
+    assert b"zip.js" in response.content
+
+
 def test_traversal_is_rejected(client, library):
     assert client.get("/i/../etc/passwd").status_code == 404
     assert client.get("/browse/../etc").status_code == 404

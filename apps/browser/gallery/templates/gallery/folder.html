@@ -20,15 +20,32 @@
     </div>
   {% endif %}
 
+  {% if groups %}
+    <form class="download" data-download="folder">
+      <label><input type="checkbox" data-select-all> Select all</label>
+      <select name="format"><option value="jpeg">JPEG</option><option value="webp">WebP</option><option value="png">PNG</option></select>
+      <select name="resolution"><option value="original">Original</option><option value="3840">3840</option><option value="2560">2560</option><option value="1920">1920</option><option value="1280">1280</option></select>
+      <button type="submit">Download ZIP</button>
+      <button type="button" data-cancel hidden>Cancel</button>
+      <span class="muted" data-progress></span>
+    </form>
+  {% endif %}
+
   <div class="grid images">
     {% for group in groups %}
-      <a class="tile" data-index="{{ group.index }}" href="{% url 'gallery-lens' path=rel %}?index={{ group.index }}">
-        <img loading="lazy" src="{% url 'gallery-thumb' path=group.rel %}" alt="">
+      <div class="tile" data-index="{{ group.index }}">
+        <a href="{% url 'gallery-lens' path=rel %}?index={{ group.index }}">
+          <img loading="lazy" src="{% url 'gallery-thumb' path=group.rel %}" alt="">
+        </a>
+        <input class="download-pick" type="checkbox" data-name="{{ group.image.name }}" data-url="{% url 'gallery-original' path=group.rel %}" aria-label="Select {{ group.image.name }}">
         {% if group.picked %}<span class="pick">★</span>{% endif %}
         {% if group.count > 1 %}<span class="variants">{{ group.count }} variants</span>{% endif %}
-      </a>
+      </div>
     {% empty %}
       <p class="muted">No images.</p>
     {% endfor %}
   </div>
+  {% load static %}
+  <script src="{% static 'gallery/zip.js' %}"></script>
+  <script src="{% static 'gallery/download.js' %}"></script>
 {% endblock %}

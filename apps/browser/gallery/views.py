@@ -1,7 +1,8 @@
 from pathlib import Path
+from urllib.parse import quote
 
 from django.conf import settings
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
 from django.shortcuts import render
 
 from filesystem.metadata import MetadataError, read_metadata
@@ -218,6 +219,30 @@ def original(request, path: str):
     disposition = "attachment" if request.GET.get("download") else "inline"
     response["Content-Disposition"] = f'{disposition}; filename="{target.name}"'
     return response
+
+
+def _all_images(entity: Entity):
+    if entity.metadata and entity.metadata.hidden:
+        return
+    yield from entity.images
+    for child in entity.children:
+        yield from _all_images(child)
+
+
+def downloads_json(request):
+    root = settings.WALLPAPER_ROOT
+    curated = request.GET.get("curated", "1") != "0"
+    archive = scan_archive(root)
+    images = []
+    for entity in (*archive.movies, *archive.series, *archive.others):
+        if not _visible(entity):
+            continue
+        for image in _all_images(entity):
+            if curated and not image.picked:
+                continue
+            relative = image.path.relative_to(root).as_posix()
+            images.append({"name": image.name, "url": f"/i/{quote(relative)}"})
+    return JsonResponse({"images": images})
 
 
 def takedown(request):

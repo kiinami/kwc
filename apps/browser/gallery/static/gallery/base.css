@@ -16,4 +16,8 @@ main { max-width: 1400px; margin: 0 auto; padding: 1rem; }
 .tile .variants { position: absolute; right: .3rem; bottom: .3rem; background: #000a; color: #fff; padding: .1rem .35rem; border-radius: 999px; font-size: .7rem; }
 .filters { display: flex; gap: .75rem; }
 .filters a[aria-current="page"] { color: var(--text); font-weight: 700; }
+.download { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; margin: 1rem 0; }
+.download select, .download button, .download label { background: var(--panel); color: var(--text); border: 1px solid #343c46; border-radius: 8px; padding: .45rem .6rem; }
+.tile a { display: block; }
+.tile .download-pick { position: absolute; top: .45rem; right: .45rem; width: 1.15rem; height: 1.15rem; }
 @media (max-width: 480px) { header { padding: .75rem; } main { padding: .75rem; } .grid { grid-template-columns: repeat(2, 1fr); } }
