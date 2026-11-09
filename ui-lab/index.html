@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KWC UI lab</title>
+  <link rel="stylesheet" href="assets/lab.css">
+</head>
+<body class="lab">
+  <main class="index">
+    <header class="index-head">
+      <p class="index-kicker">KWC · design directions</p>
+      <h1>Three ways to look at the archive.</h1>
+      <p class="index-lede">Same content, same components, three different temperaments. Open a direction, switch between the browser and the manager, and check both at desktop and phone size. Pick one, or take the parts you like from several.</p>
+    </header>
+
+    <div class="index-grid">
+      <a class="dir-card" href="noir.html">
+        <div class="dir-shot">
+          <img class="dir-main" src="assets/shots/noir-browser.webp" alt="Noir browser library">
+          <img class="dir-inset" src="assets/shots/noir-manager.webp" alt="Noir manager library">
+          <span class="dir-tag">Pico CSS</span>
+        </div>
+        <div class="dir-body">
+          <h2>01 · Noir</h2>
+          <p>The archive as a dark room. Images run edge to edge, chrome recedes to hairlines, and warm gold appears only where the owner made a choice.</p>
+          <div class="dir-traits"><span>Dark</span><span>Edge-to-edge</span><span>Minimal</span></div>
+        </div>
+      </a>
+
+      <a class="dir-card" href="paper.html">
+        <div class="dir-shot">
+          <img class="dir-main" src="assets/shots/paper-browser.webp" alt="Paper browser library">
+          <img class="dir-inset" src="assets/shots/paper-manager.webp" alt="Paper manager library">
+          <span class="dir-tag">Bootstrap 5</span>
+        </div>
+        <div class="dir-body">
+          <h2>02 · Paper</h2>
+          <p>A print room. Serif captions, matte frames, and warm paper make the collection feel edited rather than dumped into a grid.</p>
+          <div class="dir-traits"><span>Editorial</span><span>Light</span><span>Framed</span></div>
+        </div>
+      </a>
+
+      <a class="dir-card" href="studio.html">
+        <div class="dir-shot">
+          <img class="dir-main" src="assets/shots/studio-browser.webp" alt="Studio browser library">
+          <img class="dir-inset" src="assets/shots/studio-manager.webp" alt="Studio manager library">
+          <span class="dir-tag">Bulma</span>
+        </div>
+        <div class="dir-body">
+          <h2>03 · Studio</h2>
+          <p>A working tool. One indigo accent, crisp cards, and a split frame view keep browsing fast and management dense without feeling cramped.</p>
+          <div class="dir-traits"><span>Neutral</span><span>App-like</span><span>Efficient</span></div>
+        </div>
+      </a>
+    </div>
+
+    <section class="index-section">
+      <h2>Where they differ</h2>
+      <table class="compare">
+        <thead>
+          <tr><th></th><th>01 Noir</th><th>02 Paper</th><th>03 Studio</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Atmosphere</td><td>Cinematic, quiet</td><td>Editorial, warm</td><td>Operational, crisp</td></tr>
+          <tr><td>Browser home</td><td>Full-bleed grid, 2–5 columns</td><td>Oversized feature, matte plate grid</td><td>Filterable card grid</td></tr>
+          <tr><td>Frame view</td><td>Black stage with a filmstrip</td><td>Centered print with a caption</td><td>Split stage and inspector</td></tr>
+          <tr><td>Manager</td><td>Slim rail, dense rows</td><td>Masthead nav, paper table</td><td>Sidebar, stats, table</td></tr>
+          <tr><td>Framework</td><td>Pico CSS 2</td><td>Bootstrap 5.3</td><td>Bulma 1.0</td></tr>
+          <tr><td>Choose when</td><td>The images should dominate</td><td>The collection should feel curated</td><td>Everyday management speed matters</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="index-section">
+      <h2>What stays the same</h2>
+      <div class="notes-grid">
+        <article>
+          <h3>One skeleton, three skins</h3>
+          <p>Every direction uses the same header anatomy, spacing scale, filter language, status stamp, progress bar, and row pattern. Only the tokens and layout rhythm change.</p>
+        </article>
+        <article>
+          <h3>The browser stays quiet</h3>
+          <p>No accounts, no write actions, no management chrome. Browse, filter, open a frame, download. The manager carries all the operational weight.</p>
+        </article>
+        <article>
+          <h3>The manager adds density</h3>
+          <p>Stats, row actions, job progress, and error detail appear only on the private side, in the same visual language as the public side.</p>
+        </article>
+        <article>
+          <h3>Responsive for real</h3>
+          <p>The mobile toggle loads a true 390 px viewport, not a scaled screenshot: two-column grids, bottom tabs, collapsed navbars, and stacked inspectors.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="index-section">
+      <h2>How to compare</h2>
+      <div class="notes-grid">
+        <article>
+          <h3>1 · Open a direction</h3>
+          <p>Each direction opens on the browser library. The lab bar stays outside the design, so it will not be part of the final interface.</p>
+        </article>
+        <article>
+          <h3>2 · Switch context</h3>
+          <p>Use <code>Browser</code> / <code>Manager</code> and the screen buttons. Browser shows the library and a frame; manager shows folders and jobs.</p>
+        </article>
+        <article>
+          <h3>3 · Try phone size</h3>
+          <p><code>Mobile</code> renders the page in a real 390 × 844 frame. You can also open the direction URL on your own phone over the LAN.</p>
+        </article>
+        <article>
+          <h3>4 · Then mix</h3>
+          <p>“Noir's image grid with Studio's manager” is a valid answer. Tell me the direction and the parts worth keeping; I'll integrate them into both apps.</p>
+        </article>
+      </div>
+    </section>
+
+    <p class="index-foot">Sample content reuses one imported set across mock folders so the layouts can be judged with real imagery. The titles and counts are placeholders, not library data. Framework CSS is vendored under <code>ui-lab/assets/vendor/</code>; serve the folder with <code>python -m http.server 8090 -d ui-lab</code>.</p>
+  </main>
+</body>
+</html>
