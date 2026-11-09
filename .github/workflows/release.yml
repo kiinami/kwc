@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: App to release
+        required: true
+        default: both
+        type: choice
+        options:
+          - browser
+          - manager
+          - both
+      bump-type:
+        description: Version bump
+        required: true
+        default: patch
+        type: choice
+        options:
+          - none
+          - patch
+          - minor
+          - major
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  version:
+    name: Bump versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      sha: ${{ steps.push.outputs.sha }}
+      browser-version: ${{ steps.browser.outputs.version }}
+      manager-version: ${{ steps.manager.outputs.version }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d  # v7
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Ensure release runs from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "Releases must be dispatched from main, not ${GITHUB_REF_NAME}." >&2
+          exit 1
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare browser release
+        id: browser
+        if: inputs.app == 'browser' || inputs.app == 'both'
+        run: |
+          if [ "${{ inputs.bump-type }}" = "none" ]; then
+            version="$(uv run --group dev python -c \
+              'import tomllib; print(tomllib.load(open("apps/browser/pyproject.toml", "rb"))["project"]["version"])')"
+            git tag -a "browser-v${version}" -m "Release browser ${version}"
+          else
+            uv run --group dev bump-my-version bump "${{ inputs.bump-type }}" \
+              --config-file apps/browser/.bumpversion.toml
+            version="$(uv run --group dev --no-sync python -c \
+              'import tomllib; print(tomllib.load(open("apps/browser/pyproject.toml", "rb"))["project"]["version"])')"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare manager release
+        id: manager
+        if: inputs.app == 'manager' || inputs.app == 'both'
+        run: |
+          if [ "${{ inputs.bump-type }}" = "none" ]; then
+            version="$(uv run --group dev python -c \
+              'import tomllib; print(tomllib.load(open("apps/manager/pyproject.toml", "rb"))["project"]["version"])')"
+            git tag -a "manager-v${version}" -m "Release manager ${version}"
+          else
+            uv run --group dev bump-my-version bump "${{ inputs.bump-type }}" \
+              --config-file apps/manager/.bumpversion.toml
+            version="$(uv run --group dev --no-sync python -c \
+              'import tomllib; print(tomllib.load(open("apps/manager/pyproject.toml", "rb"))["project"]["version"])')"
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Push commit and tags
+        id: push
+        run: |
+          if [ "${{ inputs.bump-type }}" = "none" ]; then
+            git push origin --tags
+          else
+            git push origin HEAD --follow-tags
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  build-browser:
+    name: Build and push browser image
+    needs: version
+    if: needs.version.outputs.browser-version != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the bumped commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/browser/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/kiinami/kwc-browser:${{ needs.version.outputs.browser-version }}
+            ghcr.io/kiinami/kwc-browser:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.version.outputs.browser-version }}
+          cache-from: type=gha,scope=browser
+          cache-to: type=gha,mode=max,scope=browser
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: browser-v${{ needs.version.outputs.browser-version }}
+          name: browser v${{ needs.version.outputs.browser-version }}
+          generate_release_notes: true
+
+  build-manager:
+    name: Build and push manager image
+    needs: version
+    if: needs.version.outputs.manager-version != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the bumped commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f  # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/manager/Dockerfile
+          push: true
+          platforms: linux/amd64
+          tags: |
+            ghcr.io/kiinami/kwc-manager:${{ needs.version.outputs.manager-version }}
+            ghcr.io/kiinami/kwc-manager:latest
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ needs.version.outputs.manager-version }}
+          cache-from: type=gha,scope=manager
+          cache-to: type=gha,mode=max,scope=manager
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: manager-v${{ needs.version.outputs.manager-version }}
+          name: manager v${{ needs.version.outputs.manager-version }}
+          generate_release_notes: true
