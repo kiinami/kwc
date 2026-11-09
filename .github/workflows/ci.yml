@@ -65,6 +65,41 @@ jobs:
       - name: Run Django checks
         run: uv run --group dev --package ${{ matrix.app }} python apps/${{ matrix.app }}/manage.py check
 
+  tests:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DJANGO_DEBUG: "true"
+      DJANGO_SECRET_KEY: ci-only
+      KWC_WALLPAPER_ROOT: ${{ github.workspace }}/data/wallpapers
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v7
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d  # v7
+        with:
+          enable-cache: true
+          python-version: "3.14"
+
+      - name: Install media tools
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libjxl-tools
+
+      - name: Install dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Library tests
+        run: uv run --group dev pytest libs
+
+      - name: Manager tests
+        working-directory: apps/manager
+        run: uv run --group dev --package manager pytest
+
+      - name: Browser tests
+        working-directory: apps/browser
+        run: uv run --group dev --package browser pytest
+
   docker-build:
     name: Docker build (${{ matrix.app }})
     runs-on: ubuntu-latest

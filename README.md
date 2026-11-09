@@ -33,6 +33,8 @@ uv sync
 uv run python apps/browser/manage.py runserver 0.0.0.0:8080
 uv run python apps/manager/manage.py migrate
 uv run python apps/manager/manage.py runserver 0.0.0.0:8081
+# In another terminal: the durable manager worker
+uv run python apps/manager/manage.py runworker
 ```
 
 `.env.example` contains local-only development values (`DJANGO_DEBUG=true` and a throwaway secret). By default the apps read `data/wallpapers` from the repository root and the manager writes its database to `apps/manager/db.sqlite3`.
@@ -74,6 +76,11 @@ All settings are environment-driven. See `.env.example` for the full list. The i
 | --- | --- |
 | `KWC_WALLPAPER_HOST_DIR` | Host folder mounted into both containers |
 | `KWC_MANAGER_DATA_DIR` | Host folder for the manager's SQLite database |
+| `KWC_IMPORT_HOST_DIR` / `KWC_INGEST_HOST_DIR` | Read-only import and video source folders |
+| `TMDB_READ_TOKEN` | TMDB v3 token used by the folder manager |
+| `MANAGER_OIDC_*` / `MANAGER_ALLOWED_EMAILS` | Pocket ID (or any OIDC) client and the login allowlist |
+| `KWC_TAKEDOWN_EMAIL` | Contact address shown on the public browser |
+| `KWC_BROWSER_CACHE_MAX_BYTES` | AVIF derivative cache limit (default 5 GiB) |
 | `KWC_UID` / `KWC_GID` | Host user/group used by both containers |
 | `BROWSER_SECRET_KEY` / `MANAGER_SECRET_KEY` | Required Django secret keys |
 | `BROWSER_ALLOWED_HOSTS` / `MANAGER_ALLOWED_HOSTS` | Comma-separated host names |
@@ -115,14 +122,18 @@ Run the **Release** workflow manually and choose `browser`, `manager`, or `both`
 cp .env.example .env
 uv run --group dev ruff check --no-fix .
 uv run --group dev ruff format --check .
+uv run --group dev pytest libs
+(cd apps/manager && uv run --group dev --package manager pytest)
+(cd apps/browser && uv run --group dev --package browser pytest)
 uv run --group dev python apps/browser/manage.py check
 uv run --group dev python apps/manager/manage.py check
 ```
 
 ## Notes
 
-- The browser is intentionally stateless: no auth, admin, sessions, or database apps.
-- The manager currently uses SQLite with a single gunicorn worker, which is enough for its job history and future OIDC accounts.
-- OIDC wiring for the manager comes later; `django-allauth` is installed but not configured yet.
-- `libs/filesystem` is a placeholder for the shared wallpaper-folder layout. More focused libraries will live under `libs/`.
+- The browser is intentionally stateless: no auth, admin, sessions, or database apps. It caches disposable AVIF derivatives outside the wallpaper folder.
+- The manager uses SQLite with a single gunicorn worker and a separate `worker` service; keep both at one concurrent writer.
+- The manager requires OIDC; configure Pocket ID (or any OpenID Connect provider) and the email allowlist before exposing it.
+- Jobs (imports, series creation, renames, deletes) run in the worker and survive a web restart; interrupted jobs are marked and can be re-run.
+- `libs/filesystem`, `libs/media`, and `libs/tmdb` hold the shared archive, image, and metadata logic.
 - The dev compose stack runs as `KWC_UID`/`KWC_GID`, keeps its virtualenv and uv cache in `/tmp`, and masks `/app/data` read-only so the browser cannot write wallpapers through the repo mount.

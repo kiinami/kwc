@@ -27,6 +27,9 @@ services:
       DJANGO_DEBUG: "true"
       DJANGO_ALLOWED_HOSTS: "*"
       KWC_WALLPAPER_ROOT: /wallpapers
+      KWC_BROWSER_CACHE_ROOT: /tmp/browser-cache
+      KWC_BROWSER_CACHE_MAX_BYTES: ${KWC_BROWSER_CACHE_MAX_BYTES:-5368709120}
+      KWC_TAKEDOWN_EMAIL: ${KWC_TAKEDOWN_EMAIL:-}
     volumes:
       - .:/app
       # Mask the repo's data directory so the browser cannot write wallpapers
@@ -53,8 +56,45 @@ services:
       DJANGO_ALLOWED_HOSTS: "*"
       DJANGO_DB_PATH: /data/db.sqlite3
       KWC_WALLPAPER_ROOT: /wallpapers
+      KWC_IMPORT_ROOT: /import
+      KWC_INGEST_ROOT: /videos
+      TMDB_READ_TOKEN: ${TMDB_READ_TOKEN:-}
+      MANAGER_OIDC_ISSUER: ${MANAGER_OIDC_ISSUER:-}
+      MANAGER_OIDC_CLIENT_ID: ${MANAGER_OIDC_CLIENT_ID:-}
+      MANAGER_OIDC_CLIENT_SECRET: ${MANAGER_OIDC_CLIENT_SECRET:-}
+      MANAGER_ALLOWED_EMAILS: ${MANAGER_ALLOWED_EMAILS:-}
     volumes:
       - .:/app
       - ./data:/app/data:ro
       - "${KWC_WALLPAPER_HOST_DIR:-./data/wallpapers}:/wallpapers"
       - "${KWC_MANAGER_DATA_DIR:-./data/manager}:/data"
+      - "${KWC_IMPORT_HOST_DIR:-./data/import}:/import:ro"
+      - "${KWC_INGEST_HOST_DIR:-./data/videos}:/videos:ro"
+
+  worker:
+    image: *uv-image
+    working_dir: /app
+    command: >
+      sh -c "uv sync --frozen --package manager &&
+      uv run --package manager python apps/manager/manage.py migrate --noinput &&
+      uv run --package manager python apps/manager/manage.py runworker"
+    init: true
+    user: "${KWC_UID:-1000}:${KWC_GID:-1000}"
+    environment:
+      <<: *dev-env
+      DJANGO_SETTINGS_MODULE: manager.settings
+      DJANGO_SECRET_KEY: ${MANAGER_SECRET_KEY:-dev-insecure-manager}
+      DJANGO_DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: "*"
+      DJANGO_DB_PATH: /data/db.sqlite3
+      KWC_WALLPAPER_ROOT: /wallpapers
+      KWC_IMPORT_ROOT: /import
+      KWC_INGEST_ROOT: /videos
+      TMDB_READ_TOKEN: ${TMDB_READ_TOKEN:-}
+    volumes:
+      - .:/app
+      - ./data:/app/data:ro
+      - "${KWC_WALLPAPER_HOST_DIR:-./data/wallpapers}:/wallpapers"
+      - "${KWC_MANAGER_DATA_DIR:-./data/manager}:/data"
+      - "${KWC_IMPORT_HOST_DIR:-./data/import}:/import:ro"
+      - "${KWC_INGEST_HOST_DIR:-./data/videos}:/videos:ro"

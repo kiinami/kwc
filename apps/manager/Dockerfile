@@ -42,7 +42,10 @@ ENV DJANGO_SETTINGS_MODULE=manager.settings \
     PYTHONUNBUFFERED=1 \
     VIRTUAL_ENV=/venv
 
-RUN groupadd --gid 1000 app && useradd --uid 1000 --gid app --create-home app
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ffmpeg libjxl-tools && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid 1000 app && useradd --uid 1000 --gid app --create-home app
 
 WORKDIR /app
 
