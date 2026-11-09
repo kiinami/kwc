@@ -9,6 +9,14 @@ import requests
 
 
 @dataclass(frozen=True)
+class Poster:
+    file_path: str
+    language: str | None
+    vote_average: float
+    vote_count: int
+
+
+@dataclass(frozen=True)
 class MovieDetail:
     id: int
     title: str
@@ -127,16 +135,21 @@ class TMDBClient:
     def image_url(path: str, size: str = "w500") -> str:
         return f"https://image.tmdb.org/t/p/{size}{path}"
 
-    def posters(self, tmdb_id: int, kind: str = "movie") -> list[str]:
+    def posters(self, tmdb_id: int, kind: str = "movie") -> list[Poster]:
         endpoint = "movie" if kind == "movie" else "tv"
-        payload = self._get(f"/{endpoint}/{tmdb_id}/images", include_image_language="en,null")
+        payload = self._get(f"/{endpoint}/{tmdb_id}/images")
         items = [
-            item
+            Poster(
+                file_path=item["file_path"],
+                language=item.get("iso_639_1"),
+                vote_average=float(item.get("vote_average") or 0),
+                vote_count=int(item.get("vote_count") or 0),
+            )
             for item in payload.get("posters", [])
-            if item.get("file_path") and item.get("iso_639_1") in (None, "en")
+            if item.get("file_path")
         ]
-        items.sort(key=lambda item: (item.get("vote_average", 0), item.get("vote_count", 0)), reverse=True)
-        return [item["file_path"] for item in items]
+        items.sort(key=lambda item: (item.vote_average, item.vote_count), reverse=True)
+        return items
 
     def download_image(self, path: str, size: str = "original") -> bytes:
         if not path.startswith("/") or ".." in path:

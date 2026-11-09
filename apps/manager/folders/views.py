@@ -88,10 +88,21 @@ def _poster_data(kind: str, tmdb_id: str | None):
         return [], "", None
     client = TMDBClient(token)
     try:
-        paths = client.posters(int(tmdb_id), kind)
+        posters = client.posters(int(tmdb_id), kind)
     except TMDBError as exc:
         return [], str(exc), client
-    return [{"path": path, "url": client.image_url(path, "w185")} for path in paths], "", client
+    return (
+        [
+            {
+                "path": poster.file_path,
+                "url": client.image_url(poster.file_path, "w185"),
+                "language": poster.language or "No language",
+            }
+            for poster in posters
+        ],
+        "",
+        client,
+    )
 
 
 def folder_create(request):

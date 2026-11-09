@@ -1,7 +1,7 @@
 import pytest
 import responses
 
-from tmdb import MovieDetail, TMDBClient, TMDBError
+from tmdb import MovieDetail, Poster, TMDBClient, TMDBError
 from tmdb import client as client_module
 
 BASE = "https://api.themoviedb.org/3"
@@ -76,7 +76,7 @@ def test_retries_once_on_429(monkeypatch):
 
 
 @responses.activate
-def test_posters_are_english_and_ordered_by_votes():
+def test_posters_include_every_language_and_are_ordered_by_votes():
     responses.get(
         f"{BASE}/movie/1/images",
         json={
@@ -87,7 +87,9 @@ def test_posters_are_english_and_ordered_by_votes():
             ]
         },
     )
-    assert make_client().posters(1) == ["/b.jpg", "/a.jpg"]
+    posters = make_client().posters(1)
+    assert [poster.file_path for poster in posters] == ["/c.jpg", "/b.jpg", "/a.jpg"]
+    assert posters[0] == Poster("/c.jpg", "fr", 9.0, 30)
 
 
 @responses.activate

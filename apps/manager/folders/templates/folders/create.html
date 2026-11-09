@@ -41,6 +41,7 @@
           <label>
             <input type="radio" name="cover_path" value="{{ poster.path }}" {% if form.cover_path.value == poster.path %}checked{% endif %}>
             <img src="{{ poster.url }}" alt="">
+            <small class="muted">{{ poster.language }}</small>
           </label>
         {% endfor %}
         {{ form.cover_path.errors }}

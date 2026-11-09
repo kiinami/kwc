@@ -7,7 +7,7 @@ from jobs.models import Job
 from PIL import Image
 
 from filesystem.metadata import FolderMetadata, write_metadata
-from tmdb import MovieDetail
+from tmdb import MovieDetail, Poster
 
 
 def png_bytes() -> bytes:
@@ -21,7 +21,7 @@ class FakePosterClient:
         assert token == "token"
 
     def posters(self, tmdb_id, kind="movie"):
-        return ["/p.jpg"]
+        return [Poster("/p.jpg", "en", 10.0, 5)]
 
     def image_url(self, path, size="w500"):
         return f"https://image.tmdb.org/t/p/{size}{path}"
