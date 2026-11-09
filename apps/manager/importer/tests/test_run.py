@@ -69,6 +69,24 @@ def test_import_can_leave_images_unpicked(setup, settings):
     assert not list(target.glob("*+.jxl"))
 
 
+def test_import_swaps_reduced_into_base(setup, settings):
+    target, source = setup
+    Image.new("RGB", (8, 8), (9, 9, 9)).save(source / "Film - 0001R.png")
+    plan = build_plan(
+        source_root=source,
+        target=target,
+        pattern=PATTERN,
+        type_map=DEFAULT_TYPE_MAP,
+    )
+    run_plan(plan=plan, target=target, pick_all=False, copyright="", ctx=JobContext.for_test())
+    with Image.open(target / "Film [2001][tmdb-1] - 0001.jxl") as base:
+        base.load()
+        assert base.getpixel((0, 0)) == (9, 9, 9)
+    with Image.open(target / "Film [2001][tmdb-1] - 0001 [U].jxl") as upscaled:
+        upscaled.load()
+        assert upscaled.getpixel((0, 0)) == (1, 2, 3)
+
+
 def test_import_refuses_collisions(setup, settings):
     target, source = setup
     (target / "Film [2001][tmdb-1] - 0001.jxl").write_bytes(b"exists")

@@ -17,6 +17,7 @@ DEFAULT_TYPE_MAP: dict[str, frozenset[str]] = {
     "U": frozenset({"U"}),
     "M": frozenset({"M"}),
     "UM": frozenset({"U", "M"}),
+    "E": frozenset({"A"}),
 }
 
 
@@ -34,6 +35,14 @@ class ImportPlan:
     matches: tuple[ImportMatch, ...]
     unmatched: tuple[Path, ...]
     collisions: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _Candidate:
+    source: Path
+    index: int
+    flags: frozenset[str]
+    reduced: bool
 
 
 def _scope_for(target: Path, entity: Entity) -> NameScope:
@@ -69,10 +78,9 @@ def build_plan(
     entity = scan_entity(target)
     scope = _scope_for(target, entity)
 
-    matches: list[ImportMatch] = []
+    candidates: dict[int, list[_Candidate]] = {}
     unmatched: list[Path] = []
     collisions: list[str] = []
-    seen: dict[tuple[int, frozenset[str], int | None], Path] = {}
     for source in sorted(source_root.rglob("*")):
         if not source.is_file() or source.is_symlink():
             continue
@@ -92,24 +100,58 @@ def build_plan(
             collisions.append(f"{relative}: index out of range")
             continue
         token = (match.groupdict().get("type") or "").upper()
+        reduced = "R" in token
+        base_token = token.replace("R", "")
         flags = frozenset()
-        if token:
-            mapped = type_map.get(token)
+        if base_token:
+            mapped = type_map.get(base_token)
             if mapped is None:
                 unmatched.append(source)
                 continue
             flags = frozenset(mapped)
-        name = image_filename(scope, ImageName(index, False, flags, None))
-        key = (index, flags, None)
-        if key in seen:
-            collisions.append(f"{relative}: duplicates {seen[key].name}")
-            continue
-        seen[key] = source
-        if (target / name).exists() or (target / name.replace(".jxl", "+.jxl")).exists():
-            collisions.append(f"{relative}: target already exists as {name}")
-            continue
-        matches.append(ImportMatch(source=source, index=index, flags=flags, variant=None, target_name=name))
+        candidates.setdefault(index, []).append(_Candidate(source=source, index=index, flags=flags, reduced=reduced))
 
+    matches: list[ImportMatch] = []
+    planned: dict[str, Path] = {}
+
+    def add(candidate: _Candidate, target_flags: frozenset[str]) -> None:
+        name = image_filename(scope, ImageName(candidate.index, False, target_flags, None))
+        if name in planned:
+            collisions.append(f"{candidate.source.name}: target {name} is also used by {planned[name].name}")
+            return
+        if (target / name).exists() or (target / name.replace(".jxl", "+.jxl")).exists():
+            collisions.append(f"{candidate.source.name}: target already exists as {name}")
+            return
+        planned[name] = candidate.source
+        matches.append(
+            ImportMatch(
+                source=candidate.source,
+                index=candidate.index,
+                flags=target_flags,
+                variant=None,
+                target_name=name,
+            )
+        )
+
+    for index in sorted(candidates):
+        groups: dict[frozenset[str], dict[str, list[_Candidate]]] = {}
+        for candidate in candidates[index]:
+            bucket = groups.setdefault(candidate.flags, {"normal": [], "reduced": []})
+            bucket["reduced" if candidate.reduced else "normal"].append(candidate)
+        for flags, bucket in groups.items():
+            normals = bucket["normal"]
+            reduceds = bucket["reduced"]
+            for extra in normals[1:]:
+                collisions.append(f"{extra.source.name}: duplicate base for index {index:04d}")
+            for extra in reduceds[1:]:
+                collisions.append(f"{extra.source.name}: duplicate reduced image for index {index:04d}")
+            normal_flags = flags | {"U"} if reduceds else flags
+            if normals:
+                add(normals[0], normal_flags)
+            if reduceds:
+                add(reduceds[0], flags)
+
+    matches.sort(key=lambda match: (match.index, tuple(sorted(match.flags)), match.source.name))
     return ImportPlan(tuple(matches), tuple(unmatched), tuple(collisions))
 
 

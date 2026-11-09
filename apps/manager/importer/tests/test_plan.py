@@ -59,6 +59,74 @@ def test_plan_reports_existing_target(library, source):
     assert plan.collisions
 
 
+def test_plan_maps_edited_to_alternate(library, source):
+    (source / "Film - 0003E.png").write_bytes(b"edited")
+    plan = build_plan(
+        source_root=source,
+        target=library,
+        pattern=PATTERN,
+        type_map=DEFAULT_TYPE_MAP,
+    )
+    match = next(item for item in plan.matches if item.source.name == "Film - 0003E.png")
+    assert match.flags == frozenset({"A"})
+    assert match.target_name == "Film [2001][tmdb-1] - 0003 [A].jxl"
+
+
+def test_plan_reduced_becomes_base_and_old_base_becomes_upscaled(library, source):
+    (source / "Film - 0001R.png").write_bytes(b"reduced")
+    plan = build_plan(
+        source_root=source,
+        target=library,
+        pattern=PATTERN,
+        type_map=DEFAULT_TYPE_MAP,
+    )
+    reduced = next(item for item in plan.matches if item.source.name == "Film - 0001R.png")
+    old_base = next(item for item in plan.matches if item.source.name == "Film - 0001.png")
+    assert reduced.flags == frozenset()
+    assert reduced.target_name == "Film [2001][tmdb-1] - 0001.jxl"
+    assert old_base.flags == frozenset({"U"})
+    assert old_base.target_name == "Film [2001][tmdb-1] - 0001 [U].jxl"
+
+
+def test_plan_reduced_without_base_becomes_base(library, source):
+    (source / "Film - 0002R.png").write_bytes(b"reduced")
+    plan = build_plan(
+        source_root=source,
+        target=library,
+        pattern=PATTERN,
+        type_map=DEFAULT_TYPE_MAP,
+    )
+    reduced = next(item for item in plan.matches if item.source.name == "Film - 0002R.png")
+    assert reduced.target_name == "Film [2001][tmdb-1] - 0002.jxl"
+
+
+def test_plan_reduced_mobile_swaps_mobile_variant(library, source):
+    (source / "Film - 0003M.png").write_bytes(b"mobile")
+    (source / "Film - 0003RM.png").write_bytes(b"reduced mobile")
+    plan = build_plan(
+        source_root=source,
+        target=library,
+        pattern=PATTERN,
+        type_map=DEFAULT_TYPE_MAP,
+    )
+    reduced = next(item for item in plan.matches if item.source.name == "Film - 0003RM.png")
+    mobile = next(item for item in plan.matches if item.source.name == "Film - 0003M.png")
+    assert reduced.target_name == "Film [2001][tmdb-1] - 0003 [M].jxl"
+    assert mobile.target_name == "Film [2001][tmdb-1] - 0003 [UM].jxl"
+
+
+def test_plan_reduced_conflicts_with_upscaled(library, source):
+    (source / "Film - 0001R.png").write_bytes(b"reduced")
+    (source / "Film - 0001U.png").write_bytes(b"upscaled")
+    plan = build_plan(
+        source_root=source,
+        target=library,
+        pattern=PATTERN,
+        type_map=DEFAULT_TYPE_MAP,
+    )
+    assert plan.collisions
+
+
 def test_plan_requires_index_group(library, source):
     with pytest.raises(ValueError):
         build_plan(
