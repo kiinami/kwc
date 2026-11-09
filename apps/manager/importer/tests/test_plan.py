@@ -152,6 +152,11 @@ def test_preview_view_does_not_write(auth_client, library, source):
     assert not (library / "Film [2001][tmdb-1] - 0001.jxl").exists()
 
 
+def test_detect_button_bypasses_browser_validation(auth_client, library, source):
+    response = auth_client.get("/importer")
+    assert b"formnovalidate" in response.content
+
+
 def test_detect_pattern_proposes_index_and_type(source):
     (source / "Film - 0003E.png").write_bytes(b"edited")
     detected = detect_pattern(source)
