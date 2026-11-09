@@ -4,6 +4,7 @@ import pytest
 
 from filesystem.metadata import read_metadata
 from folders.services import create_movie, delete_entity, set_cover, set_hidden
+from jobs.models import Job
 from jobs.worker import run_worker
 
 
@@ -63,11 +64,12 @@ def test_delete_view_requires_confirmation(auth_client, library):
 
 
 @pytest.mark.django_db
-def test_delete_view_enqueues_job(auth_client, library):
+def test_delete_view_removes_folder_immediately(auth_client, library, settings):
     response = auth_client.post(f"/folders/{path('Film [2001][tmdb-1]')}/delete", {"confirm": "Film"})
     assert response.status_code == 302
-    run_worker(once=True)
     assert not library.exists()
+    assert (settings.WALLPAPER_ROOT / ".trash").is_dir()
+    assert not Job.objects.filter(kind="folders.delete").exists()
 
 
 @pytest.mark.django_db

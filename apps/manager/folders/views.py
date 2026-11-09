@@ -249,8 +249,12 @@ def folder_delete(request, path: str):
     entity = scan_entity(folder)
     form = DeleteForm(request.POST)
     if form.is_valid() and form.cleaned_data["confirm"] == entity.title:
-        enqueue("folders.delete", {"path": _relative(root, folder)})
-        return redirect("folder-list")
+        try:
+            services.delete_entity(folder=folder, trash_root=root / ".trash")
+        except OSError as exc:
+            form.add_error(None, str(exc))
+        else:
+            return redirect("folder-list")
     error = "Confirmation did not match the title." if form.is_valid() else "Confirmation is required."
     return render(request, "folders/detail.html", _detail_context(root, entity, delete_form=form, error=error))
 
