@@ -37,6 +37,7 @@ if env_bool("DJANGO_BEHIND_PROXY", False):
 
 WALLPAPER_ROOT = Path(os.environ.get("KWC_WALLPAPER_ROOT", REPO_ROOT / "data" / "wallpapers"))
 IMPORT_ROOT = Path(os.environ.get("KWC_IMPORT_ROOT", REPO_ROOT / "data" / "import"))
+IMPORT_PIXEL_BUDGET = int(os.environ.get("KWC_IMPORT_PIXEL_BUDGET", "500000000"))
 INGEST_ROOT = Path(os.environ.get("KWC_INGEST_ROOT", REPO_ROOT / "data" / "videos"))
 TMDB_READ_TOKEN = os.environ.get("TMDB_READ_TOKEN", "")
 MANAGER_OIDC_ISSUER = os.environ.get("MANAGER_OIDC_ISSUER", "")

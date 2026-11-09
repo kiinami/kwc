@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from media.jxl import ImageTooLarge, encode_jxl, encode_jxl_bytes, probe_dimensions
+from media.jxl import DEFAULT_PIXEL_BUDGET, ImageTooLarge, encode_jxl, encode_jxl_bytes, probe_dimensions
 
 
 def make_png(path: Path, size: tuple[int, int] = (32, 24), color: tuple[int, int, int] = (10, 20, 30)) -> Path:
@@ -31,6 +31,16 @@ def test_encode_bytes_round_trip(tmp_path):
     with Image.open(dest) as image:
         image.load()
         assert image.getpixel((1, 1)) == (200, 100, 50)
+
+
+def test_import_budget_allows_real_16k_assets():
+    assert DEFAULT_PIXEL_BUDGET >= 318_837_728
+
+
+def test_pillow_bomb_guard_is_disabled():
+    from PIL import Image
+
+    assert Image.MAX_IMAGE_PIXELS is None
 
 
 def test_encode_rejects_over_budget(tmp_path):

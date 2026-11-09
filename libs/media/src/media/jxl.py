@@ -12,7 +12,7 @@ import pillow_jxl  # noqa: F401  (registers the JXL plugin with Pillow)
 from PIL import Image
 
 _SIZE_RE = re.compile(r"(\d+)x(\d+)")
-DEFAULT_PIXEL_BUDGET = 200_000_000
+DEFAULT_PIXEL_BUDGET = 500_000_000
 
 
 class ImageTooLarge(ValueError):

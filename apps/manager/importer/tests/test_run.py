@@ -7,6 +7,7 @@ from filesystem.metadata import read_metadata
 from folders.services import create_movie
 from importer.services import DEFAULT_TYPE_MAP, build_plan, run_plan
 from jobs.worker import JobContext, run_worker
+from media.jxl import ImageTooLarge
 from media.metadata import read_image_metadata
 
 PATTERN = re.compile(r" - (?P<index>\d{4})(?P<type>[A-Z]{0,2})$")
@@ -85,6 +86,25 @@ def test_import_swaps_reduced_into_base(setup, settings):
     with Image.open(target / "Film [2001][tmdb-1] - 0001 [U].jxl") as upscaled:
         upscaled.load()
         assert upscaled.getpixel((0, 0)) == (1, 2, 3)
+
+
+def test_import_respects_the_pixel_budget(setup, settings):
+    target, source = setup
+    plan = build_plan(
+        source_root=source,
+        target=target,
+        pattern=PATTERN,
+        type_map=DEFAULT_TYPE_MAP,
+    )
+    with pytest.raises(ImageTooLarge):
+        run_plan(
+            plan=plan,
+            target=target,
+            pick_all=False,
+            copyright="",
+            ctx=JobContext.for_test(),
+            pixel_budget=10,
+        )
 
 
 def test_import_refuses_collisions(setup, settings):

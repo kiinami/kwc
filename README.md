@@ -77,6 +77,7 @@ All settings are environment-driven. See `.env.example` for the full list. The i
 | `KWC_WALLPAPER_HOST_DIR` | Host folder mounted into both containers |
 | `KWC_MANAGER_DATA_DIR` | Host folder for the manager's SQLite database |
 | `KWC_IMPORT_HOST_DIR` / `KWC_INGEST_HOST_DIR` | Read-only import and video source folders |
+| `KWC_IMPORT_PIXEL_BUDGET` | Import decode budget (default 500 MP) |
 | `TMDB_READ_TOKEN` | TMDB v3 token used by the folder manager |
 | `MANAGER_OIDC_*` / `MANAGER_ALLOWED_EMAILS` | Pocket ID (or any OIDC) client and the login allowlist |
 | `KWC_TAKEDOWN_EMAIL` | Contact address shown on the public browser |

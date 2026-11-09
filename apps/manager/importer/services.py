@@ -9,7 +9,7 @@ from filesystem.naming import ImageName, NameScope, image_filename, parse_folder
 from filesystem.scan import Entity, scan_entity
 from jobs.worker import JobContext
 from media.hashing import sha256_file
-from media.jxl import encode_jxl
+from media.jxl import DEFAULT_PIXEL_BUDGET, encode_jxl
 from media.metadata import ImageMetadata, write_image_metadata
 
 DEFAULT_TYPE_MAP: dict[str, frozenset[str]] = {
@@ -200,7 +200,15 @@ def build_plan(
     return ImportPlan(tuple(matches), tuple(unmatched), tuple(collisions))
 
 
-def run_plan(*, plan: ImportPlan, target: Path, pick_all: bool, copyright: str, ctx: JobContext) -> dict:
+def run_plan(  # noqa: PLR0913
+    *,
+    plan: ImportPlan,
+    target: Path,
+    pick_all: bool,
+    copyright: str,
+    ctx: JobContext,
+    pixel_budget: int = DEFAULT_PIXEL_BUDGET,
+) -> dict:
     if plan.collisions:
         raise ValueError("import plan has collisions: " + "; ".join(plan.collisions[:5]))
     target = target.resolve()
@@ -217,7 +225,7 @@ def run_plan(*, plan: ImportPlan, target: Path, pick_all: bool, copyright: str, 
             raise FileExistsError(f"target already exists: {final.name}")
         temporary = target / f".import-{match.index:04d}-{current}.tmp"
         try:
-            encode_jxl(match.source, temporary)
+            encode_jxl(match.source, temporary, pixel_budget=pixel_budget)
             write_image_metadata(
                 temporary,
                 ImageMetadata(
@@ -226,6 +234,7 @@ def run_plan(*, plan: ImportPlan, target: Path, pick_all: bool, copyright: str, 
                     generator="import",
                     source=match.source.name,
                 ),
+                pixel_budget=pixel_budget,
             )
             temporary.replace(final)
         finally:

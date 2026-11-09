@@ -26,4 +26,5 @@ def import_job(job, ctx):
         pick_all=bool(job.params.get("pick_all")),
         copyright=metadata.copyright if metadata and metadata.copyright else "",
         ctx=ctx,
+        pixel_budget=settings.IMPORT_PIXEL_BUDGET,
     )
