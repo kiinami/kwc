@@ -42,6 +42,7 @@ STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", BASE_DIR / "staticfiles"
 # No auth, admin, sessions, or database apps are installed.
 INSTALLED_APPS = [
     "django.contrib.staticfiles",
+    "gallery",
 ]
 
 MIDDLEWARE = [
@@ -80,7 +81,11 @@ STATIC_URL = "static/"
 
 STORAGES = {
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+            if DEBUG
+            else "whitenoise.storage.CompressedManifestStaticFilesStorage"
+        ),
     },
 }
 

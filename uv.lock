@@ -58,7 +58,9 @@ version = "0.1.0"
 source = { editable = "apps/browser" }
 dependencies = [
     { name = "django" },
+    { name = "filesystem" },
     { name = "gunicorn" },
+    { name = "media" },
     { name = "python-dotenv" },
     { name = "whitenoise" },
 ]
@@ -66,7 +68,9 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "django", specifier = ">=6.1" },
+    { name = "filesystem", editable = "libs/filesystem" },
     { name = "gunicorn", specifier = ">=23.0.0" },
+    { name = "media", editable = "libs/media" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "whitenoise", specifier = ">=6.12.0" },
 ]

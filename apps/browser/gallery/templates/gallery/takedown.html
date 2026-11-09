@@ -1,0 +1,7 @@
+{% extends "gallery/base.html" %}
+{% block title %}Takedown · Wallpapers{% endblock %}
+{% block content %}
+  <h1>Takedown</h1>
+  <p>If you hold rights to an image here and want it removed, contact the operator.</p>
+  {% if email %}<p><a href="mailto:{{ email }}">{{ email }}</a></p>{% endif %}
+{% endblock %}

@@ -1,0 +1,19 @@
+:root { color-scheme: dark; --bg: #0f1114; --panel: #181c21; --text: #e8ebee; --muted: #99a2ac; --accent: #8ab4f8; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, sans-serif; }
+header { display: flex; gap: 1rem; align-items: center; padding: 1rem; border-bottom: 1px solid #262c34; }
+.brand { margin-right: auto; font-weight: 700; color: var(--text); text-decoration: none; }
+a { color: var(--accent); }
+main { max-width: 1400px; margin: 0 auto; padding: 1rem; }
+.muted { color: var(--muted); }
+.grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+.card { display: flex; flex-direction: column; gap: .35rem; background: var(--panel); border-radius: 10px; padding: .6rem; text-decoration: none; color: var(--text); }
+.card img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; background: #0a0c0f; }
+.images { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.tile { position: relative; display: block; background: var(--panel); border-radius: 8px; overflow: hidden; }
+.tile img { width: 100%; display: block; aspect-ratio: 16 / 9; object-fit: cover; }
+.tile .pick { position: absolute; top: .3rem; left: .3rem; color: #ffd479; font-size: 1.2rem; }
+.tile .variants { position: absolute; right: .3rem; bottom: .3rem; background: #000a; color: #fff; padding: .1rem .35rem; border-radius: 999px; font-size: .7rem; }
+.filters { display: flex; gap: .75rem; }
+.filters a[aria-current="page"] { color: var(--text); font-weight: 700; }
+@media (max-width: 480px) { header { padding: .75rem; } main { padding: .75rem; } .grid { grid-template-columns: repeat(2, 1fr); } }

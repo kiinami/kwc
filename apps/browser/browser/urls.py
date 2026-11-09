@@ -1,3 +1,7 @@
 """URL configuration for the browser app."""
 
-urlpatterns: list = []
+from django.urls import include, path
+
+urlpatterns = [
+    path("", include("gallery.urls")),
+]

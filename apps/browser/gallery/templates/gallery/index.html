@@ -1,0 +1,18 @@
+{% extends "gallery/base.html" %}
+{% block title %}Wallpapers{% endblock %}
+{% block content %}
+  {% for label, rows in sections %}
+    <h2>{{ label }}</h2>
+    <div class="grid">
+      {% for row in rows %}
+        <a class="card" href="{% url 'gallery-folder' path=row.rel %}">
+          {% if row.cover %}<img loading="lazy" src="{% url 'gallery-original' path=row.cover %}" alt="">{% endif %}
+          <span>{{ row.entity.title }}</span>
+          <small class="muted">{{ row.entity.images|length }} images</small>
+        </a>
+      {% endfor %}
+    </div>
+  {% empty %}
+    <p class="muted">Nothing to show yet.</p>
+  {% endfor %}
+{% endblock %}
