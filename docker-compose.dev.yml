@@ -1,0 +1,60 @@
+name: kwc-dev
+
+x-uv-image: &uv-image ghcr.io/astral-sh/uv:python3.14-bookworm-slim
+
+x-dev-env: &dev-env
+  HOME: /tmp
+  PYTHONDONTWRITEBYTECODE: "1"
+  UV_CACHE_DIR: /tmp/uv-cache
+  UV_LINK_MODE: copy
+  UV_PROJECT_ENVIRONMENT: /tmp/venv
+
+services:
+  browser:
+    image: *uv-image
+    working_dir: /app
+    command: >
+      sh -c "uv sync --frozen --package browser &&
+      uv run --package browser python apps/browser/manage.py runserver 0.0.0.0:8000"
+    init: true
+    user: "${KWC_UID:-1000}:${KWC_GID:-1000}"
+    ports:
+      - "${BROWSER_PORT:-8080}:8000"
+    environment:
+      <<: *dev-env
+      DJANGO_SETTINGS_MODULE: browser.settings
+      DJANGO_SECRET_KEY: ${BROWSER_SECRET_KEY:-dev-insecure-browser}
+      DJANGO_DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: "*"
+      KWC_WALLPAPER_ROOT: /wallpapers
+    volumes:
+      - .:/app
+      # Mask the repo's data directory so the browser cannot write wallpapers
+      # through /app/data. The real read-only mount is /wallpapers.
+      - ./data:/app/data:ro
+      - "${KWC_WALLPAPER_HOST_DIR:-./data/wallpapers}:/wallpapers:ro"
+
+  manager:
+    image: *uv-image
+    working_dir: /app
+    command: >
+      sh -c "uv sync --frozen --package manager &&
+      uv run --package manager python apps/manager/manage.py migrate --noinput &&
+      uv run --package manager python apps/manager/manage.py runserver 0.0.0.0:8000"
+    init: true
+    user: "${KWC_UID:-1000}:${KWC_GID:-1000}"
+    ports:
+      - "${MANAGER_BIND:-127.0.0.1}:${MANAGER_PORT:-8081}:8000"
+    environment:
+      <<: *dev-env
+      DJANGO_SETTINGS_MODULE: manager.settings
+      DJANGO_SECRET_KEY: ${MANAGER_SECRET_KEY:-dev-insecure-manager}
+      DJANGO_DEBUG: "true"
+      DJANGO_ALLOWED_HOSTS: "*"
+      DJANGO_DB_PATH: /data/db.sqlite3
+      KWC_WALLPAPER_ROOT: /wallpapers
+    volumes:
+      - .:/app
+      - ./data:/app/data:ro
+      - "${KWC_WALLPAPER_HOST_DIR:-./data/wallpapers}:/wallpapers"
+      - "${KWC_MANAGER_DATA_DIR:-./data/manager}:/data"

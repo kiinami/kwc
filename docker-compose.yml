@@ -1,20 +1,63 @@
+name: kwc
+
 services:
-  web:
+  browser:
+    image: ghcr.io/kiinami/kwc-browser:${BROWSER_TAG:-latest}
     build:
       context: .
-    image: kwc-web:latest
-    # Run the app as your host user to avoid root-owned files on bind mounts
-    user: "${KWC_UID:-1000}:${KWC_GID:-1000}"
-    env_file:
-      - ./.env
-    ports:
-      - "8080:8000"
-    volumes:
-      # Use host bind mounts so permissions match your user
-      - "./data/db:/data"
-      - "./data/static:/app/static"
-      - "./data/wallpapers:/media/wallpapers"
-      - "./data/extractions:/media/extractions"
-      - "./data/discarded:/media/discarded"
-      - "${HOME}/tmp:/media/tmp"
+      dockerfile: apps/browser/Dockerfile
+    init: true
     restart: unless-stopped
+    user: "${KWC_UID:-1000}:${KWC_GID:-1000}"
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
+    ports:
+      - "${BROWSER_PORT:-8080}:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: browser.settings
+      DJANGO_SECRET_KEY: ${BROWSER_SECRET_KEY:?set BROWSER_SECRET_KEY in .env}
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: ${BROWSER_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${BROWSER_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_BEHIND_PROXY: ${BROWSER_BEHIND_PROXY:-false}
+      KWC_WALLPAPER_ROOT: /wallpapers
+      PORT: "8000"
+    volumes:
+      - "${KWC_WALLPAPER_HOST_DIR:-./data/wallpapers}:/wallpapers:ro"
+
+  manager:
+    image: ghcr.io/kiinami/kwc-manager:${MANAGER_TAG:-latest}
+    build:
+      context: .
+      dockerfile: apps/manager/Dockerfile
+    init: true
+    restart: unless-stopped
+    user: "${KWC_UID:-1000}:${KWC_GID:-1000}"
+    security_opt:
+      - no-new-privileges:true
+    ports:
+      - "${MANAGER_BIND:-127.0.0.1}:${MANAGER_PORT:-8081}:8000"
+    environment:
+      DJANGO_SETTINGS_MODULE: manager.settings
+      DJANGO_SECRET_KEY: ${MANAGER_SECRET_KEY:?set MANAGER_SECRET_KEY in .env}
+      DJANGO_DEBUG: "false"
+      DJANGO_ALLOWED_HOSTS: ${MANAGER_ALLOWED_HOSTS:-localhost,127.0.0.1}
+      DJANGO_CSRF_TRUSTED_ORIGINS: ${MANAGER_CSRF_TRUSTED_ORIGINS:-}
+      DJANGO_BEHIND_PROXY: ${MANAGER_BEHIND_PROXY:-false}
+      DJANGO_DB_PATH: /data/db.sqlite3
+      DJANGO_EMAIL_BACKEND: ${MANAGER_EMAIL_BACKEND:-}
+      DJANGO_EMAIL_HOST: ${MANAGER_EMAIL_HOST:-localhost}
+      DJANGO_EMAIL_PORT: ${MANAGER_EMAIL_PORT:-25}
+      DJANGO_EMAIL_HOST_USER: ${MANAGER_EMAIL_HOST_USER:-}
+      DJANGO_EMAIL_HOST_PASSWORD: ${MANAGER_EMAIL_HOST_PASSWORD:-}
+      DJANGO_EMAIL_USE_TLS: ${MANAGER_EMAIL_USE_TLS:-false}
+      DJANGO_DEFAULT_FROM_EMAIL: ${MANAGER_DEFAULT_FROM_EMAIL:-kwc@localhost}
+      KWC_WALLPAPER_ROOT: /wallpapers
+      PORT: "8000"
+      WEB_CONCURRENCY: ${MANAGER_WEB_CONCURRENCY:-1}
+    volumes:
+      - "${KWC_WALLPAPER_HOST_DIR:-./data/wallpapers}:/wallpapers"
+      - "${KWC_MANAGER_DATA_DIR:-./data/manager}:/data"
