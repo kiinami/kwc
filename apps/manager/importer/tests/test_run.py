@@ -72,8 +72,8 @@ def test_import_refuses_collisions(setup, settings):
 
 
 @pytest.mark.django_db
-def test_run_view_enqueues_job(client, setup, settings):
-    response = client.post(
+def test_run_view_enqueues_job(auth_client, setup, settings):
+    response = auth_client.post(
         "/importer/run",
         {
             "target": "Film [2001][tmdb-1]",

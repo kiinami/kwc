@@ -39,6 +39,10 @@ WALLPAPER_ROOT = Path(os.environ.get("KWC_WALLPAPER_ROOT", REPO_ROOT / "data" / 
 IMPORT_ROOT = Path(os.environ.get("KWC_IMPORT_ROOT", REPO_ROOT / "data" / "import"))
 INGEST_ROOT = Path(os.environ.get("KWC_INGEST_ROOT", REPO_ROOT / "data" / "videos"))
 TMDB_READ_TOKEN = os.environ.get("TMDB_READ_TOKEN", "")
+MANAGER_OIDC_ISSUER = os.environ.get("MANAGER_OIDC_ISSUER", "")
+MANAGER_OIDC_CLIENT_ID = os.environ.get("MANAGER_OIDC_CLIENT_ID", "")
+MANAGER_OIDC_CLIENT_SECRET = os.environ.get("MANAGER_OIDC_CLIENT_SECRET", "")
+MANAGER_ALLOWED_EMAILS = env_list("MANAGER_ALLOWED_EMAILS")
 STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", BASE_DIR / "staticfiles"))
 DB_PATH = Path(os.environ.get("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"))
 
@@ -48,11 +52,18 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "django.contrib.sites",
     "django.contrib.staticfiles",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.openid_connect",
     "jobs",
     "folders",
     "importer",
 ]
+
+SITE_ID = 1
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -61,6 +72,8 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
+    "manager.middleware.ManagerLoginRequiredMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -91,6 +104,29 @@ DATABASES = {
         "OPTIONS": {
             "timeout": 20,
         },
+    }
+}
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+LOGIN_REDIRECT_URL = "/"
+ACCOUNT_LOGOUT_REDIRECT_URL = "/"
+ACCOUNT_EMAIL_VERIFICATION = "none"
+SOCIALACCOUNT_ADAPTER = "manager.adapters.ManagerSocialAccountAdapter"
+SOCIALACCOUNT_PROVIDERS = {
+    "openid_connect": {
+        "APPS": [
+            {
+                "provider_id": "openid_connect",
+                "name": "Pocket ID",
+                "client_id": MANAGER_OIDC_CLIENT_ID,
+                "secret": MANAGER_OIDC_CLIENT_SECRET,
+                "settings": {"server_url": MANAGER_OIDC_ISSUER},
+            }
+        ]
     }
 }
 

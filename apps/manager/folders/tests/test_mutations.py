@@ -40,14 +40,14 @@ def test_cover_copies_bytes(library):
     assert dest.name == ".cover.jxl"
 
 
-def test_hide_view(client, library):
-    response = client.post(f"/folders/{path('Film [2001][tmdb-1]')}/hide", {"hidden": "on"})
+def test_hide_view(auth_client, library):
+    response = auth_client.post(f"/folders/{path('Film [2001][tmdb-1]')}/hide", {"hidden": "on"})
     assert response.status_code == 302
     assert read_metadata(library).hidden is True
 
 
-def test_cover_view(client, library):
-    response = client.post(
+def test_cover_view(auth_client, library):
+    response = auth_client.post(
         f"/folders/{path('Film [2001][tmdb-1]')}/cover",
         {"image": "Film [2001][tmdb-1] - 0001.jxl"},
     )
@@ -56,23 +56,23 @@ def test_cover_view(client, library):
 
 
 @pytest.mark.django_db
-def test_delete_view_requires_confirmation(client, library):
-    response = client.post(f"/folders/{path('Film [2001][tmdb-1]')}/delete", {"confirm": "wrong"})
+def test_delete_view_requires_confirmation(auth_client, library):
+    response = auth_client.post(f"/folders/{path('Film [2001][tmdb-1]')}/delete", {"confirm": "wrong"})
     assert response.status_code == 200
     assert library.exists()
 
 
 @pytest.mark.django_db
-def test_delete_view_enqueues_job(client, library):
-    response = client.post(f"/folders/{path('Film [2001][tmdb-1]')}/delete", {"confirm": "Film"})
+def test_delete_view_enqueues_job(auth_client, library):
+    response = auth_client.post(f"/folders/{path('Film [2001][tmdb-1]')}/delete", {"confirm": "Film"})
     assert response.status_code == 302
     run_worker(once=True)
     assert not library.exists()
 
 
 @pytest.mark.django_db
-def test_rename_view_enqueues_job(client, library):
-    response = client.post(
+def test_rename_view_enqueues_job(auth_client, library):
+    response = auth_client.post(
         f"/folders/{path('Film [2001][tmdb-1]')}/rename",
         {"new_title": "New Name", "new_year": 2002, "new_tmdb_id": 2, "confirm": "Film"},
     )

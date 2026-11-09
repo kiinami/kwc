@@ -64,8 +64,8 @@ def test_plan_requires_index_group(library, settings):
         )
 
 
-def test_preview_view_does_not_write(client, library, settings):
-    response = client.post(
+def test_preview_view_does_not_write(auth_client, library, settings):
+    response = auth_client.post(
         "/importer",
         {
             "target": "Film [2001][tmdb-1]",
