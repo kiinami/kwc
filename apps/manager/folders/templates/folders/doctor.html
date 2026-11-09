@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Doctor · KWC manager{% endblock %}
+{% block content %}
+  <h1>Archive doctor</h1>
+  {% if issues %}
+    <table class="card">
+      <tr><th>Code</th><th>Path</th><th>Message</th></tr>
+      {% for issue in issues %}
+        <tr>
+          <td>{{ issue.code }}</td>
+          <td>{{ issue.path }}</td>
+          <td>{{ issue.message }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p class="card">No issues found.</p>
+  {% endif %}
+{% endblock %}

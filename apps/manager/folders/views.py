@@ -8,6 +8,7 @@ from jobs.models import enqueue
 
 from filesystem.operations import PathEscape, resolve_under
 from filesystem.scan import Entity, scan_archive, scan_entity
+from filesystem.validate import validate_archive
 from tmdb import TMDBClient, TMDBError
 
 from . import services
@@ -107,6 +108,11 @@ def folder_create(request):
         "folders/create.html",
         {"form": form, "search_form": SearchForm(initial={"kind": request.GET.get("kind", "movie")})},
     )
+
+
+def folder_doctor(request):
+    issues = validate_archive(settings.WALLPAPER_ROOT)
+    return render(request, "folders/doctor.html", {"issues": issues})
 
 
 @require_POST
