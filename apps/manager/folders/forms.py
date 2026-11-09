@@ -29,3 +29,14 @@ class SearchForm(forms.Form):
     kind = forms.ChoiceField(choices=FolderCreateForm.KIND_CHOICES, initial="movie")
     query = forms.CharField(max_length=255)
     year = forms.IntegerField(required=False, min_value=1000, max_value=9999)
+
+
+class RenameForm(forms.Form):
+    new_title = forms.CharField(max_length=255)
+    new_year = forms.IntegerField(required=False, min_value=1000, max_value=9999)
+    new_tmdb_id = forms.IntegerField(required=False, min_value=1)
+    confirm = forms.CharField(max_length=255, label="Type the current title to confirm")
+
+
+class DeleteForm(forms.Form):
+    confirm = forms.CharField(max_length=255, label="Type the title to confirm deletion")

@@ -4,6 +4,33 @@
   <p><a href="{% url 'folder-list' %}">← Library</a></p>
   <h1>{{ entity.title }}</h1>
   <p class="muted">{{ entity.kind }}{% if entity.year %} · {{ entity.year }}{% endif %}{% if entity.tmdb_id %} · TMDB {{ entity.tmdb_id }}{% endif %}</p>
+  {% if error %}<p class="errorlist">{{ error }}</p>{% endif %}
+
+  <div class="card">
+    <h2>Actions</h2>
+    <form method="post" action="{% url 'folder-hide' path=rel %}">
+      {% csrf_token %}
+      <label><input type="checkbox" name="hidden" {% if entity.metadata.hidden %}checked{% endif %}> Hidden</label>
+      <button type="submit">Save visibility</button>
+    </form>
+    {% if cover_images %}
+      <form method="post" action="{% url 'folder-cover' path=rel %}">
+        {% csrf_token %}
+        <select name="image">{% for name in cover_images %}<option value="{{ name }}">{{ name }}</option>{% endfor %}</select>
+        <button type="submit">Set cover</button>
+      </form>
+    {% endif %}
+    <form method="post" action="{% url 'folder-rename' path=rel %}">
+      {% csrf_token %}
+      {{ rename_form.as_p }}
+      <button type="submit">Rename</button>
+    </form>
+    <form method="post" action="{% url 'folder-delete' path=rel %}">
+      {% csrf_token %}
+      {{ delete_form.as_p }}
+      <button type="submit">Delete</button>
+    </form>
+  </div>
 
   {% if entity.metadata %}
     <div class="card">

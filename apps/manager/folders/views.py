@@ -3,13 +3,15 @@ from pathlib import Path
 from django.conf import settings
 from django.http import Http404
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
+from jobs.models import enqueue
 
 from filesystem.operations import PathEscape, resolve_under
 from filesystem.scan import Entity, scan_archive, scan_entity
 from tmdb import TMDBClient, TMDBError
 
 from . import services
-from .forms import FolderCreateForm, SearchForm
+from .forms import DeleteForm, FolderCreateForm, RenameForm, SearchForm
 
 
 def _relative(root: Path, path: Path) -> str:
@@ -36,7 +38,7 @@ def folder_list(request):
     )
 
 
-def folder_detail(request, path: str):
+def _folder_or_404(path: str):
     root = settings.WALLPAPER_ROOT
     try:
         folder = resolve_under(root, path)
@@ -44,19 +46,30 @@ def folder_detail(request, path: str):
         raise Http404 from exc
     if not folder.is_dir():
         raise Http404
+    return folder
+
+
+def _detail_context(root: Path, entity: Entity, *, rename_form=None, delete_form=None, error: str = "") -> dict:
+    return {
+        "entity": entity,
+        "rel": _relative(root, entity.path),
+        "children": [_entity_row(root, child) for child in entity.children],
+        "rename_form": rename_form
+        or RenameForm(initial={"new_title": entity.title, "new_year": entity.year, "new_tmdb_id": entity.tmdb_id}),
+        "delete_form": delete_form or DeleteForm(),
+        "cover_images": [image.name for image in entity.images],
+        "error": error,
+    }
+
+
+def folder_detail(request, path: str):
+    root = settings.WALLPAPER_ROOT
+    folder = _folder_or_404(path)
     try:
         entity = scan_entity(folder)
     except ValueError as exc:
         raise Http404 from exc
-    return render(
-        request,
-        "folders/detail.html",
-        {
-            "entity": entity,
-            "rel": _relative(root, entity.path),
-            "children": [_entity_row(root, child) for child in entity.children],
-        },
-    )
+    return render(request, "folders/detail.html", _detail_context(root, entity))
 
 
 def folder_create(request):
@@ -94,6 +107,61 @@ def folder_create(request):
         "folders/create.html",
         {"form": form, "search_form": SearchForm(initial={"kind": request.GET.get("kind", "movie")})},
     )
+
+
+@require_POST
+def folder_hide(request, path: str):
+    folder = _folder_or_404(path)
+    services.set_hidden(folder=folder, hidden="hidden" in request.POST)
+    return redirect("folder-detail", path=path)
+
+
+@require_POST
+def folder_cover(request, path: str):
+    folder = _folder_or_404(path)
+    try:
+        image = resolve_under(folder, request.POST.get("image", ""))
+    except PathEscape as exc:
+        raise Http404 from exc
+    try:
+        services.set_cover(folder=folder, image=image)
+    except FileNotFoundError as exc:
+        raise Http404 from exc
+    return redirect("folder-detail", path=path)
+
+
+@require_POST
+def folder_rename(request, path: str):
+    root = settings.WALLPAPER_ROOT
+    folder = _folder_or_404(path)
+    entity = scan_entity(folder)
+    form = RenameForm(request.POST)
+    if form.is_valid() and form.cleaned_data["confirm"] == entity.title:
+        enqueue(
+            "folders.rename",
+            {
+                "path": _relative(root, folder),
+                "new_title": form.cleaned_data["new_title"],
+                "new_year": form.cleaned_data.get("new_year"),
+                "new_tmdb_id": form.cleaned_data.get("new_tmdb_id"),
+            },
+        )
+        return redirect("folder-list")
+    error = "Confirmation did not match the current title." if form.is_valid() else "Check the rename fields."
+    return render(request, "folders/detail.html", _detail_context(root, entity, rename_form=form, error=error))
+
+
+@require_POST
+def folder_delete(request, path: str):
+    root = settings.WALLPAPER_ROOT
+    folder = _folder_or_404(path)
+    entity = scan_entity(folder)
+    form = DeleteForm(request.POST)
+    if form.is_valid() and form.cleaned_data["confirm"] == entity.title:
+        enqueue("folders.delete", {"path": _relative(root, folder)})
+        return redirect("folder-list")
+    error = "Confirmation did not match the title." if form.is_valid() else "Confirmation is required."
+    return render(request, "folders/detail.html", _detail_context(root, entity, delete_form=form, error=error))
 
 
 def folder_search(request):

@@ -1,4 +1,7 @@
+import shutil
+from datetime import UTC, datetime
 from pathlib import Path
+from uuid import uuid4
 
 from filesystem.metadata import FolderMetadata, read_metadata, write_metadata
 from filesystem.naming import episode_folder, folder_name, season_folder
@@ -152,3 +155,30 @@ def add_season(*, series_path: Path, season: SeasonDetail) -> Path:
     if any(child.kind == "episode" for child in entity.children):
         promote_flat_series(series_path)
     return _create_season(series_path, season)
+
+
+def delete_entity(*, folder: Path, trash_root: Path) -> Path:
+    trash_root.mkdir(parents=True, exist_ok=True)
+    target_dir = trash_root / datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / folder.name
+    if target.exists():
+        target = target_dir / f"{folder.name}-{uuid4().hex[:6]}"
+    folder.rename(target)
+    return target
+
+
+def set_hidden(*, folder: Path, hidden: bool) -> None:
+    metadata = read_metadata(folder)
+    if metadata is None:
+        raise FileNotFoundError(f"{folder} has no .metadata.toml")
+    metadata.hidden = hidden
+    write_metadata(folder, metadata)
+
+
+def set_cover(*, folder: Path, image: Path) -> Path:
+    if not image.is_file():
+        raise FileNotFoundError(image)
+    destination = folder / ".cover.jxl"
+    shutil.copyfile(image, destination)
+    return destination
