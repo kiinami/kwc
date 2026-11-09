@@ -20,6 +20,52 @@ DEFAULT_TYPE_MAP: dict[str, frozenset[str]] = {
     "E": frozenset({"A"}),
 }
 
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff", ".bmp", ".gif", ".avif"}
+
+
+@dataclass(frozen=True)
+class DetectedPattern:
+    regex: str
+    width: int
+    matched: int
+    total: int
+    samples: tuple[tuple[str, int, str], ...]
+
+
+def detect_pattern(source_root: Path) -> DetectedPattern | None:
+    files = [
+        path
+        for path in source_root.rglob("*")
+        if path.is_file()
+        and not path.is_symlink()
+        and path.suffix.lower() in IMAGE_SUFFIXES
+        and not any(part.startswith(".") for part in path.relative_to(source_root).parts)
+    ]
+    if not files:
+        return None
+    candidates: list[tuple[int, int, str, list[tuple[str, int, str]]]] = []
+    for width in (4, 3, 2, 1):
+        regex = rf"(?P<index>\d{{{width}}})(?P<type>[A-Z]{{0,3}})$"
+        pattern = re.compile(regex)
+        matched = 0
+        samples: list[tuple[str, int, str]] = []
+        for path in files:
+            match = pattern.search(path.stem)
+            if not match:
+                continue
+            index = int(match.group("index"))
+            if not 1 <= index <= 9999:
+                continue
+            matched += 1
+            if len(samples) < 5:
+                samples.append((path.name, index, (match.groupdict().get("type") or "").upper()))
+        if matched:
+            candidates.append((matched, width, regex, samples))
+    if not candidates:
+        return None
+    matched, width, regex, samples = max(candidates, key=lambda item: (item[0], item[1]))
+    return DetectedPattern(regex=regex, width=width, matched=matched, total=len(files), samples=tuple(samples))
+
 
 @dataclass(frozen=True)
 class ImportMatch:

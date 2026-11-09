@@ -16,8 +16,21 @@
         <div class="field">{{ field.label_tag }}{{ field }}{{ field.help_text }}{{ field.errors }}</div>
       {% endif %}
     {% endfor %}
+    <button type="submit" name="action" value="detect">Detect pattern</button>
     <button type="submit">Preview</button>
   </form>
+
+  {% if detected %}
+    <div class="card">
+      <p>Detected from {{ detected.matched }} / {{ detected.total }} image filenames. Regex prefilled below; you can edit it.</p>
+      <table>
+        <tr><th>File</th><th>Index</th><th>Type</th></tr>
+        {% for name, index, type_token in detected.samples %}
+          <tr><td>{{ name }}</td><td>{{ index }}</td><td>{{ type_token|default:"—" }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% endif %}
 
   {% if plan %}
     <div class="card">

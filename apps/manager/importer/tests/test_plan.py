@@ -2,7 +2,7 @@ import re
 
 import pytest
 from folders.services import create_movie
-from importer.services import DEFAULT_TYPE_MAP, build_plan
+from importer.services import DEFAULT_TYPE_MAP, build_plan, detect_pattern
 
 PATTERN = re.compile(r" - (?P<index>\d{4})(?P<type>[A-Z]{0,2})$")
 
@@ -150,6 +150,33 @@ def test_preview_view_does_not_write(auth_client, library, source):
     assert response.status_code == 200
     assert b"0002 [UM].jxl" in response.content
     assert not (library / "Film [2001][tmdb-1] - 0001.jxl").exists()
+
+
+def test_detect_pattern_proposes_index_and_type(source):
+    (source / "Film - 0003E.png").write_bytes(b"edited")
+    detected = detect_pattern(source)
+    assert detected is not None
+    assert detected.regex == r"(?P<index>\d{4})(?P<type>[A-Z]{0,3})$"
+    assert (detected.matched, detected.total) == (3, 3)
+    assert ("Film - 0002UM.png", 2, "UM") in detected.samples
+
+
+def test_detect_pattern_returns_none_without_images(tmp_path):
+    empty = tmp_path / "empty"
+    empty.mkdir()
+    assert detect_pattern(empty) is None
+
+
+def test_detect_view_prefills_regex(auth_client, library, source):
+    response = auth_client.post(
+        "/importer",
+        {"action": "detect", "source": ".", "target": "Film [2001][tmdb-1]"},
+    )
+    assert response.status_code == 200
+    detected = response.context["detected"]
+    assert detected is not None
+    assert response.context["form"]["regex"].value() == detected.regex
+    assert b"Detected from 2 / 2 image filenames" in response.content
 
 
 def test_browse_lists_folders(auth_client, library, source):

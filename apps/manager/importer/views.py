@@ -11,7 +11,7 @@ from filesystem.operations import PathEscape, resolve_under
 from filesystem.scan import Entity, scan_archive
 
 from .forms import ImportForm
-from .services import DEFAULT_TYPE_MAP, build_plan
+from .services import DEFAULT_TYPE_MAP, build_plan, detect_pattern
 
 
 def _episode_entities(entity: Entity):
@@ -47,6 +47,26 @@ def importer_index(request):
     root = settings.WALLPAPER_ROOT
     targets = target_choices(root)
     initial = {"source": request.GET.get("source", "")}
+    if request.method == "POST" and request.POST.get("action") == "detect":
+        data = request.POST.copy()
+        form = ImportForm(data, targets=targets)
+        detected = None
+        try:
+            source = resolve_under(settings.IMPORT_ROOT, request.POST.get("source", ""))
+            detected = detect_pattern(source)
+            if detected is None:
+                form.add_error(None, "No index/type pattern was found in the image filenames.")
+            else:
+                data["regex"] = detected.regex
+                form = ImportForm(data, targets=targets)
+        except (PathEscape, OSError) as exc:
+            form.add_error(None, str(exc))
+        return render(
+            request,
+            "importer/index.html",
+            {"form": form, "plan": None, "detected": detected},
+        )
+
     form = ImportForm(request.POST or None, targets=targets, initial=initial)
     plan = None
     if request.method == "POST" and form.is_valid():
@@ -61,7 +81,7 @@ def importer_index(request):
             )
         except (PathEscape, ValueError) as exc:
             form.add_error(None, str(exc))
-    return render(request, "importer/index.html", {"form": form, "plan": plan})
+    return render(request, "importer/index.html", {"form": form, "plan": plan, "detected": None})
 
 
 def importer_browse(request):
@@ -112,4 +132,4 @@ def importer_run(request):
             },
         )
         return redirect("folder-list")
-    return render(request, "importer/index.html", {"form": form, "plan": None})
+    return render(request, "importer/index.html", {"form": form, "plan": None, "detected": None})
