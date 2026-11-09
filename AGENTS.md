@@ -69,6 +69,6 @@ docker compose up -d --build
 ## Working conventions
 
 - Conventional Commits, scoped when useful (`feat(browser): ...`).
-- Work on a feature branch and PR to `main` unless the user explicitly asks for a direct push.
+- Code and behavior changes go on a feature branch and PR to `main`. Documentation-only changes (`AGENTS.md`, `README.md`, specs) may be pushed directly to `main` without a PR, unless the user asks otherwise.
 - Prefer deleting obsolete code over compatibility shims.
 - Verify with the checks above before pushing; CI is the final gate.
