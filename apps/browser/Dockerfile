@@ -44,7 +44,8 @@ ENV DJANGO_SETTINGS_MODULE=browser.settings \
 RUN apt-get update && \
     apt-get install -y --no-install-recommends libjxl-tools && \
     rm -rf /var/lib/apt/lists/* && \
-    groupadd --gid 1000 app && useradd --uid 1000 --gid app --create-home app
+    groupadd --gid 1000 app && useradd --uid 1000 --gid app --create-home app && \
+    mkdir -p /cache && chown app:app /cache
 
 WORKDIR /app
 

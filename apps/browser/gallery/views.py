@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from urllib.parse import quote
 
@@ -121,8 +122,11 @@ def folder(request, path: str):
     )
 
 
+logger = logging.getLogger(__name__)
+
+
 def _target(request, path: str) -> Path:
-    if any(part.startswith(".") for part in Path(path).parts):
+    if any(part.startswith(".") and part != ".cover.jxl" for part in Path(path).parts):
         raise Http404
     root = settings.WALLPAPER_ROOT
     try:
@@ -150,6 +154,7 @@ def _derivative(request, path: str, kind: str):
     try:
         output = cache.thumb(target, relative) if kind == "thumb" else cache.lens(target, relative)
     except Exception as exc:
+        logger.exception("derivative failed for %s", relative)
         raise Http404 from exc
     response = FileResponse(output.open("rb"), content_type="image/avif")
     response["Cache-Control"] = "public, max-age=31536000, immutable"

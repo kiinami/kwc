@@ -106,6 +106,12 @@ def test_thumbnail_endpoint_is_cached_avif(client, library):
     assert "immutable" in response["Cache-Control"]
 
 
+def test_cover_thumbnail_is_served(client, library):
+    response = client.get("/t/" + quote("Film [2001][tmdb-1]/.cover.jxl"))
+    assert response.status_code == 200
+    assert response["Content-Type"] == "image/avif"
+
+
 def test_lens_derivative_is_avif(client, library):
     response = client.get("/l/" + quote("Film [2001][tmdb-1]/Film [2001][tmdb-1] - 0001+.jxl"))
     assert response.status_code == 200
