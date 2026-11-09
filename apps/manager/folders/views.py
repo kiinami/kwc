@@ -4,12 +4,12 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
-from jobs.models import enqueue
 
 from filesystem.operations import PathEscape, resolve_under
 from filesystem.ordering import sort_entities
 from filesystem.scan import Entity, scan_archive, scan_entity
 from filesystem.validate import validate_archive
+from jobs.models import enqueue
 from tmdb import TMDBClient, TMDBError
 
 from . import services

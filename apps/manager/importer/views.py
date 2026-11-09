@@ -5,10 +5,10 @@ from django.conf import settings
 from django.http import Http404
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
-from jobs.models import enqueue
 
 from filesystem.operations import PathEscape, resolve_under
 from filesystem.scan import Entity, scan_archive
+from jobs.models import enqueue
 
 from .forms import ImportForm
 from .services import DEFAULT_TYPE_MAP, build_plan, detect_pattern

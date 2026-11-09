@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Jobs · KWC manager{% endblock %}
+{% block head %}{% if active %}<meta http-equiv="refresh" content="3">{% endif %}{% endblock %}
+{% block content %}
+  <h1>Jobs</h1>
+  <form method="get" class="card">
+    <label for="status">Status</label>
+    <select name="status" id="status">
+      <option value="">All</option>
+      {% for value, label in statuses %}
+        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filter</button>
+  </form>
+
+  <table class="card">
+    <tr><th>Job</th><th>Status</th><th>Progress</th><th>Message</th><th>Created</th><th>Finished</th></tr>
+    {% for job in jobs %}
+      <tr>
+        <td><a href="{% url 'job-detail' job_id=job.id %}">{{ job.kind }}</a></td>
+        <td class="status-{{ job.status }}">{{ job.get_status_display }}</td>
+        <td>{% if job.progress_total %}{{ job.progress_current }} / {{ job.progress_total }}{% else %}{{ job.progress_current }}{% endif %}</td>
+        <td>{{ job.message }}</td>
+        <td>{{ job.created_at|date:"Y-m-d H:i:s" }}</td>
+        <td>{{ job.finished_at|date:"Y-m-d H:i:s"|default:"—" }}</td>
+      </tr>
+    {% empty %}
+      <tr><td colspan="6" class="muted">No jobs yet.</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}

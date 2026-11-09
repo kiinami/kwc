@@ -1,10 +1,10 @@
 from urllib.parse import quote
 
 import pytest
-from folders.services import create_movie, delete_entity, set_cover, set_hidden
-from jobs.worker import run_worker
 
 from filesystem.metadata import read_metadata
+from folders.services import create_movie, delete_entity, set_cover, set_hidden
+from jobs.worker import run_worker
 
 
 @pytest.fixture

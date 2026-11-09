@@ -2,11 +2,11 @@ from io import BytesIO
 from urllib.parse import quote
 
 import pytest
-from folders.services import create_movie, create_series
-from jobs.models import Job
 from PIL import Image
 
 from filesystem.metadata import FolderMetadata, read_metadata, write_metadata
+from folders.services import create_movie, create_series
+from jobs.models import Job
 from tmdb import MovieDetail, Poster
 
 

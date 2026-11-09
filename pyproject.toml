@@ -57,7 +57,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["browser", "manager", "filesystem", "media", "tmdb"]
+known-first-party = ["browser", "manager", "folders", "jobs", "importer", "filesystem", "media", "tmdb"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/migrations/*.py" = ["E501"]

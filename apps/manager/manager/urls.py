@@ -24,6 +24,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path("healthz", views.healthz, name="healthz"),
+    path("", include("jobs.urls")),
     path("", include("folders.urls")),
     path("", include("importer.urls")),
 ]

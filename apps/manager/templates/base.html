@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}KWC manager{% endblock %}</title>
+  {% block head %}{% endblock %}
   <style>
     :root { color-scheme: dark; --bg: #121417; --panel: #1b1f24; --text: #e6e8eb; --muted: #98a1ab; --accent: #7aa2f7; }
     * { box-sizing: border-box; }
@@ -25,6 +26,13 @@
     .posters { display: flex; flex-wrap: wrap; gap: .75rem; border: 0; padding: 0; margin: 1rem 0; }
     .posters label { display: flex; flex-direction: column; gap: .35rem; align-items: center; }
     .posters img { width: 120px; border-radius: 6px; }
+    .progress { height: .55rem; background: #2a3038; border-radius: 999px; overflow: hidden; margin-top: .75rem; }
+    .progress span { display: block; height: 100%; background: var(--accent); }
+    pre { white-space: pre-wrap; word-break: break-word; }
+    .status-running, .status-cancelling { color: #e0af68; }
+    .status-done { color: #9ece6a; }
+    .status-error { color: #f7768e; }
+    .status-interrupted, .status-cancelled { color: #c0caf5; }
     @media (max-width: 600px) { header { flex-wrap: wrap; } }
   </style>
 </head>
@@ -33,6 +41,7 @@
     <strong><a href="{% url 'folder-list' %}">KWC manager</a></strong>
     <a href="{% url 'folder-create' %}">New folder</a>
     <a href="{% url 'importer-index' %}">Importer</a>
+    <a href="{% url 'job-list' %}">Jobs</a>
     <a href="{% url 'folder-doctor' %}">Doctor</a>
   </header>
   <main>{% block content %}{% endblock %}</main>

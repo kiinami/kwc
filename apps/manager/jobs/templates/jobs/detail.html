@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ job.kind }} · Jobs{% endblock %}
+{% block head %}{% if active %}<meta http-equiv="refresh" content="3">{% endif %}{% endblock %}
+{% block content %}
+  <p><a href="{% url 'job-list' %}">← Jobs</a></p>
+  <h1>{{ job.kind }}</h1>
+  <p class="status-{{ job.status }}">{{ job.get_status_display }}</p>
+
+  <div class="card">
+    <table>
+      <tr><th>Created</th><td>{{ job.created_at|date:"Y-m-d H:i:s" }}</td></tr>
+      <tr><th>Started</th><td>{{ job.started_at|date:"Y-m-d H:i:s"|default:"—" }}</td></tr>
+      <tr><th>Finished</th><td>{{ job.finished_at|date:"Y-m-d H:i:s"|default:"—" }}</td></tr>
+      <tr><th>Progress</th><td>{{ job.progress_current }} / {{ job.progress_total|default:"—" }} ({{ job.percent }}%)</td></tr>
+      {% if job.message %}<tr><th>Message</th><td>{{ job.message }}</td></tr>{% endif %}
+    </table>
+    <div class="progress"><span style="width: {{ job.percent }}%"></span></div>
+  </div>
+
+  {% if job.error %}
+    <h2>Error</h2>
+    <pre class="card">{{ job.error }}</pre>
+  {% endif %}
+
+  <h2>Parameters</h2>
+  <pre class="card">{{ job.params_pretty }}</pre>
+  <h2>Result</h2>
+  <pre class="card">{{ job.result_pretty }}</pre>
+
+  {% if job.is_active %}
+    <form method="post" action="{% url 'job-cancel' job_id=job.id %}">
+      {% csrf_token %}
+      <button type="submit">Cancel job</button>
+    </form>
+  {% endif %}
+{% endblock %}

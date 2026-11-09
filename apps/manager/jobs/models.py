@@ -1,3 +1,4 @@
+import json
 import uuid
 
 from django.db import models
@@ -32,6 +33,24 @@ class Job(models.Model):
 
     def __str__(self) -> str:
         return f"{self.kind} ({self.status})"
+
+    @property
+    def is_active(self) -> bool:
+        return self.status in {self.Status.QUEUED, self.Status.RUNNING, self.Status.CANCELLING}
+
+    @property
+    def percent(self) -> int:
+        if not self.progress_total:
+            return 0
+        return min(100, int(self.progress_current * 100 / max(1, self.progress_total)))
+
+    @property
+    def params_pretty(self) -> str:
+        return json.dumps(self.params, indent=2, default=str)
+
+    @property
+    def result_pretty(self) -> str:
+        return json.dumps(self.result, indent=2, default=str)
 
 
 def enqueue(kind: str, params: dict) -> Job:

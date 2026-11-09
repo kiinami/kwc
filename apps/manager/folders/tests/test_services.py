@@ -1,10 +1,10 @@
 from io import BytesIO
 
 import pytest
-from folders.services import create_movie, create_other, create_series
 from PIL import Image
 
 from filesystem.metadata import read_metadata
+from folders.services import create_movie, create_other, create_series
 
 
 def png_bytes() -> bytes:

@@ -1,6 +1,7 @@
 import re
 
 import pytest
+
 from folders.services import create_movie
 from importer.services import DEFAULT_TYPE_MAP, build_plan, detect_pattern
 

@@ -1,7 +1,7 @@
 from django.conf import settings
-from jobs.registry import register
 
 from filesystem.operations import rename_entity, resolve_under
+from jobs.registry import register
 from tmdb import TMDBClient
 
 from .services import add_season, build_series_from_tmdb, delete_entity

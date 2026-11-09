@@ -5,10 +5,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
-from jobs.worker import JobContext
-
 from filesystem.naming import ImageName, NameScope, image_filename, parse_folder_name, parse_season_folder
 from filesystem.scan import Entity, scan_entity
+from jobs.worker import JobContext
 from media.hashing import sha256_file
 from media.jxl import encode_jxl
 from media.metadata import ImageMetadata, write_image_metadata

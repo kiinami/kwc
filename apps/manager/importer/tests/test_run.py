@@ -1,12 +1,12 @@
 import re
 
 import pytest
-from folders.services import create_movie
-from importer.services import DEFAULT_TYPE_MAP, build_plan, run_plan
-from jobs.worker import JobContext, run_worker
 from PIL import Image
 
 from filesystem.metadata import read_metadata
+from folders.services import create_movie
+from importer.services import DEFAULT_TYPE_MAP, build_plan, run_plan
+from jobs.worker import JobContext, run_worker
 from media.metadata import read_image_metadata
 
 PATTERN = re.compile(r" - (?P<index>\d{4})(?P<type>[A-Z]{0,2})$")

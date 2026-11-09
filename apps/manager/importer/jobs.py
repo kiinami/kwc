@@ -1,10 +1,10 @@
 import re
 
 from django.conf import settings
-from jobs.registry import register
 
 from filesystem.metadata import read_metadata
 from filesystem.operations import resolve_under
+from jobs.registry import register
 
 from .services import DEFAULT_TYPE_MAP, build_plan, run_plan
 

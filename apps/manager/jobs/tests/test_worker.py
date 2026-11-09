@@ -1,4 +1,5 @@
 import pytest
+
 from jobs.models import Job, enqueue
 from jobs.registry import register
 from jobs.worker import run_worker
