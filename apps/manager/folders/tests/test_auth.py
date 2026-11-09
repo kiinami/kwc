@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 
 from manager.adapters import ManagerSocialAccountAdapter
@@ -20,6 +22,25 @@ def test_allowlist_is_case_insensitive(settings):
 def test_empty_allowlist_denies_everyone(settings):
     settings.MANAGER_ALLOWED_EMAILS = []
     assert not ManagerSocialAccountAdapter().is_allowed("owner@example.com")
+
+
+def sociallogin(email: str) -> SimpleNamespace:
+    return SimpleNamespace(
+        user=SimpleNamespace(email=email),
+        account=SimpleNamespace(extra_data={"email": email}),
+    )
+
+
+def test_social_signup_is_open_for_allowlisted_email(settings):
+    settings.MANAGER_ALLOWED_EMAILS = ["owner@example.com"]
+    adapter = ManagerSocialAccountAdapter()
+    assert adapter.is_open_for_signup(None, sociallogin("owner@example.com"))
+
+
+def test_social_signup_is_closed_for_other_emails(settings):
+    settings.MANAGER_ALLOWED_EMAILS = ["owner@example.com"]
+    adapter = ManagerSocialAccountAdapter()
+    assert not adapter.is_open_for_signup(None, sociallogin("stranger@example.com"))
 
 
 def test_healthz_is_exempt(client):

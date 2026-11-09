@@ -26,7 +26,14 @@ class ManagerSocialAccountAdapter(DefaultSocialAccountAdapter):
     def is_allowed(self, email: str | None) -> bool:
         return is_allowed(email)
 
+    @staticmethod
+    def _email(sociallogin) -> str:
+        user = getattr(sociallogin, "user", None)
+        return getattr(user, "email", None) or sociallogin.account.extra_data.get("email") or ""
+
+    def is_open_for_signup(self, request, sociallogin) -> bool:
+        return is_allowed(self._email(sociallogin))
+
     def pre_social_login(self, request, sociallogin) -> None:
-        email = sociallogin.user.email or sociallogin.account.extra_data.get("email", "")
-        if not is_allowed(email):
+        if not is_allowed(self._email(sociallogin)):
             raise ImmediateHttpResponse(HttpResponseForbidden("This account is not allowed."))
