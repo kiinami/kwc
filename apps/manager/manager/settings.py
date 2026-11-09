@@ -36,6 +36,9 @@ if env_bool("DJANGO_BEHIND_PROXY", False):
     USE_X_FORWARDED_HOST = True
 
 WALLPAPER_ROOT = Path(os.environ.get("KWC_WALLPAPER_ROOT", REPO_ROOT / "data" / "wallpapers"))
+IMPORT_ROOT = Path(os.environ.get("KWC_IMPORT_ROOT", REPO_ROOT / "data" / "import"))
+INGEST_ROOT = Path(os.environ.get("KWC_INGEST_ROOT", REPO_ROOT / "data" / "videos"))
+TMDB_READ_TOKEN = os.environ.get("TMDB_READ_TOKEN", "")
 STATIC_ROOT = Path(os.environ.get("DJANGO_STATIC_ROOT", BASE_DIR / "staticfiles"))
 DB_PATH = Path(os.environ.get("DJANGO_DB_PATH", BASE_DIR / "db.sqlite3"))
 
@@ -47,6 +50,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "jobs",
+    "folders",
 ]
 
 MIDDLEWARE = [
@@ -65,7 +69,7 @@ ROOT_URLCONF = "manager.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [

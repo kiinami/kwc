@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ entity.title }} · KWC manager{% endblock %}
+{% block content %}
+  <p><a href="{% url 'folder-list' %}">← Library</a></p>
+  <h1>{{ entity.title }}</h1>
+  <p class="muted">{{ entity.kind }}{% if entity.year %} · {{ entity.year }}{% endif %}{% if entity.tmdb_id %} · TMDB {{ entity.tmdb_id }}{% endif %}</p>
+
+  {% if entity.metadata %}
+    <div class="card">
+      <table>
+        {% if entity.metadata.original_title %}<tr><th>Original title</th><td>{{ entity.metadata.original_title }}</td></tr>{% endif %}
+        {% if entity.metadata.copyright %}<tr><th>Copyright</th><td>{{ entity.metadata.copyright }}</td></tr>{% endif %}
+        <tr><th>Hidden</th><td>{{ entity.metadata.hidden|yesno:"yes,no" }}</td></tr>
+      </table>
+    </div>
+  {% else %}
+    <p class="muted">No metadata sidecar.</p>
+  {% endif %}
+
+  {% if children %}
+    <h2>Folders</h2>
+    <div class="grid">
+      {% for row in children %}
+        <a class="card" href="{% url 'folder-detail' path=row.rel %}">
+          <div>{{ row.entity.title }}</div>
+          <div class="muted">{{ row.entity.images|length }} images</div>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if entity.images %}
+    <h2>Images</h2>
+    <div class="card">
+      <table>
+        <tr><th>Index</th><th>File</th><th>Picked</th></tr>
+        {% for image in entity.images %}
+          <tr><td>{{ image.index }}</td><td>{{ image.name }}</td><td>{{ image.picked|yesno:"yes,no" }}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -501,8 +501,11 @@ source = { editable = "apps/manager" }
 dependencies = [
     { name = "django" },
     { name = "django-allauth", extra = ["socialaccount"] },
+    { name = "filesystem" },
     { name = "gunicorn" },
+    { name = "media" },
     { name = "python-dotenv" },
+    { name = "tmdb" },
     { name = "whitenoise" },
 ]
 
@@ -510,8 +513,11 @@ dependencies = [
 requires-dist = [
     { name = "django", specifier = ">=6.1" },
     { name = "django-allauth", extras = ["socialaccount"], specifier = ">=65.20.0" },
+    { name = "filesystem", editable = "libs/filesystem" },
     { name = "gunicorn", specifier = ">=23.0.0" },
+    { name = "media", editable = "libs/media" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "tmdb", editable = "libs/tmdb" },
     { name = "whitenoise", specifier = ">=6.12.0" },
 ]
 

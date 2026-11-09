@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}New folder · KWC manager{% endblock %}
+{% block content %}
+  <h1>New folder</h1>
+  {% if message %}<p class="card">{{ message }}</p>{% endif %}
+
+  <form method="get" action="{% url 'folder-search' %}" class="card">
+    <div class="field">{{ search_form.kind.label_tag }}{{ search_form.kind }}</div>
+    <div class="field">{{ search_form.query.label_tag }}{{ search_form.query }}</div>
+    <div class="field">{{ search_form.year.label_tag }}{{ search_form.year }}</div>
+    <button type="submit">Search TMDB</button>
+  </form>
+
+  {% if results %}
+    <div class="card">
+      <h2>Results</h2>
+      {% for result in results %}
+        <p>
+          <a href="{% url 'folder-create' %}?kind={{ result.kind }}&title={{ result.title|urlencode }}&year={{ result.year }}&tmdb_id={{ result.id }}">
+            {{ result.title }}{% if result.year %} ({{ result.year }}){% endif %}
+          </a>
+        </p>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <form method="post" class="card">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    {% for field in form %}
+      <div class="field">{{ field.label_tag }}{{ field }}{{ field.errors }}</div>
+    {% endfor %}
+    <button type="submit">Create</button>
+  </form>
+{% endblock %}

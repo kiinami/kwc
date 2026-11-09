@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}KWC manager{% endblock %}</title>
+  <style>
+    :root { color-scheme: dark; --bg: #121417; --panel: #1b1f24; --text: #e6e8eb; --muted: #98a1ab; --accent: #7aa2f7; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 16px/1.5 system-ui, sans-serif; background: var(--bg); color: var(--text); }
+    a { color: var(--accent); }
+    header { display: flex; gap: 1rem; align-items: center; padding: 1rem; border-bottom: 1px solid #2a3038; }
+    header strong { margin-right: auto; }
+    main { max-width: 1100px; margin: 0 auto; padding: 1rem; }
+    .card { background: var(--panel); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    .muted { color: var(--muted); }
+    .field { margin-bottom: .75rem; }
+    label { display: block; margin-bottom: .25rem; }
+    input, select, button { font: inherit; padding: .55rem .7rem; border-radius: 8px; border: 1px solid #39414c; background: #0f1215; color: var(--text); }
+    button { background: var(--accent); border-color: var(--accent); color: #10131a; cursor: pointer; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid #2a3038; }
+    .errorlist { color: #f7768e; }
+    @media (max-width: 600px) { header { flex-wrap: wrap; } }
+  </style>
+</head>
+<body>
+  <header>
+    <strong><a href="{% url 'folder-list' %}">KWC manager</a></strong>
+    <a href="{% url 'folder-create' %}">New folder</a>
+  </header>
+  <main>{% block content %}{% endblock %}</main>
+</body>
+</html>
