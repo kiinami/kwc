@@ -9,6 +9,7 @@ authors = [
 requires-python = ">=3.14"
 dependencies = [
     "browser",
+    "filesystem",
     "manager",
 ]
 
@@ -16,6 +17,9 @@ dependencies = [
 dev = [
     "bump-my-version>=1.1.2",
     "prek>=0.5.6",
+    "pytest>=8.4",
+    "pytest-django>=4.11",
+    "responses>=0.25",
     "ruff>=0.17.1",
 ]
 

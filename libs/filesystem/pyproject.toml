@@ -7,7 +7,9 @@ authors = [
     { name = "kiinami", email = "kinami@posteo.net" }
 ]
 requires-python = ">=3.14"
-dependencies = []
+dependencies = [
+    "tomli-w>=1.2",
+]
 
 [project.scripts]
 filesystem = "filesystem:main"
